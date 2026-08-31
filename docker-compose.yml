@@ -1,0 +1,13 @@
+services:
+  sf-vtt-dev:
+    build: .
+    container_name: sf-vtt-dev
+    volumes:
+      - ${HOME}/star-frontiers-vtt:${HOME}/star-frontiers-vtt
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    working_dir: ${HOME}/star-frontiers-vtt
+    environment:
+      - HOME=${HOME}
+    command: tail -f /dev/null
