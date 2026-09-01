@@ -47,14 +47,16 @@
               placeholder="Ship Name"
             />
             <div class="type-wrap">
-              <label>Type / Class:</label>
-              <input
-                type="text"
-                v-model="selectedShip.type"
-                @change="updateShip"
-                class="input-type"
-                placeholder="e.g. Assault Scout"
-              />
+              <label>Class Preset:</label>
+              <select
+                :value="selectedShip.type"
+                @change="onEditPresetChange($event.target.value)"
+                class="input-type-select"
+              >
+                <option v-for="preset in presets" :key="preset.type" :value="preset.type">
+                  {{ preset.type }}
+                </option>
+              </select>
             </div>
           </div>
         </header>
@@ -140,30 +142,90 @@
             </div>
             <div class="defenses-list">
               <div class="defense-toggle-row">
-                <span class="defense-label">Reflect Screen</span>
+                <span class="defense-label">Reflective Hull</span>
                 <button
-                  :class="['toggle-btn', selectedShip.defenses && selectedShip.defenses.reflect ? 'active' : 'offline']"
-                  @click="toggleDefense('reflect')"
+                  :class="['toggle-btn', getDefenseVal('reflective_hull') ? 'active' : 'offline']"
+                  @click="toggleDefenseBool('reflective_hull')"
                 >
-                  {{ selectedShip.defenses && selectedShip.defenses.reflect ? 'ONLINE' : 'OFFLINE' }}
+                  {{ getDefenseVal('reflective_hull') ? 'ONLINE' : 'OFFLINE' }}
                 </button>
               </div>
               <div class="defense-toggle-row">
-                <span class="defense-label">Masking Screen</span>
+                <span class="defense-label">Stasis Screen</span>
                 <button
-                  :class="['toggle-btn', selectedShip.defenses && selectedShip.defenses.masking ? 'active' : 'offline']"
-                  @click="toggleDefense('masking')"
+                  :class="['toggle-btn', getDefenseVal('stasis_screen') ? 'active' : 'offline']"
+                  @click="toggleDefenseBool('stasis_screen')"
                 >
-                  {{ selectedShip.defenses && selectedShip.defenses.masking ? 'ONLINE' : 'OFFLINE' }}
+                  {{ getDefenseVal('stasis_screen') ? 'ONLINE' : 'OFFLINE' }}
                 </button>
               </div>
               <div class="defense-toggle-row">
-                <span class="defense-label">ICMs (Interceptors)</span>
-                <div class="icm-wrap">
-                  <label>Qty:</label>
+                <span class="defense-label">Stealth Screen</span>
+                <button
+                  :class="['toggle-btn', getDefenseVal('stealth_screen') ? 'active' : 'offline']"
+                  @click="toggleDefenseBool('stealth_screen')"
+                >
+                  {{ getDefenseVal('stealth_screen') ? 'ONLINE' : 'OFFLINE' }}
+                </button>
+              </div>
+              
+              <!-- Masking Screens -->
+              <div class="defense-counter-box">
+                <div class="defense-counter-header">
+                  <span class="defense-label">Masking Screens</span>
+                  <button
+                    class="btn-action"
+                    :disabled="getDefenseVal('masking_screens_current') <= 0"
+                    @click="deployMaskingScreen"
+                  >
+                    Deploy Screen
+                  </button>
+                </div>
+                <div class="counter-inputs">
+                  <label>Current:</label>
                   <input
                     type="number"
-                    v-model.number="selectedShip.defenses.icm_count"
+                    v-model.number="selectedShip.defenses.masking_screens_current"
+                    @change="updateShip"
+                    min="0"
+                    class="item-level-input"
+                  />
+                  <label>Max:</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedShip.defenses.masking_screens_max"
+                    @change="updateShip"
+                    min="0"
+                    class="item-level-input"
+                  />
+                </div>
+              </div>
+
+              <!-- ICMs (Interceptors) -->
+              <div class="defense-counter-box">
+                <div class="defense-counter-header">
+                  <span class="defense-label">ICMs (Interceptors)</span>
+                  <button
+                    class="btn-action"
+                    :disabled="getDefenseVal('icm_current') <= 0"
+                    @click="launchICM"
+                  >
+                    Launch ICM
+                  </button>
+                </div>
+                <div class="counter-inputs">
+                  <label>Current:</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedShip.defenses.icm_current"
+                    @change="updateShip"
+                    min="0"
+                    class="item-level-input"
+                  />
+                  <label>Max:</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedShip.defenses.icm_max"
                     @change="updateShip"
                     min="0"
                     class="item-level-input"
@@ -182,31 +244,79 @@
             <div v-if="!selectedShip.weapons || selectedShip.weapons.length === 0" class="empty-list">
               No weapon systems equipped.
             </div>
-            <ul class="items-list">
-              <li v-for="(wpn, index) in selectedShip.weapons" :key="index" class="item-row">
-                <input
-                  type="text"
-                  v-model="wpn.name"
-                  @change="updateShip"
-                  placeholder="e.g. Laser Battery"
-                  class="item-name-input"
-                />
-                <input
-                  type="text"
-                  v-model="wpn.damage"
-                  @change="updateShip"
-                  placeholder="e.g. 1d10"
-                  class="item-dmg-input"
-                />
-                <button
-                  :class="['status-btn', wpn.status === 'Online' ? 'online' : 'damaged']"
-                  @click="toggleWeaponStatus(index)"
-                >
-                  {{ wpn.status || 'Online' }}
-                </button>
-                <button class="btn-remove" @click="removeWeapon(index)">✕</button>
-              </li>
-            </ul>
+            <div v-else class="weapons-wrapper">
+              <div v-for="(wpn, index) in selectedShip.weapons" :key="wpn.id || index" class="weapon-card">
+                <div class="weapon-main-row">
+                  <input
+                    type="text"
+                    v-model="wpn.type"
+                    @change="updateShip"
+                    placeholder="e.g. Laser Battery"
+                    class="item-name-input"
+                  />
+                  <select
+                    v-model="wpn.status"
+                    @change="updateShip"
+                    :class="['status-select', (wpn.status || 'Online').toLowerCase()]"
+                  >
+                    <option value="Online">Online</option>
+                    <option value="Damaged">Damaged</option>
+                    <option value="Offline">Offline</option>
+                  </select>
+                  <button class="btn-remove" title="Remove Weapon" @click="removeWeapon(index)">✕</button>
+                </div>
+                
+                <div class="weapon-details-row">
+                  <div class="detail-field">
+                    <label>Dmg:</label>
+                    <input
+                      type="text"
+                      v-model="wpn.damage"
+                      @change="updateShip"
+                      placeholder="1d10"
+                      class="item-dmg-input"
+                    />
+                  </div>
+                  <div class="detail-field">
+                    <label>Rng:</label>
+                    <input
+                      type="number"
+                      v-model.number="wpn.range"
+                      @change="updateShip"
+                      class="item-num-input"
+                      min="0"
+                    />
+                  </div>
+                  <div class="detail-field ammo-field" v-if="wpn.ammo_max > 0 || wpn.ammo_current > 0">
+                    <label>Ammo:</label>
+                    <input
+                      type="number"
+                      v-model.number="wpn.ammo_current"
+                      @change="updateShip"
+                      class="item-num-input"
+                      min="0"
+                    />
+                    <span>/</span>
+                    <input
+                      type="number"
+                      v-model.number="wpn.ammo_max"
+                      @change="updateShip"
+                      class="item-num-input"
+                      min="0"
+                    />
+                  </div>
+                  <div class="detail-field fire-field">
+                    <button
+                      class="btn-fire"
+                      :disabled="wpn.status !== 'Online' || (wpn.ammo_max > 0 && wpn.ammo_current <= 0)"
+                      @click="fireWeapon(index)"
+                    >
+                      Fire
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </div>
@@ -218,11 +328,19 @@
         <h3>Create New Ship</h3>
         <form @submit.prevent="createShip">
           <div class="form-group">
+            <label>Ship Class Preset</label>
+            <select v-model="selectedPresetType" @change="applyPresetToCreateForm" class="preset-select">
+              <option v-for="preset in presets" :key="preset.type" :value="preset.type">
+                {{ preset.type }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>Ship Name</label>
             <input type="text" v-model="newShipForm.name" required placeholder="e.g. UPF Gullwind" />
           </div>
           <div class="form-group">
-            <label>Ship Type / Class</label>
+            <label>Type / Class Label</label>
             <input type="text" v-model="newShipForm.type" placeholder="e.g. Assault Scout" />
           </div>
           <div class="form-row">
@@ -257,11 +375,14 @@
 
 <script>
 import { socket } from '../services/socket.js';
+import { SHIP_PRESETS } from '../constants/shipPresets.js';
 
 export default {
   name: 'ShipSheetsView',
   data() {
     return {
+      presets: SHIP_PRESETS,
+      selectedPresetType: 'Assault Scout',
       ships: [],
       selectedShip: null,
       loading: true,
@@ -272,9 +393,11 @@ export default {
         type: 'Assault Scout',
         adf: 5,
         mr: 4,
-        dcr: 70,
-        max_hull_points: 50,
-        current_hull_points: 50,
+        dcr: 35,
+        max_hull_points: 15,
+        current_hull_points: 15,
+        weapons: [],
+        defenses: {},
       },
     };
   },
@@ -298,6 +421,30 @@ export default {
     this.removeSocketListeners();
   },
   methods: {
+    normalizeDefenses(defenses) {
+      const def = defenses || {};
+      return {
+        reflective_hull: def.reflective_hull !== undefined ? def.reflective_hull : (def.reflect || false),
+        stasis_screen: def.stasis_screen || false,
+        stealth_screen: def.stealth_screen || false,
+        masking_screens_max: def.masking_screens_max !== undefined ? def.masking_screens_max : (def.masking ? 1 : 0),
+        masking_screens_current: def.masking_screens_current !== undefined ? def.masking_screens_current : (def.masking ? 1 : 0),
+        icm_max: def.icm_max !== undefined ? def.icm_max : (def.icm_count || 0),
+        icm_current: def.icm_current !== undefined ? def.icm_current : (def.icm_count || 0),
+      };
+    },
+    normalizeWeapons(weapons) {
+      if (!Array.isArray(weapons)) return [];
+      return weapons.map((w, idx) => ({
+        id: w.id || `w_${Date.now()}_${idx}`,
+        type: w.type || w.name || 'Laser Battery',
+        damage: w.damage || '1d10',
+        range: w.range !== undefined ? w.range : 9,
+        ammo_max: w.ammo_max !== undefined ? w.ammo_max : 0,
+        ammo_current: w.ammo_current !== undefined ? w.ammo_current : 0,
+        status: w.status || 'Online',
+      }));
+    },
     async fetchShips() {
       this.loading = true;
       try {
@@ -316,22 +463,44 @@ export default {
     },
     selectShip(ship) {
       const copy = JSON.parse(JSON.stringify(ship));
-      if (!copy.defenses) {
-        copy.defenses = { reflect: false, masking: false, icm_count: 4 };
+      copy.defenses = this.normalizeDefenses(copy.defenses);
+      copy.weapons = this.normalizeWeapons(copy.weapons);
+      if (copy.hull_points !== undefined && copy.max_hull_points === undefined) {
+        copy.max_hull_points = copy.hull_points;
+        copy.current_hull_points = copy.hull_points;
       }
       this.selectedShip = copy;
     },
+    applyPresetToCreateForm() {
+      const preset = this.presets.find((p) => p.type === this.selectedPresetType) || this.presets[0];
+      this.newShipForm.type = preset.type;
+      this.newShipForm.adf = preset.adf;
+      this.newShipForm.mr = preset.mr;
+      this.newShipForm.dcr = preset.dcr;
+      this.newShipForm.max_hull_points = preset.hull_points;
+      this.newShipForm.current_hull_points = preset.hull_points;
+      this.newShipForm.weapons = JSON.parse(JSON.stringify(preset.weapons));
+      this.newShipForm.defenses = JSON.parse(JSON.stringify(preset.defenses));
+    },
     openCreateModal() {
-      this.newShipForm = {
-        name: '',
-        type: 'Assault Scout',
-        adf: 5,
-        mr: 4,
-        dcr: 70,
-        max_hull_points: 50,
-        current_hull_points: 50,
-      };
+      this.selectedPresetType = 'Assault Scout';
+      this.applyPresetToCreateForm();
+      this.newShipForm.name = '';
       this.showCreateModal = true;
+    },
+    onEditPresetChange(newType) {
+      const preset = this.presets.find((p) => p.type === newType);
+      this.selectedShip.type = newType;
+      if (preset && confirm(`Load stats, weapons, and defenses for ${newType}?`)) {
+        this.selectedShip.adf = preset.adf;
+        this.selectedShip.mr = preset.mr;
+        this.selectedShip.dcr = preset.dcr;
+        this.selectedShip.max_hull_points = preset.hull_points;
+        this.selectedShip.current_hull_points = preset.hull_points;
+        this.selectedShip.weapons = JSON.parse(JSON.stringify(preset.weapons));
+        this.selectedShip.defenses = JSON.parse(JSON.stringify(preset.defenses));
+      }
+      this.updateShip();
     },
     async createShip() {
       if (!this.newShipForm.name.trim()) return;
@@ -340,10 +509,8 @@ export default {
         const payload = {
           ...this.newShipForm,
           current_hull_points: this.newShipForm.max_hull_points,
-          defenses: { reflect: false, masking: false, icm_count: 4 },
-          weapons: [
-            { name: 'Laser Battery', damage: '1d10', status: 'Online' },
-          ],
+          defenses: this.normalizeDefenses(this.newShipForm.defenses),
+          weapons: this.normalizeWeapons(this.newShipForm.weapons),
         };
         const res = await fetch('/api/ships', {
           method: 'POST',
@@ -404,26 +571,59 @@ export default {
         console.error('Error deleting ship:', err);
       }
     },
-    toggleDefense(type) {
+    getDefenseVal(key) {
+      if (!this.selectedShip || !this.selectedShip.defenses) return false;
+      return this.selectedShip.defenses[key];
+    },
+    toggleDefenseBool(key) {
       if (!this.selectedShip.defenses) {
-        this.selectedShip.defenses = { reflect: false, masking: false, icm_count: 0 };
+        this.selectedShip.defenses = this.normalizeDefenses({});
       }
-      this.selectedShip.defenses[type] = !this.selectedShip.defenses[type];
+      this.selectedShip.defenses[key] = !this.selectedShip.defenses[key];
       this.updateShip();
+    },
+    deployMaskingScreen() {
+      if (!this.selectedShip.defenses) return;
+      if (this.selectedShip.defenses.masking_screens_current > 0) {
+        this.selectedShip.defenses.masking_screens_current -= 1;
+        this.updateShip();
+      }
+    },
+    launchICM() {
+      if (!this.selectedShip.defenses) return;
+      if (this.selectedShip.defenses.icm_current > 0) {
+        this.selectedShip.defenses.icm_current -= 1;
+        this.updateShip();
+      }
     },
     addWeapon() {
       if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
-      this.selectedShip.weapons.push({ name: 'New Weapon', damage: '1d10', status: 'Online' });
+      this.selectedShip.weapons.push({
+        id: `w_${Date.now()}`,
+        type: 'New Weapon',
+        damage: '1d10',
+        range: 9,
+        ammo_max: 0,
+        ammo_current: 0,
+        status: 'Online',
+      });
       this.updateShip();
     },
     removeWeapon(index) {
       this.selectedShip.weapons.splice(index, 1);
       this.updateShip();
     },
-    toggleWeaponStatus(index) {
-      const current = this.selectedShip.weapons[index].status || 'Online';
-      this.selectedShip.weapons[index].status = current === 'Online' ? 'Disabled' : 'Online';
-      this.updateShip();
+    fireWeapon(index) {
+      const wpn = this.selectedShip.weapons[index];
+      if (!wpn || wpn.status !== 'Online') return;
+      if (wpn.ammo_max > 0) {
+        if (wpn.ammo_current > 0) {
+          wpn.ammo_current -= 1;
+          this.updateShip();
+        }
+      } else {
+        this.updateShip();
+      }
     },
     setupSocketListeners() {
       socket.on('sheet:created', this.handleSheetCreated);
@@ -453,7 +653,11 @@ export default {
         if (idx !== -1) {
           this.ships[idx] = sheet;
           if (this.selectedShip && this.selectedShip.id === sheet.id) {
-            this.selectedShip = { ...sheet };
+            this.selectedShip = {
+              ...sheet,
+              defenses: this.normalizeDefenses(sheet.defenses),
+              weapons: this.normalizeWeapons(sheet.weapons),
+            };
           }
         }
       }
@@ -591,7 +795,7 @@ export default {
 }
 
 .sheet-container {
-  max-width: 900px;
+  max-width: 950px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -630,7 +834,7 @@ export default {
   font-weight: 600;
 }
 
-.input-type {
+.input-type-select {
   background: #0d1117;
   border: 1px solid #30363d;
   color: #58a6ff;
@@ -777,7 +981,7 @@ export default {
 .defenses-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .defense-toggle-row {
@@ -785,13 +989,14 @@ export default {
   justify-content: space-between;
   align-items: center;
   background: #0d1117;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid #30363d;
 }
 
 .defense-label {
   font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .toggle-btn {
@@ -811,12 +1016,44 @@ export default {
   color: #8b949e;
 }
 
-.icm-wrap {
+.defense-counter-box {
+  background: #0d1117;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.defense-counter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.counter-inputs {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.85rem;
   color: #8b949e;
+}
+
+.btn-action {
+  background: #1f6feb;
+  color: #ffffff;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-action:disabled {
+  background: #21262d;
+  color: #8b949e;
+  cursor: not-allowed;
 }
 
 .empty-list {
@@ -826,66 +1063,121 @@ export default {
   padding: 8px 0;
 }
 
-.items-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.weapons-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.item-row {
+.weapon-card {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weapon-main-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+.weapon-details-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #8b949e;
+}
+
+.detail-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ammo-field {
+  margin-left: auto;
+}
+
 .item-name-input {
   flex: 1;
-  background: #0d1117;
+  background: #161b22;
   border: 1px solid #30363d;
   color: #f0f6fc;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border-radius: 4px;
 }
 
 .item-dmg-input {
-  width: 75px;
-  background: #0d1117;
+  width: 65px;
+  background: #161b22;
   border: 1px solid #30363d;
   color: #f0f6fc;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
   text-align: center;
 }
 
-.status-btn {
-  padding: 4px 8px;
+.item-num-input {
+  width: 40px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  padding: 4px 4px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.status-select {
+  padding: 4px 6px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
+  border: 1px solid #30363d;
+  background: #161b22;
+  color: #f0f6fc;
+}
+.status-select.online {
+  color: #3fb950;
+  border-color: #3fb95044;
+}
+.status-select.damaged {
+  color: #d29922;
+  border-color: #d2992244;
+}
+.status-select.offline {
+  color: #f85149;
+  border-color: #f8514944;
+}
+
+.btn-fire {
+  background: #da3633;
+  color: #ffffff;
   border: none;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.8rem;
   cursor: pointer;
 }
-.status-btn.online {
-  background: #23863622;
-  color: #3fb950;
-  border: 1px solid #3fb95044;
-}
-.status-btn.damaged {
-  background: #da363322;
-  color: #f85149;
-  border: 1px solid #f8514944;
+.btn-fire:disabled {
+  background: #21262d;
+  color: #8b949e;
+  cursor: not-allowed;
 }
 
 .item-level-input {
-  width: 50px;
-  background: #0d1117;
+  width: 45px;
+  background: #161b22;
   border: 1px solid #30363d;
   color: #f0f6fc;
   text-align: center;
-  padding: 6px 4px;
+  padding: 3px 4px;
   border-radius: 4px;
 }
 
@@ -894,7 +1186,7 @@ export default {
   border: none;
   color: #8b949e;
   cursor: pointer;
-  padding: 4px;
+  padding: 2px 6px;
 }
 .btn-remove:hover {
   color: #f85149;
@@ -969,7 +1261,8 @@ export default {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.preset-select {
   background: #0d1117;
   border: 1px solid #30363d;
   color: #f0f6fc;
