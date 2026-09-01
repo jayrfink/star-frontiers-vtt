@@ -671,13 +671,9 @@ export default {
         const idx = this.ships.findIndex((s) => s.id === sheet.id);
         if (idx !== -1) {
           this.ships[idx] = sheet;
-          if (this.selectedShip && this.selectedShip.id === sheet.id) {
-            this.selectedShip = {
-              ...sheet,
-              defenses: this.normalizeDefenses(sheet.defenses),
-              weapons: this.normalizeWeapons(sheet.weapons),
-            };
-          }
+        }
+        if (this.selectedShip && this.selectedShip.id === sheet.id) {
+          this.selectShip(sheet);
         }
       }
     },
@@ -686,7 +682,7 @@ export default {
         const id = payload.id;
         this.ships = this.ships.filter((s) => s.id !== id);
         if (this.selectedShip && this.selectedShip.id === id) {
-          this.selectedShip = this.ships.length > 0 ? { ...this.ships[0] } : null;
+          this.selectShip(this.ships.length > 0 ? this.ships[0] : null);
         }
       }
     },
