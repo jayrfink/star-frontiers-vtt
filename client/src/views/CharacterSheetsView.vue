@@ -318,11 +318,11 @@ export default {
     async fetchCharacters() {
       this.loading = true;
       try {
-        const res = await fetch('/api/characters');
+        const res = await fetch('/api/characters', { credentials: 'include' });
         if (res.ok) {
           this.characters = await res.json();
           if (this.characters.length > 0 && !this.selectedChar) {
-            this.selectedChar = { ...this.characters[0] };
+            this.selectedChar = JSON.parse(JSON.stringify(this.characters[0]));
           }
         }
       } catch (err) {
@@ -361,6 +361,7 @@ export default {
         const res = await fetch('/api/characters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload),
         });
         if (res.ok) {
@@ -384,6 +385,7 @@ export default {
         const res = await fetch(`/api/characters/${this.selectedChar.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(this.selectedChar),
         });
         if (res.ok) {
@@ -407,7 +409,10 @@ export default {
     async deleteCharacter(id) {
       if (!confirm('Are you sure you want to delete this character?')) return;
       try {
-        const res = await fetch(`/api/characters/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/characters/${id}`, { 
+          method: 'DELETE',
+          credentials: 'include'
+        });
         if (res.ok) {
           this.characters = this.characters.filter((c) => c.id !== id);
           if (this.selectedChar && this.selectedChar.id === id) {

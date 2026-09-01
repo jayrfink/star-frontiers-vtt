@@ -448,7 +448,7 @@ export default {
     async fetchShips() {
       this.loading = true;
       try {
-        const res = await fetch('/api/ships');
+        const res = await fetch('/api/ships', { credentials: 'include' });
         if (res.ok) {
           this.ships = await res.json();
           if (this.ships.length > 0 && !this.selectedShip) {
@@ -463,12 +463,11 @@ export default {
     },
     selectShip(ship) {
       const copy = JSON.parse(JSON.stringify(ship));
+      copy.type = copy.type || copy.ship_type || 'Fighter';
+      copy.max_hull_points = copy.max_hull_points !== undefined ? copy.max_hull_points : (copy.hull_points || 50);
+      copy.current_hull_points = copy.current_hull_points !== undefined ? copy.current_hull_points : (copy.current_hp !== undefined ? copy.current_hp : copy.max_hull_points);
       copy.defenses = this.normalizeDefenses(copy.defenses);
       copy.weapons = this.normalizeWeapons(copy.weapons);
-      if (copy.hull_points !== undefined && copy.max_hull_points === undefined) {
-        copy.max_hull_points = copy.hull_points;
-        copy.current_hull_points = copy.hull_points;
-      }
       this.selectedShip = copy;
     },
     applyPresetToCreateForm() {
@@ -503,18 +502,24 @@ export default {
       this.updateShip();
     },
     async createShip() {
-      if (!this.newShipForm.name.trim()) return;
+      if (!this.newShipForm.name || !this.newShipForm.name.trim()) return;
       this.creating = true;
       try {
         const payload = {
-          ...this.newShipForm,
-          current_hull_points: this.newShipForm.max_hull_points,
+          name: this.newShipForm.name.trim(),
+          ship_type: this.newShipForm.type || 'Fighter',
+          adf: this.newShipForm.adf || 2,
+          mr: this.newShipForm.mr || 2,
+          dcr: this.newShipForm.dcr || 50,
+          hull_points: this.newShipForm.max_hull_points || 50,
+          current_hp: this.newShipForm.max_hull_points || 50,
           defenses: this.normalizeDefenses(this.newShipForm.defenses),
           weapons: this.normalizeWeapons(this.newShipForm.weapons),
         };
         const res = await fetch('/api/ships', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload),
         });
         if (res.ok) {
@@ -524,6 +529,10 @@ export default {
             this.ships.push(created);
           }
           this.selectShip(created);
+        } else {
+          const errData = await res.json();
+          console.error('Error creating ship response:', res.status, errData);
+          alert(errData.error || 'Failed to create ship');
         }
       } catch (err) {
         console.error('Error creating ship:', err);
@@ -534,10 +543,17 @@ export default {
     async updateShip() {
       if (!this.selectedShip || !this.selectedShip.id) return;
       try {
+        const payload = {
+          ...this.selectedShip,
+          ship_type: this.selectedShip.type || this.selectedShip.ship_type || 'Fighter',
+          hull_points: this.selectedShip.max_hull_points || this.selectedShip.hull_points || 50,
+          current_hp: this.selectedShip.current_hull_points !== undefined ? this.selectedShip.current_hull_points : (this.selectedShip.current_hp || 50),
+        };
         const res = await fetch(`/api/ships/${this.selectedShip.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.selectedShip),
+          credentials: 'include',
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           const updated = await res.json();
@@ -560,7 +576,10 @@ export default {
     async deleteShip(id) {
       if (!confirm('Are you sure you want to delete this ship?')) return;
       try {
-        const res = await fetch(`/api/ships/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/ships/${id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
         if (res.ok) {
           this.ships = this.ships.filter((s) => s.id !== id);
           if (this.selectedShip && this.selectedShip.id === id) {
