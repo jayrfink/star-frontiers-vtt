@@ -17,7 +17,8 @@ export function createRulebooksRouter() {
         await extractRulebooks();
       }
       const data = fs.readFileSync(RULEBOOKS_JSON, 'utf-8');
-      res.json(JSON.parse(data));
+      res.setHeader('Content-Type', 'application/json');
+      res.send(data);
     } catch (err) {
       console.error('Error fetching rulebooks:', err);
       res.status(500).json({ error: 'Failed to load rulebooks' });

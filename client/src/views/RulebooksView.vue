@@ -90,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import lunr from 'lunr';
 
 const docs = ref([]);
@@ -99,6 +99,10 @@ const searchQuery = ref('');
 const selectedSystem = ref('All');
 const selectedBook = ref('All');
 const selectedItem = ref(null);
+
+watch(selectedSystem, () => {
+  selectedBook.value = 'All';
+});
 
 let index = null;
 const docMap = new Map();
