@@ -41,7 +41,7 @@ export async function extractRulebooks() {
             }
             lastY = item.transform[5];
           }
-          return text;
+          return text + '\f';
         });
       }
     });
