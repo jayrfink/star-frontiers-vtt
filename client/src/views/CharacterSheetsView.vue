@@ -55,11 +55,53 @@
                 <option value="Yazirian">Yazirian</option>
               </select>
             </div>
+            <div class="psa-select-wrap">
+              <label>PSA:</label>
+              <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
+                <option value="Military">Military</option>
+                <option value="Technological">Technological</option>
+                <option value="Biosocial">Biosocial</option>
+              </select>
+            </div>
           </div>
           <div class="race-ability-banner">
-            <strong>Racial Ability:</strong> {{ racialAbilities[selectedChar.race] || 'None' }}
+            <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
           </div>
         </header>
+
+        <!-- Derived Tactical Sub-Stats Bar -->
+        <section class="tactical-bar card">
+          <div class="tactical-stat">
+            <span class="tactical-label">IM</span>
+            <span class="tactical-value">+{{ derivedIM }}</span>
+          </div>
+          <div class="tactical-stat">
+            <span class="tactical-label">Punch Dmg</span>
+            <span class="tactical-value">{{ derivedPunchDmg }}d6</span>
+          </div>
+          <div class="tactical-stat">
+            <span class="tactical-label">Melee Base Hit</span>
+            <span class="tactical-value">{{ derivedMeleeHit }}%</span>
+          </div>
+          <div class="tactical-stat">
+            <span class="tactical-label">Movement (Walk/Run/Glide)</span>
+            <span class="tactical-value">
+              {{ movementRates.walk }} / {{ movementRates.run }} / {{ movementRates.glide }} m/s
+            </span>
+          </div>
+          <div class="tactical-stat encumbrance-stat">
+            <span class="tactical-label">Encumbrance ({{ totalInventoryWeight }} / {{ unencumberedMaxWeight }} kg)</span>
+            <div class="encumbrance-bar-bg">
+              <div
+                class="encumbrance-bar-fill"
+                :style="{ width: encumbrancePct + '%', backgroundColor: encumbranceColor }"
+              ></div>
+            </div>
+            <span class="encumbrance-sub" :class="{ 'over-limit': isOverloaded }">
+              Max Carry: {{ maxCarryWeight }} kg
+            </span>
+          </div>
+        </section>
 
         <!-- Quick Stamina Tracker -->
         <section class="stamina-section card">
@@ -90,58 +132,161 @@
           </div>
         </section>
 
-        <!-- Primary Stats Grid -->
+        <!-- Primary Stats Grid with Point-Shift Controls -->
         <section class="stats-section card">
           <h4>Primary D100 Stats</h4>
           <div class="stats-grid">
-            <div class="stat-box">
-              <div class="stat-label">STR / STA</div>
-              <div class="stat-sublabel">Strength / Stamina</div>
-              <input
-                type="number"
-                v-model.number="selectedChar.str_sta"
-                @change="updateCharacter"
-                class="stat-input"
-                min="1"
-                max="100"
-              />
+            <!-- STR / STA -->
+            <div class="stat-pair-box">
+              <div class="stat-pair-header">STR / STA</div>
+              <div class="stat-inputs-row">
+                <div class="sub-stat">
+                  <label>STR</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.str"
+                    @change="onStatChange('str')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+                <div class="shift-controls">
+                  <button class="btn-shift" title="Shift point to STA" @click="shiftStat('str', 'sta', -1)">◄</button>
+                  <button class="btn-shift" title="Shift point to STR" @click="shiftStat('str', 'sta', 1)">►</button>
+                </div>
+                <div class="sub-stat">
+                  <label>STA</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.sta"
+                    @change="onStatChange('sta')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">DEX / RS</div>
-              <div class="stat-sublabel">Dexterity / Reaction Speed</div>
-              <input
-                type="number"
-                v-model.number="selectedChar.dex_rs"
-                @change="updateCharacter"
-                class="stat-input"
-                min="1"
-                max="100"
-              />
+
+            <!-- DEX / RS -->
+            <div class="stat-pair-box">
+              <div class="stat-pair-header">DEX / RS</div>
+              <div class="stat-inputs-row">
+                <div class="sub-stat">
+                  <label>DEX</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.dex"
+                    @change="onStatChange('dex')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+                <div class="shift-controls">
+                  <button class="btn-shift" title="Shift point to RS" @click="shiftStat('dex', 'rs', -1)">◄</button>
+                  <button class="btn-shift" title="Shift point to DEX" @click="shiftStat('dex', 'rs', 1)">►</button>
+                </div>
+                <div class="sub-stat">
+                  <label>RS</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.rs"
+                    @change="onStatChange('rs')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">INT / LOG</div>
-              <div class="stat-sublabel">Intuition / Logic</div>
-              <input
-                type="number"
-                v-model.number="selectedChar.int_log"
-                @change="updateCharacter"
-                class="stat-input"
-                min="1"
-                max="100"
-              />
+
+            <!-- INT / LOG -->
+            <div class="stat-pair-box">
+              <div class="stat-pair-header">INT / LOG</div>
+              <div class="stat-inputs-row">
+                <div class="sub-stat">
+                  <label>INT</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.int"
+                    @change="onStatChange('int')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+                <div class="shift-controls">
+                  <button class="btn-shift" title="Shift point to LOG" @click="shiftStat('int', 'log', -1)">◄</button>
+                  <button class="btn-shift" title="Shift point to INT" @click="shiftStat('int', 'log', 1)">►</button>
+                </div>
+                <div class="sub-stat">
+                  <label>LOG</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.log"
+                    @change="onStatChange('log')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">PER / LDR</div>
-              <div class="stat-sublabel">Personality / Leadership</div>
-              <input
-                type="number"
-                v-model.number="selectedChar.per_ldr"
-                @change="updateCharacter"
-                class="stat-input"
-                min="1"
-                max="100"
-              />
+
+            <!-- PER / LDR -->
+            <div class="stat-pair-box">
+              <div class="stat-pair-header">PER / LDR</div>
+              <div class="stat-inputs-row">
+                <div class="sub-stat">
+                  <label>PER</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.per"
+                    @change="onStatChange('per')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+                <div class="shift-controls">
+                  <button class="btn-shift" title="Shift point to LDR" @click="shiftStat('per', 'ldr', -1)">◄</button>
+                  <button class="btn-shift" title="Shift point to PER" @click="shiftStat('per', 'ldr', 1)">►</button>
+                </div>
+                <div class="sub-stat">
+                  <label>LDR</label>
+                  <input
+                    type="number"
+                    v-model.number="selectedChar.ldr"
+                    @change="onStatChange('ldr')"
+                    class="stat-input"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+              </div>
             </div>
+          </div>
+        </section>
+
+        <!-- Detailed Racial Abilities Panel -->
+        <section class="card racial-panel">
+          <h4>Racial Traits & Abilities</h4>
+          <div v-if="selectedChar.race === 'Human'" class="racial-details">
+            <p><strong>Human Adaptability:</strong> Versatile species. Receives a +5 bonus to any single ability score during creation.</p>
+          </div>
+          <div v-else-if="selectedChar.race === 'Dralasite'" class="racial-details">
+            <p><strong>Elasticity:</strong> Can sprout up to <strong>{{ dralasiteLimbsLimit }}</strong> limbs (DEX / 10).</p>
+            <p><strong>Lie Detection:</strong> <strong>{{ lieDetectionChance }}%</strong> base chance (5% base + 5% per level if skill used).</p>
+          </div>
+          <div v-else-if="selectedChar.race === 'Vrusk'" class="racial-details">
+            <p><strong>Ambidexterity:</strong> Can use either hand without off-hand penalty.</p>
+            <p><strong>Comprehension:</strong> <strong>{{ comprehensionChance }}%</strong> base chance to understand unknown machinery/technology.</p>
+          </div>
+          <div v-else-if="selectedChar.race === 'Yazirian'" class="racial-details">
+            <p><strong>Gliding:</strong> Can glide using skin membranes (Glide movement: 4 m/s).</p>
+            <p><strong>Battle Rage:</strong> <strong>{{ battleRageChance }}%</strong> base chance. When enraged, gains +20 bonus to hit in melee.</p>
           </div>
         </section>
 
@@ -150,21 +295,24 @@
           <!-- Skills -->
           <section class="card list-card">
             <div class="list-header">
-              <h4>Skills</h4>
+              <h4>Skills & Experience</h4>
               <button class="btn-secondary" @click="addSkill">+ Add Skill</button>
             </div>
             <div v-if="!selectedChar.skills || selectedChar.skills.length === 0" class="empty-list">
               No skills added.
             </div>
             <ul class="items-list">
-              <li v-for="(skill, index) in selectedChar.skills" :key="index" class="item-row">
-                <input
-                  type="text"
-                  v-model="skill.name"
-                  @change="updateCharacter"
-                  placeholder="Skill Name"
-                  class="item-name-input"
-                />
+              <li v-for="(skill, index) in selectedChar.skills" :key="index" class="item-row skill-row">
+                <div class="skill-main-select">
+                  <select v-model="skill.name" @change="updateCharacter" class="select-official-skill">
+                    <option v-for="offSk in officialSkills" :key="offSk.name" :value="offSk.name">
+                      {{ offSk.name }} ({{ offSk.psa }})
+                    </option>
+                  </select>
+                  <span class="skill-chance-badge" title="Calculated Success Chance">
+                    {{ getSkillSuccessChance(skill) }}%
+                  </span>
+                </div>
                 <div class="level-wrap">
                   <label>Lvl:</label>
                   <input
@@ -175,6 +323,14 @@
                     max="6"
                     class="item-level-input"
                   />
+                  <button
+                    v-if="skill.level < 6"
+                    class="btn-xp-upgrade"
+                    :title="`Upgrade to Level ${skill.level + 1}`"
+                    @click="upgradeSkillLevel(index)"
+                  >
+                    +Lvl ({{ getXPCost(skill.name, skill.level + 1) }} XP)
+                  </button>
                 </div>
                 <button class="btn-remove" @click="removeSkill(index)">✕</button>
               </li>
@@ -184,14 +340,14 @@
           <!-- Inventory -->
           <section class="card list-card">
             <div class="list-header">
-              <h4>Inventory</h4>
+              <h4>Inventory & Mass</h4>
               <button class="btn-secondary" @click="addInventoryItem">+ Add Item</button>
             </div>
             <div v-if="!selectedChar.inventory || selectedChar.inventory.length === 0" class="empty-list">
               No equipment in inventory.
             </div>
             <ul class="items-list">
-              <li v-for="(item, index) in selectedChar.inventory" :key="index" class="item-row">
+              <li v-for="(item, index) in selectedChar.inventory" :key="index" class="item-row inventory-row">
                 <input
                   type="text"
                   v-model="item.name"
@@ -199,6 +355,17 @@
                   placeholder="Item Name"
                   class="item-name-input"
                 />
+                <div class="item-weight-wrap">
+                  <label>Kg:</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    v-model.number="item.weight"
+                    @change="updateCharacter"
+                    min="0"
+                    class="item-weight-input"
+                  />
+                </div>
                 <div class="level-wrap">
                   <label>Qty:</label>
                   <input
@@ -235,6 +402,14 @@
               <option value="Yazirian">Yazirian (Battle Rage & Gliding)</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Primary System Area (PSA)</label>
+            <select v-model="newCharForm.psa">
+              <option value="Military">Military</option>
+              <option value="Technological">Technological</option>
+              <option value="Biosocial">Biosocial</option>
+            </select>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>STR / STA</label>
@@ -267,6 +442,16 @@
 
 <script>
 import { socket } from '../services/socket.js';
+import {
+  RACES_DATA,
+  OFFICIAL_SKILLS,
+  calcIM,
+  calcPunchDamage,
+  calcMeleeHit,
+  calcMaxCarry,
+  calcUnencumberedMax,
+  calcXPCost,
+} from '../constants/characterRules.js';
 
 export default {
   name: 'CharacterSheetsView',
@@ -277,21 +462,18 @@ export default {
       loading: true,
       creating: false,
       showCreateModal: false,
+      racesData: RACES_DATA,
+      officialSkills: OFFICIAL_SKILLS,
       newCharForm: {
         name: '',
         race: 'Human',
+        psa: 'Military',
         str_sta: 50,
         dex_rs: 50,
         int_log: 50,
         per_ldr: 50,
         max_stamina: 50,
         current_stamina: 50,
-      },
-      racialAbilities: {
-        Human: 'Adaptable - Receives +5% bonus experience overall.',
-        Dralasite: 'Lie Detection (5% base + 5%/lvl) & Elasticity (can sprout up to 5 limbs).',
-        Vrusk: 'Ambidexterity (no off-hand penalty) & Comprehensive (15% base chance to understand unknown tech).',
-        Yazirian: 'Battle Rage (+20 to hit when enraged) & Gliding (can glide down from heights).',
       },
     };
   },
@@ -306,6 +488,65 @@ export default {
       if (this.staminaPercentage > 25) return '#ff9800';
       return '#f44336';
     },
+    derivedIM() {
+      if (!this.selectedChar) return 5;
+      return calcIM(this.selectedChar.rs);
+    },
+    derivedPunchDmg() {
+      if (!this.selectedChar) return '3';
+      return calcPunchDamage(this.selectedChar.str);
+    },
+    derivedMeleeHit() {
+      if (!this.selectedChar) return 25;
+      return calcMeleeHit(this.selectedChar.str, this.selectedChar.dex);
+    },
+    maxCarryWeight() {
+      if (!this.selectedChar) return 50;
+      return calcMaxCarry(this.selectedChar.str);
+    },
+    unencumberedMaxWeight() {
+      if (!this.selectedChar) return 25;
+      return calcUnencumberedMax(this.selectedChar.str);
+    },
+    totalInventoryWeight() {
+      if (!this.selectedChar || !this.selectedChar.inventory) return 0;
+      return this.selectedChar.inventory.reduce((sum, item) => {
+        const qty = item.quantity || 1;
+        const w = Number(item.weight) || 0;
+        return sum + qty * w;
+      }, 0);
+    },
+    encumbrancePct() {
+      if (!this.unencumberedMaxWeight) return 0;
+      return Math.min(100, Math.round((this.totalInventoryWeight / this.unencumberedMaxWeight) * 100));
+    },
+    encumbranceColor() {
+      if (this.totalInventoryWeight > this.maxCarryWeight) return '#f44336';
+      if (this.totalInventoryWeight > this.unencumberedMaxWeight) return '#ff9800';
+      return '#4caf50';
+    },
+    isOverloaded() {
+      return this.totalInventoryWeight > this.maxCarryWeight;
+    },
+    movementRates() {
+      if (!this.selectedChar || !RACES_DATA[this.selectedChar.race]) {
+        return { walk: 2, run: 6, glide: 0 };
+      }
+      return RACES_DATA[this.selectedChar.race].movement;
+    },
+    dralasiteLimbsLimit() {
+      if (!this.selectedChar) return 5;
+      return Math.floor((this.selectedChar.dex || 50) / 10);
+    },
+    lieDetectionChance() {
+      return 5;
+    },
+    comprehensionChance() {
+      return 15;
+    },
+    battleRageChance() {
+      return 5;
+    },
   },
   mounted() {
     this.fetchCharacters();
@@ -315,12 +556,30 @@ export default {
     this.removeSocketListeners();
   },
   methods: {
+    normalizeCharacterData(char) {
+      const c = { ...char };
+      if (!c.psa) c.psa = 'Military';
+      // Ensure individual stats are set from paired stats if missing
+      if (c.str === undefined) c.str = c.str_sta || 50;
+      if (c.sta === undefined) c.sta = c.str_sta || 50;
+      if (c.dex === undefined) c.dex = c.dex_rs || 50;
+      if (c.rs === undefined) c.rs = c.dex_rs || 50;
+      if (c.int === undefined) c.int = c.int_log || 50;
+      if (c.log === undefined) c.log = c.int_log || 50;
+      if (c.per === undefined) c.per = c.per_ldr || 50;
+      if (c.ldr === undefined) c.ldr = c.per_ldr || 50;
+
+      if (!c.skills) c.skills = [];
+      if (!c.inventory) c.inventory = [];
+      return c;
+    },
     async fetchCharacters() {
       this.loading = true;
       try {
         const res = await fetch('/api/characters', { credentials: 'include' });
         if (res.ok) {
-          this.characters = await res.json();
+          const data = await res.json();
+          this.characters = data.map((c) => this.normalizeCharacterData(c));
           if (this.characters.length > 0 && !this.selectedChar) {
             this.selectedChar = JSON.parse(JSON.stringify(this.characters[0]));
           }
@@ -332,12 +591,13 @@ export default {
       }
     },
     selectCharacter(char) {
-      this.selectedChar = JSON.parse(JSON.stringify(char));
+      this.selectedChar = JSON.parse(JSON.stringify(this.normalizeCharacterData(char)));
     },
     openCreateModal() {
       this.newCharForm = {
         name: '',
         race: 'Human',
+        psa: 'Military',
         str_sta: 50,
         dex_rs: 50,
         int_log: 50,
@@ -353,6 +613,14 @@ export default {
       try {
         const payload = {
           ...this.newCharForm,
+          str: this.newCharForm.str_sta,
+          sta: this.newCharForm.str_sta,
+          dex: this.newCharForm.dex_rs,
+          rs: this.newCharForm.dex_rs,
+          int: this.newCharForm.int_log,
+          log: this.newCharForm.int_log,
+          per: this.newCharForm.per_ldr,
+          ldr: this.newCharForm.per_ldr,
           max_stamina: this.newCharForm.str_sta,
           current_stamina: this.newCharForm.str_sta,
           skills: [],
@@ -365,9 +633,9 @@ export default {
           body: JSON.stringify(payload),
         });
         if (res.ok) {
-          const created = await res.json();
+          const rawCreated = await res.json();
+          const created = this.normalizeCharacterData(rawCreated);
           this.showCreateModal = false;
-          // If socket hasn't added it yet, add locally
           if (!this.characters.some((c) => c.id === created.id)) {
             this.characters.push(created);
           }
@@ -389,7 +657,8 @@ export default {
           body: JSON.stringify(this.selectedChar),
         });
         if (res.ok) {
-          const updated = await res.json();
+          const rawUpdated = await res.json();
+          const updated = this.normalizeCharacterData(rawUpdated);
           const idx = this.characters.findIndex((c) => c.id === updated.id);
           if (idx !== -1) {
             this.characters[idx] = { ...updated };
@@ -398,6 +667,18 @@ export default {
       } catch (err) {
         console.error('Error updating character:', err);
       }
+    },
+    shiftStat(statA, statB, amount) {
+      if (!this.selectedChar) return;
+      const newA = (this.selectedChar[statA] || 50) + amount;
+      const newB = (this.selectedChar[statB] || 50) - amount;
+      if (newA < 1 || newA > 100 || newB < 1 || newB > 100) return;
+      this.selectedChar[statA] = newA;
+      this.selectedChar[statB] = newB;
+      this.updateCharacter();
+    },
+    onStatChange(statName) {
+      this.updateCharacter();
     },
     adjustStamina(amount) {
       if (!this.selectedChar) return;
@@ -409,14 +690,14 @@ export default {
     async deleteCharacter(id) {
       if (!confirm('Are you sure you want to delete this character?')) return;
       try {
-        const res = await fetch(`/api/characters/${id}`, { 
+        const res = await fetch(`/api/characters/${id}`, {
           method: 'DELETE',
-          credentials: 'include'
+          credentials: 'include',
         });
         if (res.ok) {
           this.characters = this.characters.filter((c) => c.id !== id);
           if (this.selectedChar && this.selectedChar.id === id) {
-            this.selectedChar = this.characters.length > 0 ? { ...this.characters[0] } : null;
+            this.selectedChar = this.characters.length > 0 ? JSON.parse(JSON.stringify(this.characters[0])) : null;
           }
         }
       } catch (err) {
@@ -425,16 +706,42 @@ export default {
     },
     addSkill() {
       if (!this.selectedChar.skills) this.selectedChar.skills = [];
-      this.selectedChar.skills.push({ name: 'New Skill', level: 1 });
+      const defaultSkill = OFFICIAL_SKILLS[0].name;
+      this.selectedChar.skills.push({ name: defaultSkill, level: 1 });
       this.updateCharacter();
     },
     removeSkill(index) {
       this.selectedChar.skills.splice(index, 1);
       this.updateCharacter();
     },
+    upgradeSkillLevel(index) {
+      const sk = this.selectedChar.skills[index];
+      if (sk && sk.level < 6) {
+        sk.level += 1;
+        this.updateCharacter();
+      }
+    },
+    getXPCost(skillName, targetLevel) {
+      const charPSA = this.selectedChar ? this.selectedChar.psa || 'Military' : 'Military';
+      return calcXPCost(skillName, targetLevel, charPSA);
+    },
+    getSkillSuccessChance(skill) {
+      if (!this.selectedChar) return 0;
+      const offSk = OFFICIAL_SKILLS.find((s) => s.name === skill.name);
+      let baseVal = 50;
+      if (offSk) {
+        if (offSk.baseChance === 'Dexterity') baseVal = this.selectedChar.dex || 50;
+        else if (offSk.baseChance === 'Logic') baseVal = this.selectedChar.log || 50;
+        else if (offSk.baseChance === 'Intuition') baseVal = this.selectedChar.int || 50;
+        else if (offSk.baseChance === 'Personality') baseVal = this.selectedChar.per || 50;
+        else if (offSk.baseChance.includes('Melee Base')) baseVal = this.derivedMeleeHit;
+      }
+      const lvlBonus = (skill.level || 1) * 10;
+      return baseVal + lvlBonus;
+    },
     addInventoryItem() {
       if (!this.selectedChar.inventory) this.selectedChar.inventory = [];
-      this.selectedChar.inventory.push({ name: 'New Item', quantity: 1 });
+      this.selectedChar.inventory.push({ name: 'New Item', quantity: 1, weight: 1.0 });
       this.updateCharacter();
     },
     removeInventoryItem(index) {
@@ -453,7 +760,7 @@ export default {
     },
     handleSheetCreated(payload) {
       if (payload && payload.type === 'character' && payload.sheet) {
-        const sheet = payload.sheet;
+        const sheet = this.normalizeCharacterData(payload.sheet);
         const idx = this.characters.findIndex((c) => c.id === sheet.id);
         if (idx === -1) {
           this.characters.push(sheet);
@@ -464,12 +771,12 @@ export default {
     },
     handleSheetUpdated(payload) {
       if (payload && payload.type === 'character' && payload.sheet) {
-        const sheet = payload.sheet;
+        const sheet = this.normalizeCharacterData(payload.sheet);
         const idx = this.characters.findIndex((c) => c.id === sheet.id);
         if (idx !== -1) {
           this.characters[idx] = sheet;
           if (this.selectedChar && this.selectedChar.id === sheet.id) {
-            this.selectedChar = { ...sheet };
+            this.selectedChar = JSON.parse(JSON.stringify(sheet));
           }
         }
       }
@@ -479,7 +786,7 @@ export default {
         const id = payload.id;
         this.characters = this.characters.filter((c) => c.id !== id);
         if (this.selectedChar && this.selectedChar.id === id) {
-          this.selectedChar = this.characters.length > 0 ? { ...this.characters[0] } : null;
+          this.selectedChar = this.characters.length > 0 ? JSON.parse(JSON.stringify(this.characters[0])) : null;
         }
       }
     },
@@ -607,7 +914,7 @@ export default {
 }
 
 .sheet-container {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -649,14 +956,16 @@ export default {
   border-radius: 4px;
 }
 
-.race-select-wrap {
+.race-select-wrap,
+.psa-select-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 600;
 }
 
-.select-race {
+.select-race,
+.select-psa {
   background: #0d1117;
   border: 1px solid #30363d;
   color: #58a6ff;
@@ -675,6 +984,62 @@ export default {
 
 .race-ability-banner strong {
   color: #f0f6fc;
+}
+
+/* Derived Tactical Sub-Stats Bar */
+.tactical-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) 2fr;
+  gap: 12px;
+  align-items: center;
+  background: #0d1117;
+}
+
+.tactical-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tactical-label {
+  font-size: 0.75rem;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tactical-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #58a6ff;
+}
+
+.encumbrance-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.encumbrance-bar-bg {
+  height: 8px;
+  background: #21262d;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.encumbrance-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.encumbrance-sub {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+.encumbrance-sub.over-limit {
+  color: #f85149;
+  font-weight: bold;
 }
 
 /* Stamina Section */
@@ -759,39 +1124,85 @@ export default {
   gap: 12px;
 }
 
-.stat-box {
+.stat-pair-box {
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 6px;
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.stat-label {
+.stat-pair-header {
   font-weight: 700;
-  color: #f0f6fc;
-}
-
-.stat-sublabel {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   color: #8b949e;
   text-align: center;
 }
 
+.stat-inputs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.sub-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.sub-stat label {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #f0f6fc;
+}
+
 .stat-input {
-  width: 70px;
-  font-size: 1.3rem;
+  width: 48px;
+  font-size: 1.1rem;
   font-weight: 700;
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
   color: #58a6ff;
   border-radius: 4px;
-  padding: 4px;
-  margin-top: 4px;
+  padding: 4px 2px;
+}
+
+.shift-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-shift {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.btn-shift:hover {
+  background: #30363d;
+  color: #58a6ff;
+}
+
+/* Racial Traits Panel */
+.racial-panel h4 {
+  margin: 0 0 10px 0;
+  color: #58a6ff;
+}
+
+.racial-details p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: #c9d1d9;
 }
 
 /* Lists */
@@ -834,6 +1245,47 @@ export default {
   gap: 8px;
 }
 
+.skill-main-select {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.select-official-skill {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.skill-chance-badge {
+  background: #1f6feb33;
+  color: #58a6ff;
+  font-weight: bold;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #1f6feb66;
+}
+
+.btn-xp-upgrade {
+  background: #23863633;
+  color: #3fb950;
+  border: 1px solid #23863666;
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-xp-upgrade:hover {
+  background: #23863666;
+}
+
 .item-name-input {
   flex: 1;
   background: #0d1117;
@@ -843,6 +1295,7 @@ export default {
   border-radius: 4px;
 }
 
+.item-weight-wrap,
 .level-wrap {
   display: flex;
   align-items: center;
@@ -851,8 +1304,18 @@ export default {
   color: #8b949e;
 }
 
+.item-weight-input {
+  width: 48px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 4px;
+}
+
 .item-level-input {
-  width: 45px;
+  width: 42px;
   background: #0d1117;
   border: 1px solid #30363d;
   color: #f0f6fc;
@@ -918,7 +1381,7 @@ export default {
   border: 1px solid #30363d;
   border-radius: 8px;
   padding: 24px;
-  width: 420px;
+  width: 440px;
   max-width: 90vw;
 }
 
