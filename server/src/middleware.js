@@ -9,15 +9,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SQLiteStore = connectSqlite3(session);
 
 export function createSessionMiddleware(dataDir) {
-  const dir = dataDir || path.join(__dirname, '../../data');
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  return session({
-    store: new SQLiteStore({
+  let store;
+  if (dataDir === ':memory:') {
+    store = new session.MemoryStore();
+  } else {
+    const dir = dataDir || path.join(__dirname, '../../data');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    store = new SQLiteStore({
       db: 'sessions.db',
       dir,
-    }),
+    });
+  }
+  return session({
+    store,
     secret: process.env.SESSION_SECRET || 'sf-vtt-dev-secret',
     resave: false,
     saveUninitialized: false,

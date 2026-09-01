@@ -7,12 +7,11 @@ import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
 
 describe('Auth API', () => {
-  let db, app, sessionDir;
+  let db, app;
 
   beforeEach(() => {
-    sessionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-vtt-test-'));
     db = createTestDb();
-    app = createApp(db, sessionDir);
+    app = createApp(db, ':memory:');
   });
 
   afterEach(() => {

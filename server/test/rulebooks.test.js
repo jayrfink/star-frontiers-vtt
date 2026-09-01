@@ -7,19 +7,15 @@ import path from 'path';
 import fs from 'fs';
 
 describe('Rulebooks API', () => {
-  let db, app, testSessionDir;
+  let db, app;
 
   beforeEach(() => {
     db = createTestDb();
-    testSessionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-vtt-test-'));
-    app = createApp(db, testSessionDir);
+    app = createApp(db, ':memory:');
   });
 
   afterEach(() => {
     if (db) db.close();
-    if (testSessionDir && fs.existsSync(testSessionDir)) {
-      fs.rmSync(testSessionDir, { recursive: true, force: true });
-    }
   });
 
   it('rejects unauthenticated requests with 401', async () => {
