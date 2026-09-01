@@ -1,10 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from './stores/auth.js';
 import LoginView from './views/LoginView.vue';
+import DashboardView from './views/DashboardView.vue';
+import RpgVttView from './views/RpgVttView.vue';
+import SpaceVttView from './views/SpaceVttView.vue';
+import CharacterSheetsView from './views/CharacterSheetsView.vue';
+import ShipSheetsView from './views/ShipSheetsView.vue';
+import RulebooksView from './views/RulebooksView.vue';
 
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'Login', component: LoginView, meta: { guest: true } },
+  {
+    path: '/dashboard',
+    component: DashboardView,
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', redirect: '/dashboard/rpg-vtt' },
+      { path: 'rpg-vtt', name: 'RpgVtt', component: RpgVttView },
+      { path: 'space-vtt', name: 'SpaceVtt', component: SpaceVttView },
+      { path: 'character-sheets', name: 'CharacterSheets', component: CharacterSheetsView },
+      { path: 'ship-sheets', name: 'ShipSheets', component: ShipSheetsView },
+      { path: 'rulebooks', name: 'Rulebooks', component: RulebooksView },
+    ],
+  },
 ];
 
 const router = createRouter({
