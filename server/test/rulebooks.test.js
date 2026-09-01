@@ -7,15 +7,18 @@ import path from 'path';
 import fs from 'fs';
 
 describe('Rulebooks API', () => {
-  let db, app;
+  let db, app, server;
 
   beforeEach(() => {
     db = createTestDb();
-    app = createApp(db, ':memory:');
+    const result = createApp(db, ':memory:');
+    app = result.app;
+    server = result.server;
   });
 
   afterEach(() => {
     if (db) db.close();
+    if (server && server.close) server.close();
   });
 
   it('rejects unauthenticated requests with 401', async () => {

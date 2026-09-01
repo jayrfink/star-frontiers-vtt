@@ -7,15 +7,18 @@ import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
 
 describe('Auth API', () => {
-  let db, app;
+  let db, app, server;
 
   beforeEach(() => {
     db = createTestDb();
-    app = createApp(db, ':memory:');
+    const result = createApp(db, ':memory:');
+    app = result.app;
+    server = result.server;
   });
 
   afterEach(() => {
     if (db) db.close();
+    if (server && server.close) server.close();
   });
 
   describe('POST /api/auth/register', () => {
