@@ -564,10 +564,13 @@ export default {
       if (c.sta === undefined) c.sta = c.str_sta || 50;
       if (c.dex === undefined) c.dex = c.dex_rs || 50;
       if (c.rs === undefined) c.rs = c.dex_rs || 50;
-      if (c.int === undefined) c.int = c.int_log || 50;
-      if (c.log === undefined) c.log = c.int_log || 50;
+      c.int = c.int_stat ?? c.int ?? c.int_log ?? 50;
+      c.log = c.log_stat ?? c.log ?? c.int_log ?? 50;
       if (c.per === undefined) c.per = c.per_ldr || 50;
       if (c.ldr === undefined) c.ldr = c.per_ldr || 50;
+
+      c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : (c.sta || 50));
+      c.max_stamina = c.sta !== undefined ? c.sta : (c.max_stamina || 50);
 
       if (!c.skills) c.skills = [];
       if (!c.inventory) c.inventory = [];
@@ -614,15 +617,18 @@ export default {
         const payload = {
           ...this.newCharForm,
           str: this.newCharForm.str_sta,
-          sta: this.newCharForm.str_sta,
+          sta: this.newCharForm.max_stamina ?? this.newCharForm.str_sta,
+          current_sta: this.newCharForm.current_stamina ?? this.newCharForm.str_sta,
           dex: this.newCharForm.dex_rs,
           rs: this.newCharForm.dex_rs,
           int: this.newCharForm.int_log,
           log: this.newCharForm.int_log,
+          int_stat: this.newCharForm.int_log,
+          log_stat: this.newCharForm.int_log,
           per: this.newCharForm.per_ldr,
           ldr: this.newCharForm.per_ldr,
-          max_stamina: this.newCharForm.str_sta,
-          current_stamina: this.newCharForm.str_sta,
+          max_stamina: this.newCharForm.max_stamina ?? this.newCharForm.str_sta,
+          current_stamina: this.newCharForm.current_stamina ?? this.newCharForm.str_sta,
           skills: [],
           inventory: [],
         };
@@ -650,11 +656,18 @@ export default {
     async updateCharacter() {
       if (!this.selectedChar || !this.selectedChar.id) return;
       try {
+        const payload = {
+          ...this.selectedChar,
+          int_stat: this.selectedChar.int,
+          log_stat: this.selectedChar.log,
+          sta: this.selectedChar.max_stamina,
+          current_sta: this.selectedChar.current_stamina,
+        };
         const res = await fetch(`/api/characters/${this.selectedChar.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(this.selectedChar),
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           const rawUpdated = await res.json();
