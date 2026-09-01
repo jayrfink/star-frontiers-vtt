@@ -1,26 +1,66 @@
 <template>
   <div class="rulebooks-container">
     <div class="filter-bar">
-      <div class="filter-group">
-        <label>System:</label>
-        <select v-model="selectedSystem">
-          <option value="All">All Systems</option>
-          <option value="Alpha Dawn">Alpha Dawn</option>
-          <option value="Knight Hawks">Knight Hawks</option>
-        </select>
+      <div class="mode-toggle">
+        <button
+          :class="{ active: viewMode === 'reader' }"
+          @click="viewMode = 'reader'"
+        >
+          Text Reader
+        </button>
+        <button
+          :class="{ active: viewMode === 'pdf' }"
+          @click="viewMode = 'pdf'"
+        >
+          PDF Viewer
+        </button>
       </div>
-      <div class="filter-group">
-        <label>Book:</label>
-        <select v-model="selectedBook">
-          <option value="All">All Rulebooks</option>
-          <option v-for="b in availableBooks" :key="b.id" :value="b.id">{{ b.title }}</option>
-        </select>
-      </div>
-      <div class="stats-info" v-if="loading">Loading rulebooks...</div>
-      <div class="stats-info" v-else>{{ filteredDocs.length }} entries indexed</div>
+
+      <template v-if="viewMode === 'reader'">
+        <div class="filter-group">
+          <label>System:</label>
+          <select v-model="selectedSystem">
+            <option value="All">All Systems</option>
+            <option value="Alpha Dawn">Alpha Dawn</option>
+            <option value="Knight Hawks">Knight Hawks</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Book:</label>
+          <select v-model="selectedBook">
+            <option value="All">All Rulebooks</option>
+            <option v-for="b in availableBooks" :key="b.id" :value="b.id">{{ b.title }}</option>
+          </select>
+        </div>
+        <div class="stats-info" v-if="loading">Loading rulebooks...</div>
+        <div class="stats-info" v-else>{{ filteredDocs.length }} entries indexed</div>
+      </template>
+
+      <template v-else>
+        <div class="filter-group">
+          <label>Book:</label>
+          <select v-model="pdfBookId">
+            <option v-for="b in pdfBooksList" :key="b.id" :value="b.id">{{ b.title }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Page:</label>
+          <input
+            type="number"
+            v-model.number="pdfPage"
+            min="1"
+            max="200"
+            class="page-input"
+          />
+        </div>
+        <div class="stats-info">
+          <a :href="pdfSrc" target="_blank" rel="noopener" class="new-tab-link">Open in New Tab ↗</a>
+        </div>
+      </template>
     </div>
 
-    <div class="rulebooks-layout">
+    <!-- Reader Mode Layout -->
+    <div v-if="viewMode === 'reader'" class="rulebooks-layout">
       <!-- Left Panel: Search & Results -->
       <aside class="sidebar">
         <div class="search-box">
@@ -74,6 +114,7 @@
               <div class="reader-sub">System: {{ selectedItem.system }} | Page {{ selectedItem.page }}</div>
             </div>
             <div class="nav-controls">
+              <button @click="openPdfAtCurrent" class="pdf-jump-btn">View Original PDF</button>
               <button @click="navigatePage(-1)" :disabled="!hasPrev">← Prev Page</button>
               <button @click="navigatePage(1)" :disabled="!hasNext">Next Page →</button>
             </div>
@@ -86,12 +127,51 @@
         </div>
       </main>
     </div>
+
+    <!-- PDF Viewer Mode Layout -->
+    <div v-else class="pdf-layout">
+      <iframe
+        :key="pdfSrc"
+        :src="pdfSrc"
+        class="pdf-iframe"
+        title="PDF Rulebook Viewer"
+      ></iframe>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import lunr from 'lunr';
+
+const viewMode = ref('reader');
+const pdfBookId = ref('ad-basic');
+const pdfPage = ref(1);
+
+const pdfBooksList = [
+  { id: 'ad-basic', title: 'Alpha Dawn Basic Rules' },
+  { id: 'ad-expanded', title: 'Alpha Dawn Expanded Rules' },
+  { id: 'ad-volturnus', title: 'Crash on Volturnus' },
+  { id: 'kh-basic', title: 'Knight Hawks Basic Rules' },
+  { id: 'kh-expansion', title: 'Knight Hawks Expansion Rules' },
+  { id: 'kh-mission', title: 'Knight Hawks Mission Brief' },
+];
+
+const pdfSrc = computed(() => {
+  return `/api/rulebooks/pdf/${pdfBookId.value}#page=${pdfPage.value || 1}`;
+});
+
+function openPdfAtCurrent() {
+  if (selectedItem.value) {
+    if (selectedItem.value.bookId) {
+      pdfBookId.value = selectedItem.value.bookId;
+    }
+    if (selectedItem.value.page) {
+      pdfPage.value = selectedItem.value.page;
+    }
+  }
+  viewMode.value = 'pdf';
+}
 
 const docs = ref([]);
 const loading = ref(true);
@@ -241,6 +321,31 @@ onMounted(fetchRulebooks);
   border-radius: var(--radius);
 }
 
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-primary);
+  padding: 4px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.mode-toggle button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mode-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 .filter-group {
   display: flex;
   align-items: center;
@@ -252,7 +357,7 @@ onMounted(fetchRulebooks);
   color: var(--text-secondary);
 }
 
-select {
+select, .page-input {
   background: var(--bg-primary);
   color: var(--text-primary);
   border: 1px solid var(--border);
@@ -260,10 +365,24 @@ select {
   padding: 6px 12px;
 }
 
+.page-input {
+  width: 70px;
+}
+
 .stats-info {
   margin-left: auto;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.new-tab-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.new-tab-link:hover {
+  text-decoration: underline;
 }
 
 .rulebooks-layout {
@@ -381,6 +500,17 @@ select {
   gap: 8px;
 }
 
+.pdf-jump-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.pdf-jump-btn:hover {
+  background: var(--bg-tertiary);
+}
+
 .reader-content {
   line-height: 1.7;
   font-size: 15px;
@@ -406,5 +536,20 @@ select {
 
 .empty-icon {
   font-size: 48px;
+}
+
+.pdf-layout {
+  flex: 1;
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.pdf-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 </style>
