@@ -426,42 +426,46 @@ export default {
       this.updateShip();
     },
     setupSocketListeners() {
-      socket.on('sheet:created', (sheet) => {
-        if (sheet && sheet.type === 'ship') {
-          const idx = this.ships.findIndex((s) => s.id === sheet.id);
-          if (idx === -1) {
-            this.ships.push(sheet);
-          } else {
-            this.ships[idx] = sheet;
-          }
-        }
-      });
-
-      socket.on('sheet:updated', (sheet) => {
-        if (sheet && sheet.type === 'ship') {
-          const idx = this.ships.findIndex((s) => s.id === sheet.id);
-          if (idx !== -1) {
-            this.ships[idx] = sheet;
-            if (this.selectedShip && this.selectedShip.id === sheet.id) {
-              this.selectedShip = { ...sheet };
-            }
-          }
-        }
-      });
-
-      socket.on('sheet:deleted', ({ id, type }) => {
-        if (type === 'ship') {
-          this.ships = this.ships.filter((s) => s.id !== id);
-          if (this.selectedShip && this.selectedShip.id === id) {
-            this.selectedShip = this.ships.length > 0 ? { ...this.ships[0] } : null;
-          }
-        }
-      });
+      socket.on('sheet:created', this.handleSheetCreated);
+      socket.on('sheet:updated', this.handleSheetUpdated);
+      socket.on('sheet:deleted', this.handleSheetDeleted);
     },
     removeSocketListeners() {
-      socket.off('sheet:created');
-      socket.off('sheet:updated');
-      socket.off('sheet:deleted');
+      socket.off('sheet:created', this.handleSheetCreated);
+      socket.off('sheet:updated', this.handleSheetUpdated);
+      socket.off('sheet:deleted', this.handleSheetDeleted);
+    },
+    handleSheetCreated(payload) {
+      if (payload && payload.type === 'ship' && payload.sheet) {
+        const sheet = payload.sheet;
+        const idx = this.ships.findIndex((s) => s.id === sheet.id);
+        if (idx === -1) {
+          this.ships.push(sheet);
+        } else {
+          this.ships[idx] = sheet;
+        }
+      }
+    },
+    handleSheetUpdated(payload) {
+      if (payload && payload.type === 'ship' && payload.sheet) {
+        const sheet = payload.sheet;
+        const idx = this.ships.findIndex((s) => s.id === sheet.id);
+        if (idx !== -1) {
+          this.ships[idx] = sheet;
+          if (this.selectedShip && this.selectedShip.id === sheet.id) {
+            this.selectedShip = { ...sheet };
+          }
+        }
+      }
+    },
+    handleSheetDeleted(payload) {
+      if (payload && payload.type === 'ship') {
+        const id = payload.id;
+        this.ships = this.ships.filter((s) => s.id !== id);
+        if (this.selectedShip && this.selectedShip.id === id) {
+          this.selectedShip = this.ships.length > 0 ? { ...this.ships[0] } : null;
+        }
+      }
     },
   },
 };

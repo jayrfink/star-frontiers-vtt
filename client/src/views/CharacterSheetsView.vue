@@ -437,42 +437,46 @@ export default {
       this.updateCharacter();
     },
     setupSocketListeners() {
-      socket.on('sheet:created', (sheet) => {
-        if (sheet && sheet.type === 'character') {
-          const idx = this.characters.findIndex((c) => c.id === sheet.id);
-          if (idx === -1) {
-            this.characters.push(sheet);
-          } else {
-            this.characters[idx] = sheet;
-          }
-        }
-      });
-
-      socket.on('sheet:updated', (sheet) => {
-        if (sheet && sheet.type === 'character') {
-          const idx = this.characters.findIndex((c) => c.id === sheet.id);
-          if (idx !== -1) {
-            this.characters[idx] = sheet;
-            if (this.selectedChar && this.selectedChar.id === sheet.id) {
-              this.selectedChar = { ...sheet };
-            }
-          }
-        }
-      });
-
-      socket.on('sheet:deleted', ({ id, type }) => {
-        if (type === 'character') {
-          this.characters = this.characters.filter((c) => c.id !== id);
-          if (this.selectedChar && this.selectedChar.id === id) {
-            this.selectedChar = this.characters.length > 0 ? { ...this.characters[0] } : null;
-          }
-        }
-      });
+      socket.on('sheet:created', this.handleSheetCreated);
+      socket.on('sheet:updated', this.handleSheetUpdated);
+      socket.on('sheet:deleted', this.handleSheetDeleted);
     },
     removeSocketListeners() {
-      socket.off('sheet:created');
-      socket.off('sheet:updated');
-      socket.off('sheet:deleted');
+      socket.off('sheet:created', this.handleSheetCreated);
+      socket.off('sheet:updated', this.handleSheetUpdated);
+      socket.off('sheet:deleted', this.handleSheetDeleted);
+    },
+    handleSheetCreated(payload) {
+      if (payload && payload.type === 'character' && payload.sheet) {
+        const sheet = payload.sheet;
+        const idx = this.characters.findIndex((c) => c.id === sheet.id);
+        if (idx === -1) {
+          this.characters.push(sheet);
+        } else {
+          this.characters[idx] = sheet;
+        }
+      }
+    },
+    handleSheetUpdated(payload) {
+      if (payload && payload.type === 'character' && payload.sheet) {
+        const sheet = payload.sheet;
+        const idx = this.characters.findIndex((c) => c.id === sheet.id);
+        if (idx !== -1) {
+          this.characters[idx] = sheet;
+          if (this.selectedChar && this.selectedChar.id === sheet.id) {
+            this.selectedChar = { ...sheet };
+          }
+        }
+      }
+    },
+    handleSheetDeleted(payload) {
+      if (payload && payload.type === 'character') {
+        const id = payload.id;
+        this.characters = this.characters.filter((c) => c.id !== id);
+        if (this.selectedChar && this.selectedChar.id === id) {
+          this.selectedChar = this.characters.length > 0 ? { ...this.characters[0] } : null;
+        }
+      }
     },
   },
 };
