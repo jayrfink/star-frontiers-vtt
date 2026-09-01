@@ -561,16 +561,16 @@ export default {
       if (!c.psa) c.psa = 'Military';
       // Ensure individual stats are set from paired stats if missing
       if (c.str === undefined) c.str = c.str_sta || 50;
-      if (c.sta === undefined) c.sta = c.str_sta || 50;
+      if (c.sta === undefined) c.sta = c.max_stamina !== undefined ? c.max_stamina : (c.str_sta || 50);
+      c.max_stamina = c.sta;
+      c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : c.sta);
+
       if (c.dex === undefined) c.dex = c.dex_rs || 50;
       if (c.rs === undefined) c.rs = c.dex_rs || 50;
       c.int = c.int_stat ?? c.int ?? c.int_log ?? 50;
       c.log = c.log_stat ?? c.log ?? c.int_log ?? 50;
       if (c.per === undefined) c.per = c.per_ldr || 50;
       if (c.ldr === undefined) c.ldr = c.per_ldr || 50;
-
-      c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : (c.sta || 50));
-      c.max_stamina = c.sta !== undefined ? c.sta : (c.max_stamina || 50);
 
       if (!c.skills) c.skills = [];
       if (!c.inventory) c.inventory = [];
@@ -656,12 +656,15 @@ export default {
     async updateCharacter() {
       if (!this.selectedChar || !this.selectedChar.id) return;
       try {
+        if (this.selectedChar.sta !== undefined) {
+          this.selectedChar.max_stamina = this.selectedChar.sta;
+        }
         const payload = {
           ...this.selectedChar,
           int_stat: this.selectedChar.int,
           log_stat: this.selectedChar.log,
-          sta: this.selectedChar.max_stamina,
-          current_sta: this.selectedChar.current_stamina,
+          sta: this.selectedChar.sta ?? this.selectedChar.max_stamina ?? 50,
+          current_sta: this.selectedChar.current_stamina ?? 50,
         };
         const res = await fetch(`/api/characters/${this.selectedChar.id}`, {
           method: 'PUT',
@@ -688,9 +691,14 @@ export default {
       if (newA < 1 || newA > 100 || newB < 1 || newB > 100) return;
       this.selectedChar[statA] = newA;
       this.selectedChar[statB] = newB;
+      if (statA === 'sta') this.selectedChar.max_stamina = newA;
+      if (statB === 'sta') this.selectedChar.max_stamina = newB;
       this.updateCharacter();
     },
     onStatChange(statName) {
+      if (statName === 'sta' && this.selectedChar) {
+        this.selectedChar.max_stamina = this.selectedChar.sta;
+      }
       this.updateCharacter();
     },
     adjustStamina(amount) {
