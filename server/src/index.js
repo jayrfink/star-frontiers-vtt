@@ -3,6 +3,7 @@ import cors from 'cors';
 import { createDb } from './db.js';
 import { createSessionMiddleware } from './middleware.js';
 import { createAuthRouter } from './auth.js';
+import { createRulebooksRouter } from './rulebooks.js';
 
 export function createApp(db, sessionDir) {
   const app = express();
@@ -14,6 +15,7 @@ export function createApp(db, sessionDir) {
   app.use(express.json());
   app.use(createSessionMiddleware(sessionDir));
   app.use('/api/auth', createAuthRouter(db));
+  app.use('/api/rulebooks', createRulebooksRouter());
 
   return app;
 }
