@@ -4,7 +4,7 @@ import { createDb } from './db.js';
 import { createSessionMiddleware } from './middleware.js';
 import { createAuthRouter } from './auth.js';
 
-export function createApp(db) {
+export function createApp(db, sessionDir) {
   const app = express();
 
   app.use(cors({
@@ -12,7 +12,7 @@ export function createApp(db) {
     credentials: true,
   }));
   app.use(express.json());
-  app.use(createSessionMiddleware());
+  app.use(createSessionMiddleware(sessionDir));
   app.use('/api/auth', createAuthRouter(db));
 
   return app;

@@ -1,14 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
 
 describe('Auth API', () => {
-  let db, app;
+  let db, app, sessionDir;
 
   beforeEach(() => {
+    sessionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-vtt-test-'));
     db = createTestDb();
-    app = createApp(db);
+    app = createApp(db, sessionDir);
   });
 
   afterEach(() => {

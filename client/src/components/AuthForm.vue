@@ -33,25 +33,17 @@ import { ref } from 'vue';
 
 const props = defineProps({
   mode: { type: String, default: 'login' },
+  error: { type: String, default: '' },
+  loading: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['submit']);
 
 const username = ref('');
 const password = ref('');
-const error = ref('');
-const loading = ref(false);
 
-async function onSubmit() {
-  error.value = '';
-  loading.value = true;
-  try {
-    await emit('submit', { username: username.value, password: password.value });
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
-  }
+function onSubmit() {
+  emit('submit', { username: username.value, password: password.value });
 }
 </script>
 

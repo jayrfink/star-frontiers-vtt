@@ -5,11 +5,13 @@
       <p class="subtitle">{{ isRegister ? 'Create your account' : 'Sign in to continue' }}</p>
       <AuthForm
         :mode="isRegister ? 'register' : 'login'"
+        :error="error"
+        :loading="loading"
         @submit="handleAuth"
       />
       <p class="toggle">
         {{ isRegister ? 'Already have an account?' : "Don't have an account?" }}
-        <a href="#" @click.prevent="isRegister = !isRegister">
+        <a href="#" @click.prevent="toggleMode">
           {{ isRegister ? 'Sign in' : 'Create one' }}
         </a>
       </p>
@@ -26,14 +28,29 @@ import AuthForm from '../components/AuthForm.vue';
 const auth = useAuthStore();
 const router = useRouter();
 const isRegister = ref(false);
+const error = ref('');
+const loading = ref(false);
+
+function toggleMode() {
+  isRegister.value = !isRegister.value;
+  error.value = '';
+}
 
 async function handleAuth({ username, password }) {
-  if (isRegister.value) {
-    await auth.register(username, password);
-  } else {
-    await auth.login(username, password);
+  error.value = '';
+  loading.value = true;
+  try {
+    if (isRegister.value) {
+      await auth.register(username, password);
+    } else {
+      await auth.login(username, password);
+    }
+    router.push('/dashboard');
+  } catch (err) {
+    error.value = err.message || 'An error occurred during authentication.';
+  } finally {
+    loading.value = false;
   }
-  router.push('/dashboard');
 }
 </script>
 
