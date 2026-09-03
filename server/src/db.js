@@ -106,12 +106,15 @@ export function createDb(dbPath = DEFAULT_DB_PATH) {
   }
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
   migrate(db);
   return db;
 }
 
 export function createTestDb() {
   const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
   migrate(db);
   return db;
 }
+

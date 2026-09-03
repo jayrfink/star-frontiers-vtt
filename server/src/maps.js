@@ -151,8 +151,11 @@ export function createMapRouter(db, io) {
         return res.status(404).json({ error: 'Map not found' });
       }
 
-      db.prepare('UPDATE maps SET is_active = 0').run();
-      db.prepare('UPDATE maps SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.params.id);
+      const activateTransaction = db.transaction((mapId) => {
+        db.prepare('UPDATE maps SET is_active = 0').run();
+        db.prepare('UPDATE maps SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(mapId);
+      });
+      activateTransaction(req.params.id);
 
       const updated = db.prepare('SELECT * FROM maps WHERE id = ?').get(req.params.id);
       const map = formatMap(updated);
