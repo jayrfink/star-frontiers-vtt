@@ -965,7 +965,7 @@ onBeforeUnmount(() => {
 .vtt-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px);
+  height: 100%;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;

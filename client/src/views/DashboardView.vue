@@ -33,9 +33,10 @@ const tabs = [
 
 <style scoped>
 .dashboard {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .tab-bar {
@@ -72,6 +73,7 @@ const tabs = [
 
 .dashboard-content {
   flex: 1;
-  padding: 24px;
+  overflow: hidden;
+  position: relative;
 }
 </style>

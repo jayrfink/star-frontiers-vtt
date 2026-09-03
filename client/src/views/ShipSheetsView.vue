@@ -693,7 +693,7 @@ export default {
 <style scoped>
 .sheets-layout {
   display: flex;
-  height: calc(100vh - 60px);
+  height: 100%;
   background: var(--bg-dark, #0d1117);
   color: var(--text-primary, #c9d1d9);
   overflow: hidden;
