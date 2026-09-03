@@ -89,6 +89,24 @@
           @token-selected="onTokenSelected"
           @fog-changed="onFogChanged"
         />
+
+        <!-- No Active Map Overlay -->
+        <div v-if="!activeMap" class="no-map-overlay">
+          <div class="no-map-card">
+            <div class="no-map-icon">🗺️</div>
+            <h3>No Active Tactical Map</h3>
+            <p v-if="isGm">
+              You are logged in as <strong>GameMaster</strong>. Create a tactical map or select an existing map to activate it for all players.
+            </p>
+            <p v-else>
+              Logged in as <strong>Player</strong>. Waiting for the GameMaster to activate a tactical map...
+            </p>
+            <div v-if="isGm" class="no-map-actions">
+              <button class="primary" @click="openCreateMapModal">+ Create New Map</button>
+              <button class="btn-gm" @click="showGmDrawer = true">🗺️ Open GM Map Manager</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- GM Drawer / Map Manager Modal -->
@@ -1331,5 +1349,55 @@ onBeforeUnmount(() => {
   font-style: italic;
   text-align: center;
   padding: 8px 0;
+}
+
+.no-map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.no-map-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 440px;
+  padding: 32px;
+  background: var(--bg-secondary, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.no-map-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.no-map-card h3 {
+  font-size: 20px;
+  color: var(--text-primary, #f0f6fc);
+  margin-bottom: 8px;
+}
+
+.no-map-card p {
+  font-size: 14px;
+  color: var(--text-secondary, #8b949e);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.no-map-actions {
+  display: flex;
+  gap: 12px;
 }
 </style>
