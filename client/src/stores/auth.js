@@ -48,13 +48,17 @@ export const useAuthStore = defineStore('auth', () => {
     await login(username, password);
   }
 
-  async function logout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
+  async function switchRole(newRole) {
+    const res = await fetch('/api/auth/role', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      body: JSON.stringify({ role: newRole }),
     });
-    user.value = null;
+    if (res.ok) {
+      user.value = await res.json();
+    }
   }
 
-  return { user, checked, isAuthenticated, fetchUser, login, register, logout };
+  return { user, checked, isAuthenticated, fetchUser, login, register, logout, switchRole };
 });

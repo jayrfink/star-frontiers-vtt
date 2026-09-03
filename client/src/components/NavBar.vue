@@ -2,8 +2,13 @@
   <nav class="navbar">
     <div class="navbar-brand">⭐ Star Frontiers VTT</div>
     <div class="navbar-user">
-      <span class="role-badge" :class="auth.user?.role === 'GameMaster' ? 'gm' : 'player'">
-        {{ auth.user?.role === 'GameMaster' ? 'GM' : 'Player' }}
+      <span
+        class="role-badge clickable"
+        :class="auth.user?.role === 'GameMaster' ? 'gm' : 'player'"
+        title="Click to toggle between GameMaster and Player roles"
+        @click="toggleRole"
+      >
+        {{ auth.user?.role === 'GameMaster' ? 'GM ⚙️' : 'Player 🔄' }}
       </span>
       <span class="username">{{ auth.user?.username }}</span>
       <button @click="handleLogout">Logout</button>
@@ -17,6 +22,11 @@ import { useAuthStore } from '../stores/auth.js';
 
 const auth = useAuthStore();
 const router = useRouter();
+
+async function toggleRole() {
+  const newRole = auth.user?.role === 'GameMaster' ? 'Player' : 'GameMaster';
+  await auth.switchRole(newRole);
+}
 
 async function handleLogout() {
   await auth.logout();
@@ -56,6 +66,16 @@ async function handleLogout() {
   text-transform: uppercase;
   padding: 2px 8px;
   border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.role-badge.clickable {
+  cursor: pointer;
+}
+
+.role-badge.clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .role-badge.gm {

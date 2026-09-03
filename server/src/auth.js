@@ -83,5 +83,15 @@ export function createAuthRouter(db) {
     res.json(user);
   });
 
+  router.put('/role', requireAuth, (req, res) => {
+    const { role } = req.body;
+    if (!['GameMaster', 'Player'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, req.session.userId);
+    const user = db.prepare('SELECT id, username, role FROM users WHERE id = ?').get(req.session.userId);
+    res.json(user);
+  });
+
   return router;
 }
