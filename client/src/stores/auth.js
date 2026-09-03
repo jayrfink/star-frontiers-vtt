@@ -60,5 +60,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    user.value = null;
+    checked.value = false;
+  }
+
   return { user, checked, isAuthenticated, fetchUser, login, register, logout, switchRole };
 });
