@@ -199,6 +199,7 @@ function drawCanvas() {
 }
 
 function drawBackground(ctx, mapW, mapH) {
+  if (!props.map) return;
   const preset = props.map.preset_bg || 'grid_only';
   const customUrl = props.map.background_url;
 
@@ -271,6 +272,7 @@ function drawBackground(ctx, mapW, mapH) {
 }
 
 function drawGrid(ctx, mapW, mapH) {
+  if (!props.map) return;
   const gSize = gridPx.value;
   const color = props.map.grid_color || '#333333';
 
@@ -425,6 +427,7 @@ function drawInitials(ctx, name, cx, cy, radius) {
 }
 
 function drawFogOfWar(ctx, mapW, mapH) {
+  if (!props.map) return;
   const fogData = props.map.fog_data;
   if (!fogData || !Array.isArray(fogData)) return;
 
