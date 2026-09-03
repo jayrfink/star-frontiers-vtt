@@ -617,20 +617,33 @@ async function resetFog() {
   await saveFog([]);
 }
 
-async function saveFog(fogData) {
+let fogSaveTimer = null;
+
+async function saveFog(fogData, immediate = false) {
   if (!activeMap.value) return;
-  try {
-    const res = await fetch(`/api/maps/${activeMap.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ fog_data: fogData }),
-    });
-    if (res.ok) {
-      activeMap.value = await res.json();
+
+  const performSave = async () => {
+    try {
+      const res = await fetch(`/api/maps/${activeMap.value.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ fog_data: fogData }),
+      });
+      if (res.ok) {
+        activeMap.value = await res.json();
+      }
+    } catch (err) {
+      console.error('Failed to save fog:', err);
     }
-  } catch (err) {
-    console.error('Failed to save fog:', err);
+  };
+
+  if (immediate) {
+    if (fogSaveTimer) clearTimeout(fogSaveTimer);
+    await performSave();
+  } else {
+    if (fogSaveTimer) clearTimeout(fogSaveTimer);
+    fogSaveTimer = setTimeout(performSave, 200);
   }
 }
 

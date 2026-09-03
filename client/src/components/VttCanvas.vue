@@ -508,6 +508,7 @@ function onMouseDown(e) {
   const cell = getCellFromWorld(worldPos.x, worldPos.y);
 
   if (e.button === 1 || isSpacePressed.value || props.activeTool === 'pan') {
+    if (e.button === 1) e.preventDefault();
     isPanning.value = true;
     panStart.x = e.clientX - panX.value;
     panStart.y = e.clientY - panY.value;
@@ -649,16 +650,29 @@ watch(
   }
 );
 
+let resizeObserver = null;
+
 onMounted(() => {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
+
+  if (containerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      resizeCanvas();
+    });
+    resizeObserver.observe(containerRef.value);
+  }
+
   startRenderLoop();
 });
 
 onBeforeUnmount(() => {
   stopRenderLoop();
+  if (resizeObserver && containerRef.value) {
+    resizeObserver.unobserve(containerRef.value);
+  }
   window.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('keyup', onKeyUp);
