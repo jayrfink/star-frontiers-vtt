@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 
 const props = defineProps({
   map: {
@@ -234,28 +234,24 @@ function drawGrid(ctx, mapW, mapH) {
   
   ctx.strokeStyle = '#334155';
   ctx.lineWidth = 1;
-  
-  const w = Math.sqrt(3) * hexSize;
-  const h = 2 * hexSize;
 
+  ctx.beginPath();
   for (let r = 0; r < mapRows.value; r++) {
     for (let q = 0; q < mapCols.value; q++) {
-      const cx = q * w + (r % 2) * (w / 2) + w / 2;
-      const cy = r * (0.75 * h) + h / 2;
+      const center = getCellCenter(q, r);
       
-      ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         const angle_deg = 60 * i - 30;
         const angle_rad = Math.PI / 180 * angle_deg;
-        const x = cx + hexSize * Math.cos(angle_rad);
-        const y = cy + hexSize * Math.sin(angle_rad);
+        const x = center.x + hexSize * Math.cos(angle_rad);
+        const y = center.y + hexSize * Math.sin(angle_rad);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.stroke();
     }
   }
+  ctx.stroke();
 }
 
 function drawTokens(ctx) {
@@ -304,10 +300,12 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     const img = getCachedImage(token.avatar_url);
     if (img) {
       // Assuming square image fitting inside circle
+      ctx.save();
       ctx.beginPath();
       ctx.arc(0, 0, size, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(img, -size, -size, size * 2, size * 2);
+      ctx.restore();
     } else {
       drawInitials(ctx, token.name, 0, 0, size);
     }
@@ -352,7 +350,8 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   }
 
   // Speed badge
-  if (token.speed !== null && token.speed !== undefined) {
+  const speed = token.current_speed ?? token.speed;
+  if (speed !== null && speed !== undefined) {
     ctx.fillStyle = '#1e40af'; // dark blue background for speed
     ctx.beginPath();
     ctx.arc(cx + size * 0.7, cy - size * 0.7, 10, 0, Math.PI * 2);
@@ -365,7 +364,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(token.speed.toString(), cx + size * 0.7, cy - size * 0.7);
+    ctx.fillText(speed.toString(), cx + size * 0.7, cy - size * 0.7);
   }
 }
 
