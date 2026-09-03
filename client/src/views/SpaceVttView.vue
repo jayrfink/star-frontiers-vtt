@@ -515,7 +515,6 @@ const activeMap = ref(null);
 const tokens = ref([]);
 const mapList = ref([]);
 const ships = ref([]);
-const characters = ref([]);
 
 // UI State
 const activeTool = ref('select');
@@ -526,7 +525,6 @@ const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
 const selectedShipId = ref(null);
-const selectedCharacterId = ref(null);
 
 // Counter Presets
 const counterPresets = [
@@ -632,6 +630,9 @@ function onKeyDown(e) {
     return;
   }
 
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (showCreateMapModal.value || showAddTokenModal.value) return;
+
   if (!selectedToken.value) return;
 
   if (e.key === 'q' || e.key === 'Q') {
@@ -718,17 +719,6 @@ async function fetchShips() {
     }
   } catch (err) {
     console.error('Failed to fetch ships:', err);
-  }
-}
-
-async function fetchCharacters() {
-  try {
-    const res = await fetch('/api/characters', { credentials: 'include' });
-    if (res.ok) {
-      characters.value = await res.json();
-    }
-  } catch (err) {
-    console.error('Failed to fetch characters:', err);
   }
 }
 
@@ -825,7 +815,6 @@ async function deleteMap(mapId) {
 // Token Actions
 function openAddTokenModal() {
   selectedShipId.value = null;
-  selectedCharacterId.value = null;
   newTokenForm.name = 'UPF Assault Scout';
   newTokenForm.color = '#3b82f6';
   newTokenForm.avatar_url = '/tokens/space/upf_assault_scout.png';
@@ -872,7 +861,7 @@ async function submitAddToken() {
       credentials: 'include',
       body: JSON.stringify({
         map_id: activeMap.value.id,
-        character_id: selectedShipId.value || selectedCharacterId.value || null,
+        character_id: selectedShipId.value || null,
         name: newTokenForm.name,
         color: newTokenForm.color,
         avatar_url: newTokenForm.avatar_url,
@@ -992,6 +981,7 @@ function setupSocketListeners() {
   socket.on('map:activated', ({ map, tokens: newTokens }) => {
     activeMap.value = map;
     tokens.value = newTokens || [];
+    selectedTokenId.value = null;
   });
 
   socket.on('map:updated', ({ map }) => {
@@ -1069,7 +1059,6 @@ function cleanupSocketListeners() {
 onMounted(() => {
   fetchActiveMap();
   fetchShips();
-  fetchCharacters();
   if (isGm.value) {
     fetchMapList();
   }

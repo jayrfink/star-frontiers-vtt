@@ -2,8 +2,9 @@ import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
 
-const inputFile = path.join(process.cwd(), 'assets/space/Knight Hawks printables/Star Frontiers-7011-Knight Hawks-counters.jpg');
-const outputDir = path.join(process.cwd(), 'client/public/tokens/space');
+const scriptDir = new URL('.', import.meta.url).pathname;
+const inputFile = path.join(scriptDir, '../assets/space/Knight Hawks printables/Star Frontiers-7011-Knight Hawks-counters.jpg');
+const outputDir = path.join(scriptDir, '../client/public/tokens/space');
 
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
