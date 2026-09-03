@@ -60,6 +60,42 @@ function migrate(db) {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS maps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      background_url TEXT DEFAULT '',
+      preset_bg TEXT DEFAULT 'grid_only',
+      width INTEGER NOT NULL DEFAULT 20,
+      height INTEGER NOT NULL DEFAULT 20,
+      grid_size INTEGER NOT NULL DEFAULT 40,
+      grid_color TEXT DEFAULT '#333333',
+      is_active INTEGER NOT NULL DEFAULT 0,
+      fog_data TEXT DEFAULT '[]',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      map_id INTEGER NOT NULL,
+      character_id INTEGER,
+      name TEXT NOT NULL,
+      color TEXT DEFAULT '#ff0000',
+      avatar_url TEXT DEFAULT '',
+      x INTEGER NOT NULL DEFAULT 0,
+      y INTEGER NOT NULL DEFAULT 0,
+      size INTEGER NOT NULL DEFAULT 1,
+      current_hp INTEGER,
+      max_hp INTEGER,
+      status_effects TEXT DEFAULT '[]',
+      layer TEXT NOT NULL DEFAULT 'character',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+    );
   `);
 }
 

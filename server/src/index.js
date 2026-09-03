@@ -7,6 +7,7 @@ import { createSessionMiddleware } from './middleware.js';
 import { createAuthRouter } from './auth.js';
 import { createRulebooksRouter } from './rulebooks.js';
 import { createCharacterRouter, createShipRouter } from './sheets.js';
+import { createMapRouter, createTokenRouter } from './maps.js';
 
 export function createApp(db, sessionDir) {
   const app = express();
@@ -28,6 +29,8 @@ export function createApp(db, sessionDir) {
   app.use('/api/rulebooks', createRulebooksRouter());
   app.use('/api/characters', createCharacterRouter(db, io));
   app.use('/api/ships', createShipRouter(db, io));
+  app.use('/api/maps', createMapRouter(db, io));
+  app.use('/api/tokens', createTokenRouter(db, io));
 
   return { app, server, io };
 }
