@@ -92,11 +92,21 @@ function migrate(db) {
       max_hp INTEGER,
       status_effects TEXT DEFAULT '[]',
       layer TEXT NOT NULL DEFAULT 'character',
+      rotation INTEGER DEFAULT 0,
+      current_speed INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
     );
   `);
+
+  const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);
+  if (!tokenCols.includes('rotation')) {
+    db.exec('ALTER TABLE tokens ADD COLUMN rotation INTEGER DEFAULT 0');
+  }
+  if (!tokenCols.includes('current_speed')) {
+    db.exec('ALTER TABLE tokens ADD COLUMN current_speed INTEGER DEFAULT 0');
+  }
 }
 
 export function createDb(dbPath = DEFAULT_DB_PATH) {

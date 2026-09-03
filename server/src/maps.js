@@ -303,6 +303,8 @@ export function createTokenRouter(db, io) {
         max_hp = null,
         status_effects = [],
         layer = 'character',
+        rotation = 0,
+        current_speed = 0,
       } = req.body;
 
       if (!map_id || !name) {
@@ -319,16 +321,19 @@ export function createTokenRouter(db, io) {
       const stmt = db.prepare(`
         INSERT INTO tokens (
           map_id, character_id, name, color, avatar_url,
-          x, y, size, current_hp, max_hp, status_effects, layer
+          x, y, size, current_hp, max_hp, status_effects, layer,
+          rotation, current_speed
         ) VALUES (
           ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?
         )
       `);
 
       const result = stmt.run(
         map_id, character_id, name, color, avatar_url,
-        x, y, size, current_hp, max_hp, statusEffectsStr, layer
+        x, y, size, current_hp, max_hp, statusEffectsStr, layer,
+        rotation, current_speed
       );
 
       const created = db.prepare('SELECT * FROM tokens WHERE id = ?').get(result.lastInsertRowid);
@@ -366,6 +371,8 @@ export function createTokenRouter(db, io) {
         max_hp = existing.max_hp,
         status_effects = safeJsonParse(existing.status_effects, []),
         layer = existing.layer,
+        rotation = existing.rotation ?? 0,
+        current_speed = existing.current_speed ?? 0,
       } = req.body;
 
       const positionChanged = (req.body.x !== undefined && req.body.x !== existing.x) ||
@@ -377,14 +384,14 @@ export function createTokenRouter(db, io) {
         UPDATE tokens SET
           map_id = ?, character_id = ?, name = ?, color = ?, avatar_url = ?,
           x = ?, y = ?, size = ?, current_hp = ?, max_hp = ?, status_effects = ?,
-          layer = ?, updated_at = CURRENT_TIMESTAMP
+          layer = ?, rotation = ?, current_speed = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         map_id, character_id, name, color, avatar_url,
         x, y, size, current_hp, max_hp, statusEffectsStr,
-        layer, req.params.id
+        layer, rotation, current_speed, req.params.id
       );
 
       const updated = db.prepare('SELECT * FROM tokens WHERE id = ?').get(req.params.id);

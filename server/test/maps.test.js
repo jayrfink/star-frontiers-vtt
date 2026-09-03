@@ -207,6 +207,39 @@ describe('Maps & Tokens API & Socket.io', () => {
       }));
     });
 
+    it('updates token rotation and speed', async () => {
+      const createRes = await agent.post('/api/tokens').send({
+        map_id: mapId,
+        name: 'Starship',
+      });
+      const tokenId = createRes.body.id;
+
+      const emitSpy = vi.spyOn(io, 'emit');
+
+      const res = await agent.put(`/api/tokens/${tokenId}`).send({
+        rotation: 60,
+        current_speed: 10,
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.rotation).toBe(60);
+      expect(res.body.current_speed).toBe(10);
+      expect(emitSpy).toHaveBeenCalledWith('token:updated', expect.objectContaining({
+        token: expect.objectContaining({ id: tokenId, rotation: 60, current_speed: 10 }),
+      }));
+    });
+
+    it('creates token with rotation and speed', async () => {
+      const createRes = await agent.post('/api/tokens').send({
+        map_id: mapId,
+        name: 'Fighter',
+        rotation: 180,
+        current_speed: 6,
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.rotation).toBe(180);
+      expect(createRes.body.current_speed).toBe(6);
+    });
+
     it('deletes token and emits token:deleted', async () => {
       const createRes = await agent.post('/api/tokens').send({
         map_id: mapId,
