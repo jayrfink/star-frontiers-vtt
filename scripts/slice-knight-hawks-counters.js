@@ -9,8 +9,7 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-// Just extract a few key counters for testing (UPF Assault Scout, Sathar Destroyer, Volturnus)
-// Assumes rough crop coordinates for testing the VTT engine
+// Extract key counters for testing (UPF Assault Scout, Sathar Destroyer, Volturnus)
 export const regions = [
   { name: 'upf_assault_scout.png', left: 45, top: 57, width: 90, height: 90 },
   { name: 'sathar_destroyer.png', left: 500, top: 500, width: 90, height: 90 },
@@ -19,12 +18,20 @@ export const regions = [
 
 export async function slice() {
   for (const region of regions) {
+    const circleMask = Buffer.from(
+      `<svg width="${region.width}" height="${region.height}"><circle cx="${region.width / 2}" cy="${region.height / 2}" r="${Math.min(region.width, region.height) / 2}" fill="white" /></svg>`
+    );
+
     await sharp(inputFile)
       .extract({ left: region.left, top: region.top, width: region.width, height: region.height })
+      .composite([{ input: circleMask, blend: 'dest-in' }])
       .png()
       .toFile(path.join(outputDir, region.name));
     console.log(`Extracted ${region.name}`);
   }
 }
 
-slice().catch(console.error);
+slice().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
