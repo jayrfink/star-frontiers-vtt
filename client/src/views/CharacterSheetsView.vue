@@ -1106,6 +1106,10 @@ export default {
   border-radius: 4px;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+.btn-sta:active {
+  transform: translateY(1px);
 }
 .btn-sub {
   background: #da363322;
@@ -1114,6 +1118,7 @@ export default {
 }
 .btn-sub:hover {
   background: #da363344;
+  box-shadow: 0 0 8px rgba(248, 81, 73, 0.4);
 }
 .btn-add {
   background: #23863622;
@@ -1122,6 +1127,7 @@ export default {
 }
 .btn-add:hover {
   background: #23863644;
+  box-shadow: var(--sci-glow-green);
 }
 
 /* Primary Stats Grid */
@@ -1192,17 +1198,23 @@ export default {
 }
 
 .btn-shift {
-  background: #21262d;
-  border: 1px solid #30363d;
-  color: #c9d1d9;
+  background: linear-gradient(180deg, #16222f 0%, #0e1722 100%);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #06b6d4;
   font-size: 0.65rem;
-  padding: 2px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 .btn-shift:hover {
-  background: #30363d;
-  color: #58a6ff;
+  background: #162a3a;
+  border-color: #06b6d4;
+  color: #ffffff;
+  box-shadow: var(--sci-glow-cyan);
+}
+.btn-shift:active {
+  transform: translateY(1px);
 }
 
 /* Racial Traits Panel */
@@ -1275,27 +1287,39 @@ export default {
 }
 
 .skill-chance-badge {
-  background: #1f6feb33;
-  color: #58a6ff;
-  font-weight: bold;
+  background: rgba(6, 182, 212, 0.12);
+  color: #22d3ee;
+  font-weight: 700;
   font-size: 0.8rem;
+  font-family: monospace;
   padding: 4px 6px;
   border-radius: 4px;
-  border: 1px solid #1f6feb66;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.25);
+  letter-spacing: 0.5px;
 }
 
 .btn-xp-upgrade {
-  background: #23863633;
-  color: #3fb950;
-  border: 1px solid #23863666;
+  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
+  border: 1px solid #10b981;
+  color: #ecfdf5;
   font-size: 0.75rem;
+  font-weight: 600;
   padding: 4px 6px;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: var(--sci-glow-green);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition: all 0.15s ease-in-out;
 }
 .btn-xp-upgrade:hover {
-  background: #23863666;
+  box-shadow: var(--sci-glow-green-hover);
+  border-color: #34d399;
+}
+.btn-xp-upgrade:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
 }
 
 .item-name-input {
@@ -1349,29 +1373,54 @@ export default {
 
 /* Buttons & Controls */
 .btn-primary {
-  background: #238636;
-  color: #ffffff;
-  border: none;
-  padding: 6px 12px;
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #14b8a6 100%);
+  color: #07131e;
+  border: 1px solid #38bdf8;
+  padding: 6px 14px;
   border-radius: 4px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
 }
 .btn-primary:hover {
-  background: #2ea043;
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #14b8a6 100%);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.8);
+  border-color: #7dd3fc;
+  color: #07131e;
+}
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
-  padding: 4px 10px;
+  background: linear-gradient(180deg, #16222f 0%, #0e1722 100%);
+  color: #e6edf3;
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  padding: 5px 12px;
   border-radius: 4px;
   font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
 }
 .btn-secondary:hover {
-  background: #30363d;
+  background: linear-gradient(180deg, #1a2938 0%, #121d2b 100%);
+  border-color: #06b6d4;
+  color: #ffffff;
+  box-shadow: var(--sci-glow-cyan);
+}
+.btn-secondary:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);
 }
 
 /* Modal */

@@ -10,6 +10,14 @@
   --success: #3fb950;
   --border: #30363d;
   --radius: 6px;
+  --sci-blue: #0ea5e9;
+  --sci-cyan: #06b6d4;
+  --sci-aqua: #14b8a6;
+  --sci-green: #10b981;
+  --sci-glow-cyan: 0 0 10px rgba(6, 182, 212, 0.45);
+  --sci-glow-cyan-hover: 0 0 16px rgba(6, 182, 212, 0.7);
+  --sci-glow-green: 0 0 10px rgba(16, 185, 129, 0.45);
+  --sci-glow-green-hover: 0 0 16px rgba(16, 185, 129, 0.7);
 }
 
 * {
@@ -36,29 +44,56 @@ a:hover {
 
 button {
   cursor: pointer;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(6, 182, 212, 0.35);
   border-radius: var(--radius);
   padding: 8px 16px;
   font-size: 14px;
-  background: var(--bg-tertiary);
+  background: linear-gradient(180deg, #16222f 0%, #0e1722 100%);
   color: var(--text-primary);
-  transition: background 0.15s;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s ease-in-out;
 }
 
 button:hover {
-  background: var(--border);
+  border-color: #06b6d4;
+  box-shadow: var(--sci-glow-cyan);
+  color: #ffffff;
 }
 
-button.primary {
-  background: var(--accent);
-  color: var(--bg-primary);
-  border-color: var(--accent);
-  font-weight: 600;
+button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);
 }
 
-button.primary:hover {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+button.primary,
+.btn-primary {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #14b8a6 100%);
+  color: #07131e;
+  border: 1px solid #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+}
+
+button.primary:hover,
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #14b8a6 100%);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.8);
+  border-color: #7dd3fc;
+  color: #07131e;
+}
+
+button.active {
+  background: linear-gradient(135deg, #0891b2 0%, #0d9488 100%);
+  border-color: #22d3ee;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
 }
 
 input {
@@ -75,4 +110,11 @@ input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3);
+}
+
+/* Dice Box Overlays */
+#dice-box canvas {
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
 }
