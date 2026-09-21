@@ -76,10 +76,6 @@
             <span class="tactical-value">+{{ derivedIM }}</span>
           </div>
           <div class="tactical-stat">
-            <span class="tactical-label">Punch Dmg</span>
-            <span class="tactical-value">{{ derivedPunchDmg }}d6</span>
-          </div>
-          <div class="tactical-stat">
             <span class="tactical-label">Melee Base Hit</span>
             <span class="tactical-value">{{ derivedMeleeHit }}%</span>
           </div>
@@ -446,7 +442,6 @@ import {
   RACES_DATA,
   OFFICIAL_SKILLS,
   calcIM,
-  calcPunchDamage,
   calcMeleeHit,
   calcMaxCarry,
   calcUnencumberedMax,
@@ -491,10 +486,6 @@ export default {
     derivedIM() {
       if (!this.selectedChar) return 5;
       return calcIM(this.selectedChar.rs);
-    },
-    derivedPunchDmg() {
-      if (!this.selectedChar) return '3';
-      return calcPunchDamage(this.selectedChar.str);
     },
     derivedMeleeHit() {
       if (!this.selectedChar) return 25;
@@ -1010,7 +1001,7 @@ export default {
 /* Derived Tactical Sub-Stats Bar */
 .tactical-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr) 2fr;
+  grid-template-columns: repeat(3, 1fr) 2fr;
   gap: 12px;
   align-items: center;
   background: #0d1117;
