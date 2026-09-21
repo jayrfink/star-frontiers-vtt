@@ -1,141 +1,200 @@
 <template>
   <div class="rulebooks-container">
-    <div class="filter-bar">
-      <div class="mode-toggle">
+    <!-- Top-Level Navigation Bar -->
+    <header class="top-nav-bar">
+      <nav class="mode-toggle" aria-label="Rulebook View Modes">
         <button
-          :class="{ active: viewMode === 'reader' }"
-          @click="viewMode = 'reader'"
+          type="button"
+          class="mode-btn"
+          :class="{ active: viewMode === 'quickref' }"
+          @click="viewMode = 'quickref'"
         >
-          Text Reader
+          Quick Reference Tables
         </button>
         <button
+          type="button"
+          class="mode-btn"
           :class="{ active: viewMode === 'pdf' }"
           @click="viewMode = 'pdf'"
         >
-          PDF Viewer
+          PDF Rulebooks
         </button>
+      </nav>
+
+      <div class="view-status" v-if="viewMode === 'pdf'">
+        <span v-if="loading" class="status-loading">Loading rulebook index...</span>
+        <span v-else class="status-count">{{ filteredDocs.length }} pages indexed</span>
       </div>
+    </header>
 
-      <template v-if="viewMode === 'reader'">
-        <div class="filter-group">
-          <label>System:</label>
-          <select v-model="selectedSystem">
-            <option value="All">All Systems</option>
-            <option value="Alpha Dawn">Alpha Dawn</option>
-            <option value="Knight Hawks">Knight Hawks</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Book:</label>
-          <select v-model="selectedBook">
-            <option value="All">All Rulebooks</option>
-            <option v-for="b in availableBooks" :key="b.id" :value="b.id">{{ b.title }}</option>
-          </select>
-        </div>
-        <div class="stats-info" v-if="loading">Loading rulebooks...</div>
-        <div class="stats-info" v-else>{{ filteredDocs.length }} entries indexed</div>
-      </template>
-
-      <template v-else>
-        <div class="filter-group">
-          <label>Book:</label>
-          <select v-model="pdfBookId">
-            <option v-for="b in pdfBooksList" :key="b.id" :value="b.id">{{ b.title }}</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Page:</label>
-          <input
-            type="number"
-            v-model.number="pdfPage"
-            min="1"
-            max="200"
-            class="page-input"
-          />
-        </div>
-        <div class="stats-info">
-          <a :href="pdfSrc" target="_blank" rel="noopener" class="new-tab-link">Open in New Tab ↗</a>
-        </div>
-      </template>
+    <!-- Quick Reference Tables View -->
+    <div v-if="viewMode === 'quickref'" class="quickref-layout">
+      <QuickReferenceTables />
     </div>
 
-    <!-- Reader Mode Layout -->
-    <div v-if="viewMode === 'reader'" class="rulebooks-layout">
-      <!-- Left Panel: Search & Results -->
-      <aside class="sidebar">
-        <div class="search-box">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search rules (e.g. Vrusk, ADF, Gyrojet)..."
-          />
+    <!-- PDF Rulebooks View -->
+    <div v-else-if="viewMode === 'pdf'" class="pdf-layout">
+      <!-- Left Sidebar: Search & Table of Contents -->
+      <aside class="pdf-sidebar">
+        <!-- Sidebar Filters -->
+        <div class="sidebar-filters">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label for="system-filter">System:</label>
+              <select id="system-filter" v-model="selectedSystem" class="sidebar-select">
+                <option value="All">All Systems</option>
+                <option value="Alpha Dawn">Alpha Dawn</option>
+                <option value="Knight Hawks">Knight Hawks</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="book-filter">Book:</label>
+              <select id="book-filter" v-model="selectedBook" class="sidebar-select">
+                <option value="All">All Rulebooks</option>
+                <option v-for="b in availableBooks" :key="b.id" :value="b.id">{{ b.title }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Search Box -->
+          <div class="search-box">
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="Search PDF rulebooks (e.g. Vrusk, Gyrojet, ADF)..."
+              aria-label="Search PDF rulebooks"
+            />
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="clear-search-btn"
+              title="Clear search"
+              @click="searchQuery = ''"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <div class="results-list" v-if="searchQuery.trim().length > 0">
+        <!-- Search Results List (when searching) -->
+        <div v-if="searchQuery.trim().length > 0" class="results-list" role="region" aria-label="Search Results">
           <div v-if="searchResults.length === 0" class="no-results">
-            No matching sections found.
+            No matching rulebook sections found.
           </div>
           <div
             v-for="item in searchResults"
             :key="item.id"
             class="result-card"
-            :class="{ active: selectedItem && selectedItem.id === item.id }"
-            @click="selectItem(item)"
+            :class="{ active: pdfBookId === item.bookId && pdfPage === item.page }"
+            @click="jumpToPage(item.bookId, item.page)"
           >
             <div class="result-header">
               <span class="book-tag">{{ item.bookTitle }}</span>
               <span class="page-tag">p. {{ item.page }}</span>
             </div>
             <div class="result-title">{{ item.section }}</div>
-            <div class="result-snippet">{{ item.snippet }}</div>
+            <div class="result-snippet" v-html="item.highlightedSnippet"></div>
           </div>
         </div>
 
-        <div class="browser-tree" v-else>
-          <div
-            v-for="item in filteredDocs"
-            :key="item.id"
-            class="tree-item"
-            :class="{ active: selectedItem && selectedItem.id === item.id }"
-            @click="selectItem(item)"
-          >
-            <span class="tree-book">{{ item.bookTitle }}</span>
-            <span class="tree-page">Page {{ item.page }}</span>
+        <!-- Table of Contents / Page Index (when not searching) -->
+        <div v-else class="browser-tree" role="region" aria-label="Table of Contents">
+          <div v-if="loading && docs.length === 0" class="sidebar-loading">
+            Loading pages...
+          </div>
+          <div v-else-if="filteredDocs.length === 0" class="no-results">
+            No pages found for the selected filter.
+          </div>
+          <div v-else class="tree-groups">
+            <div
+              v-for="bookGroup in groupedDocs"
+              :key="bookGroup.id"
+              class="book-group"
+            >
+              <div class="book-group-header" v-if="selectedBook === 'All'">
+                <span class="book-group-title">{{ bookGroup.title }}</span>
+                <span class="book-group-count">{{ bookGroup.pages.length }} pages</span>
+              </div>
+              <div
+                v-for="item in bookGroup.pages"
+                :key="item.id"
+                class="tree-item"
+                :class="{ active: pdfBookId === item.bookId && pdfPage === item.page }"
+                @click="jumpToPage(item.bookId, item.page)"
+              >
+                <div class="tree-item-info">
+                  <span class="tree-page">Page {{ item.page }}</span>
+                  <span v-if="item.preview" class="tree-preview">{{ item.preview }}</span>
+                </div>
+                <span class="tree-jump-icon">↗</span>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
 
-      <!-- Right Panel: Document Reader -->
-      <main class="reader-pane">
-        <div v-if="selectedItem" class="document-viewer">
-          <div class="reader-header">
-            <div>
-              <h2>{{ selectedItem.bookTitle }}</h2>
-              <div class="reader-sub">System: {{ selectedItem.system }} | Page {{ selectedItem.page }}</div>
-            </div>
-            <div class="nav-controls">
-              <button @click="openPdfAtCurrent" class="pdf-jump-btn">View Original PDF</button>
-              <button @click="navigatePage(-1)" :disabled="!hasPrev">← Prev Page</button>
-              <button @click="navigatePage(1)" :disabled="!hasNext">Next Page →</button>
-            </div>
+      <!-- Right Main Panel: PDF Viewer & Controls -->
+      <main class="pdf-main">
+        <!-- PDF Viewer Toolbar -->
+        <div class="pdf-toolbar">
+          <div class="pdf-toolbar-group">
+            <label for="pdf-book-select">Book:</label>
+            <select id="pdf-book-select" v-model="pdfBookId" class="pdf-select">
+              <option v-for="b in pdfBooksList" :key="b.id" :value="b.id">{{ b.title }}</option>
+            </select>
           </div>
-          <div class="reader-content" v-html="highlightedContent"></div>
+
+          <div class="pdf-toolbar-group page-controls">
+            <button
+              type="button"
+              class="page-btn"
+              :disabled="pdfPage <= 1"
+              @click="changePdfPage(-1)"
+              title="Previous Page"
+            >
+              ← Prev
+            </button>
+            <div class="page-input-wrapper">
+              <label for="pdf-page-input">Page:</label>
+              <input
+                id="pdf-page-input"
+                type="number"
+                v-model.number="pdfPage"
+                min="1"
+                :max="currentBookMaxPage"
+                class="page-input"
+              />
+              <span class="page-total">/ {{ currentBookMaxPage }}</span>
+            </div>
+            <button
+              type="button"
+              class="page-btn"
+              :disabled="pdfPage >= currentBookMaxPage"
+              @click="changePdfPage(1)"
+              title="Next Page"
+            >
+              Next →
+            </button>
+          </div>
+
+          <div class="pdf-toolbar-group external-link-group">
+            <a :href="pdfSrc" target="_blank" rel="noopener" class="new-tab-link">
+              Open in New Tab ↗
+            </a>
+          </div>
         </div>
-        <div v-else class="empty-reader">
-          <div class="empty-icon">📖</div>
-          <h3>Select a section or enter a search query to view rulebooks</h3>
+
+        <!-- PDF Embedded Viewer Frame -->
+        <div class="pdf-viewer-frame">
+          <iframe
+            :key="pdfSrc"
+            :src="pdfSrc"
+            class="pdf-iframe"
+            title="PDF Rulebook Viewer"
+          ></iframe>
         </div>
       </main>
-    </div>
-
-    <!-- PDF Viewer Mode Layout -->
-    <div v-else class="pdf-layout">
-      <iframe
-        :key="pdfSrc"
-        :src="pdfSrc"
-        class="pdf-iframe"
-        title="PDF Rulebook Viewer"
-      ></iframe>
     </div>
   </div>
 </template>
@@ -143,88 +202,183 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import lunr from 'lunr';
+import QuickReferenceTables from '../components/QuickReferenceTables.vue';
 
-const viewMode = ref('reader');
-const pdfBookId = ref('ad-basic');
-const pdfPage = ref(1);
-
-const pdfBooksList = [
-  { id: 'ad-basic', title: 'Alpha Dawn Basic Rules' },
-  { id: 'ad-expanded', title: 'Alpha Dawn Expanded Rules' },
-  { id: 'ad-volturnus', title: 'Crash on Volturnus' },
-  { id: 'kh-basic', title: 'Knight Hawks Basic Rules' },
-  { id: 'kh-expansion', title: 'Knight Hawks Expansion Rules' },
-  { id: 'kh-mission', title: 'Knight Hawks Mission Brief' },
-];
-
-const pdfSrc = computed(() => {
-  return `/api/rulebooks/pdf/${pdfBookId.value}#page=${pdfPage.value || 1}`;
+const props = defineProps({
+  initialViewMode: {
+    type: String,
+    default: 'quickref',
+  },
+  initialPdfBook: {
+    type: String,
+    default: 'ad-basic',
+  },
+  initialPdfPage: {
+    type: Number,
+    default: 1,
+  },
+  initialDocs: {
+    type: Array,
+    default: () => [],
+  },
+  initialSearch: {
+    type: String,
+    default: '',
+  },
+  initialSystem: {
+    type: String,
+    default: 'All',
+  },
+  initialBook: {
+    type: String,
+    default: 'All',
+  },
 });
 
-function openPdfAtCurrent() {
-  if (selectedItem.value) {
-    if (selectedItem.value.bookId) {
-      pdfBookId.value = selectedItem.value.bookId;
-    }
-    if (selectedItem.value.page) {
-      pdfPage.value = selectedItem.value.page;
-    }
-  }
-  viewMode.value = 'pdf';
-}
+const viewMode = ref(props.initialViewMode);
+const pdfBookId = ref(props.initialPdfBook);
+const pdfPage = ref(props.initialPdfPage);
 
-const docs = ref([]);
-const loading = ref(true);
-const searchQuery = ref('');
-const selectedSystem = ref('All');
-const selectedBook = ref('All');
-const selectedItem = ref(null);
+const pdfBooksList = [
+  { id: 'ad-basic', title: 'Alpha Dawn Basic Rules', system: 'Alpha Dawn' },
+  { id: 'ad-expanded', title: 'Alpha Dawn Expanded Rules', system: 'Alpha Dawn' },
+  { id: 'ad-volturnus', title: 'Crash on Volturnus', system: 'Alpha Dawn' },
+  { id: 'kh-basic', title: 'Knight Hawks Basic Rules', system: 'Knight Hawks' },
+  { id: 'kh-expansion', title: 'Knight Hawks Expansion Rules', system: 'Knight Hawks' },
+  { id: 'kh-mission', title: 'Knight Hawks Mission Brief', system: 'Knight Hawks' },
+];
+
+const docs = ref([...props.initialDocs]);
+const loading = ref(props.initialDocs.length === 0);
+const searchQuery = ref(props.initialSearch);
+const selectedSystem = ref(props.initialSystem);
+const selectedBook = ref(props.initialBook);
+
+let index = null;
+const docMap = new Map();
 
 watch(selectedSystem, () => {
   selectedBook.value = 'All';
 });
 
-let index = null;
-const docMap = new Map();
+watch(selectedBook, (newVal) => {
+  if (newVal !== 'All') {
+    pdfBookId.value = newVal;
+    pdfPage.value = 1;
+  }
+});
 
 const availableBooks = computed(() => {
-  const booksMap = new Map();
+  if (selectedSystem.value === 'All') {
+    return pdfBooksList;
+  }
+  return pdfBooksList.filter(b => b.system === selectedSystem.value);
+});
+
+const bookMaxPages = computed(() => {
+  const map = {
+    'ad-basic': 20,
+    'ad-expanded': 68,
+    'ad-volturnus': 43,
+    'kh-basic': 20,
+    'kh-expansion': 68,
+    'kh-mission': 18,
+  };
   docs.value.forEach(d => {
-    if (!booksMap.has(d.bookId)) {
-      booksMap.set(d.bookId, { id: d.bookId, title: d.bookTitle, system: d.system });
-    }
+    map[d.bookId] = Math.max(map[d.bookId] || 0, d.page);
   });
-  const list = Array.from(booksMap.values());
-  if (selectedSystem.value !== 'All') {
-    return list.filter(b => b.system === selectedSystem.value);
-  }
-  return list;
+  return map;
 });
 
-const filteredDocs = computed(() => {
-  return docs.value.filter(d => {
-    const systemMatch = selectedSystem.value === 'All' || d.system === selectedSystem.value;
-    const bookMatch = selectedBook.value === 'All' || d.bookId === selectedBook.value;
-    return systemMatch && bookMatch;
-  });
+const currentBookMaxPage = computed(() => {
+  return bookMaxPages.value[pdfBookId.value] || 200;
 });
 
-async function fetchRulebooks() {
-  try {
-    loading.value = true;
-    const res = await fetch('/api/rulebooks', { credentials: 'include' });
-    if (res.ok) {
-      docs.value = await res.json();
-      buildIndex();
-      if (docs.value.length > 0) {
-        selectedItem.value = docs.value[0];
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load rulebooks', err);
-  } finally {
-    loading.value = false;
+watch(pdfPage, (newVal) => {
+  if (typeof newVal !== 'number' || isNaN(newVal) || newVal < 1) {
+    pdfPage.value = 1;
+    return;
   }
+  const max = currentBookMaxPage.value;
+  if (newVal > max && max > 0) {
+    pdfPage.value = max;
+  }
+});
+
+watch(pdfBookId, () => {
+  const max = currentBookMaxPage.value;
+  if (pdfPage.value > max) {
+    pdfPage.value = 1;
+  }
+});
+
+const pdfSrc = computed(() => {
+  const page = pdfPage.value || 1;
+  return `/api/rulebooks/pdf/${pdfBookId.value}#page=${page}`;
+});
+
+function changePdfPage(delta) {
+  const next = (pdfPage.value || 1) + delta;
+  const max = currentBookMaxPage.value;
+  if (next >= 1 && next <= max) {
+    pdfPage.value = next;
+  }
+}
+
+function jumpToPage(bookId, page) {
+  pdfBookId.value = bookId;
+  pdfPage.value = page;
+}
+
+function escapeHtml(text) {
+  return (text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function highlightSnippet(content, rawQuery) {
+  if (!content) return '';
+  const cleaned = content.replace(/Jason Fink \(Order #[0-9]+\)/g, ' ').trim();
+  const q = (rawQuery || '').trim();
+  const terms = q.split(/\s+/).filter(t => t.length > 0);
+
+  const lower = cleaned.toLowerCase();
+  let bestIdx = -1;
+  for (const t of terms) {
+    const idx = lower.indexOf(t.toLowerCase());
+    if (idx !== -1 && (bestIdx === -1 || idx < bestIdx)) {
+      bestIdx = idx;
+    }
+  }
+
+  let snippetRaw = '';
+  if (bestIdx !== -1) {
+    const start = Math.max(0, bestIdx - 40);
+    const end = Math.min(cleaned.length, bestIdx + 100);
+    snippetRaw = (start > 0 ? '...' : '') + cleaned.slice(start, end) + (end < cleaned.length ? '...' : '');
+  } else {
+    snippetRaw = cleaned.slice(0, 140) + (cleaned.length > 140 ? '...' : '');
+  }
+
+  let escaped = escapeHtml(snippetRaw);
+  for (const term of terms) {
+    const cleanTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (cleanTerm) {
+      const regex = new RegExp(`(${cleanTerm})`, 'gi');
+      escaped = escaped.replace(regex, '<mark>$1</mark>');
+    }
+  }
+  return escaped;
+}
+
+function getPagePreview(content) {
+  if (!content) return '';
+  const cleaned = content.replace(/Jason Fink \(Order #[0-9]+\)/g, '').trim();
+  const preview = cleaned.split('\n').map(l => l.trim()).find(l => l.length > 0) || '';
+  return preview.length > 60 ? preview.slice(0, 57) + '...' : preview;
 }
 
 function buildIndex() {
@@ -242,11 +396,14 @@ function buildIndex() {
 }
 
 const searchResults = computed(() => {
-  if (!searchQuery.value.trim() || !index) return [];
+  const rawQ = searchQuery.value.trim();
+  if (!rawQ || !index) return [];
+
   try {
-    const q = searchQuery.value.trim().toLowerCase();
-    const results = index.search(q + '*');
-    
+    const terms = rawQ.split(/\s+/).filter(Boolean);
+    const queryStr = terms.map(t => `${t}* ${t}`).join(' ');
+    const results = index.search(queryStr);
+
     return results
       .map(r => {
         const item = docMap.get(r.ref);
@@ -255,52 +412,84 @@ const searchResults = computed(() => {
         if (selectedSystem.value !== 'All' && item.system !== selectedSystem.value) return null;
         if (selectedBook.value !== 'All' && item.bookId !== selectedBook.value) return null;
 
-        const idx = item.content.toLowerCase().indexOf(q);
-        let snippet = item.content.slice(0, 120) + '...';
-        if (idx !== -1) {
-          const start = Math.max(0, idx - 40);
-          const end = Math.min(item.content.length, idx + 80);
-          snippet = (start > 0 ? '...' : '') + item.content.slice(start, end) + '...';
-        }
-
-        return { ...item, score: r.score, snippet };
+        return {
+          ...item,
+          score: r.score,
+          highlightedSnippet: highlightSnippet(item.content, rawQ),
+        };
       })
       .filter(Boolean);
   } catch {
-    return [];
+    const qLower = rawQ.toLowerCase();
+    return docs.value
+      .filter(item => {
+        if (selectedSystem.value !== 'All' && item.system !== selectedSystem.value) return false;
+        if (selectedBook.value !== 'All' && item.bookId !== selectedBook.value) return false;
+        return (item.content || '').toLowerCase().includes(qLower) ||
+               (item.bookTitle || '').toLowerCase().includes(qLower);
+      })
+      .map(item => ({
+        ...item,
+        score: 1,
+        highlightedSnippet: highlightSnippet(item.content, rawQ),
+      }));
   }
 });
 
-function selectItem(item) {
-  selectedItem.value = item;
-}
-
-const currentIndex = computed(() => {
-  if (!selectedItem.value) return -1;
-  return docs.value.findIndex(d => d.id === selectedItem.value.id);
+const filteredDocs = computed(() => {
+  return docs.value.filter(d => {
+    const systemMatch = selectedSystem.value === 'All' || d.system === selectedSystem.value;
+    const bookMatch = selectedBook.value === 'All' || d.bookId === selectedBook.value;
+    return systemMatch && bookMatch;
+  });
 });
 
-const hasPrev = computed(() => currentIndex.value > 0);
-const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < docs.value.length - 1);
+const groupedDocs = computed(() => {
+  const groups = new Map();
 
-function navigatePage(dir) {
-  const target = currentIndex.value + dir;
-  if (target >= 0 && target < docs.value.length) {
-    selectedItem.value = docs.value[target];
+  for (const doc of filteredDocs.value) {
+    if (!groups.has(doc.bookId)) {
+      groups.set(doc.bookId, {
+        id: doc.bookId,
+        title: doc.bookTitle,
+        system: doc.system,
+        pages: [],
+      });
+    }
+
+    groups.get(doc.bookId).pages.push({
+      ...doc,
+      preview: getPagePreview(doc.content),
+    });
+  }
+
+  return Array.from(groups.values());
+});
+
+async function fetchRulebooks() {
+  try {
+    loading.value = true;
+    const res = await fetch('/api/rulebooks', { credentials: 'include' });
+    if (res.ok) {
+      docs.value = await res.json();
+      buildIndex();
+    }
+  } catch (err) {
+    console.error('Failed to load rulebooks', err);
+  } finally {
+    loading.value = false;
   }
 }
 
-const highlightedContent = computed(() => {
-  if (!selectedItem.value) return '';
-  let content = selectedItem.value.content;
-  if (!searchQuery.value.trim()) return content;
+if (props.initialDocs.length > 0) {
+  buildIndex();
+}
 
-  const term = searchQuery.value.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`(${term})`, 'gi');
-  return content.replace(regex, '<mark>$1</mark>');
+onMounted(() => {
+  if (docs.value.length === 0) {
+    fetchRulebooks();
+  }
 });
-
-onMounted(fetchRulebooks);
 </script>
 
 <style scoped>
@@ -308,248 +497,460 @@ onMounted(fetchRulebooks);
   display: flex;
   flex-direction: column;
   height: calc(100vh - 120px);
-  gap: 16px;
+  gap: 12px;
 }
 
-.filter-bar {
+/* Top Nav Bar */
+.top-nav-bar {
   display: flex;
-  gap: 20px;
+  justify-content: space-between;
   align-items: center;
   background: var(--bg-secondary);
-  padding: 12px 20px;
+  padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  flex-shrink: 0;
 }
 
 .mode-toggle {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   background: var(--bg-primary);
   padding: 4px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
 
-.mode-toggle button {
+.mode-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  transition: all 0.15s ease;
 }
 
-.mode-toggle button.active {
+.mode-btn:hover {
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
   background: var(--accent);
   color: #fff;
 }
 
-.filter-group {
+.view-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Quick Reference Layout */
+.quickref-layout {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
 }
 
-.filter-group label {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-select, .page-input {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px 12px;
-}
-
-.page-input {
-  width: 70px;
-}
-
-.stats-info {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.new-tab-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.new-tab-link:hover {
-  text-decoration: underline;
-}
-
-.rulebooks-layout {
+/* PDF Layout */
+.pdf-layout {
   display: flex;
   flex: 1;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
 }
 
-.sidebar {
-  width: 340px;
+/* PDF Sidebar */
+.pdf-sidebar {
+  width: 360px;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-filters {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-secondary);
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.filter-field label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.sidebar-select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-size: 12px;
+  width: 100%;
+}
+
+.sidebar-select:focus,
+.search-input:focus,
+.page-input:focus,
+.pdf-select:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .search-box {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.results-list, .browser-tree {
+.search-input {
+  width: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 28px 7px 10px;
+  font-size: 13px;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.clear-search-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Results List & Table of Contents */
+.results-list,
+.browser-tree {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.no-results {
-  padding: 16px;
+.no-results,
+.sidebar-loading {
+  padding: 20px 12px;
   text-align: center;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
-.result-card, .tree-item {
+.result-card {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   background: var(--bg-primary);
-  transition: background 0.15s;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.result-card:hover, .tree-item:hover {
+.result-card:hover {
   background: var(--bg-tertiary);
+  border-color: var(--text-secondary);
 }
 
-.result-card.active, .tree-item.active {
+.result-card.active {
   border-color: var(--accent);
-  background: rgba(88, 166, 255, 0.1);
+  background: rgba(88, 166, 255, 0.12);
 }
 
 .result-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 11px;
+}
+
+.book-tag {
   color: var(--accent);
-  margin-bottom: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.page-tag {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .result-title {
+  font-size: 12px;
   font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 4px;
+  color: var(--text-primary);
 }
 
 .result-snippet {
   font-size: 12px;
   color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.tree-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-.tree-page {
-  color: var(--text-secondary);
-}
-
-.reader-pane {
-  flex: 1;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.reader-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 16px;
-  margin-bottom: 20px;
-}
-
-.reader-sub {
-  color: var(--text-secondary);
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-.nav-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.pdf-jump-btn {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  color: var(--accent);
-  cursor: pointer;
-}
-
-.pdf-jump-btn:hover {
-  background: var(--bg-tertiary);
-}
-
-.reader-content {
-  line-height: 1.7;
-  font-size: 15px;
-  white-space: pre-wrap;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 :deep(mark) {
   background: #d29922;
   color: #0d1117;
-  padding: 0 4px;
+  padding: 0 3px;
   border-radius: 2px;
+  font-weight: 600;
 }
 
-.empty-reader {
+/* Table of Contents Groups */
+.tree-groups {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-secondary);
   gap: 12px;
 }
 
-.empty-icon {
-  font-size: 48px;
+.book-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.pdf-layout {
+.book-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.book-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.book-group-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  gap: 8px;
+}
+
+.tree-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.tree-item.active {
+  border-color: var(--accent);
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.tree-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tree-page {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tree-preview {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-jump-icon {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.tree-item:hover .tree-jump-icon,
+.tree-item.active .tree-jump-icon {
+  color: var(--accent);
+}
+
+/* Right Main Panel */
+.pdf-main {
   flex: 1;
   display: flex;
+  flex-direction: column;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  min-width: 0;
+}
+
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-wrap: wrap;
+}
+
+.pdf-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-toolbar-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pdf-select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-input {
+  width: 65px;
+  text-align: center;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.page-total {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.external-link-group {
+  margin-left: auto;
+}
+
+.new-tab-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.new-tab-link:hover {
+  text-decoration: underline;
+  color: var(--accent-hover);
+}
+
+.pdf-viewer-frame {
+  flex: 1;
+  min-height: 0;
 }
 
 .pdf-iframe {
   width: 100%;
   height: 100%;
   border: none;
+  display: block;
 }
 </style>
