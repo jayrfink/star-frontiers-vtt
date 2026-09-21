@@ -15,7 +15,7 @@ describe('QuickReferenceTables.vue', () => {
     expect(html).toContain('Ship-to-Ship Combat');
     expect(html).toContain('Ranged Weapon Combat');
     expect(html).toContain('Melee Combat');
-    expect(html).toContain('Filter rules &amp; tables...') || expect(html).toContain('Filter rules & tables...');
+    expect(html).toMatch(/Filter rules &(amp;)?\s*tables\.\.\./);
   });
 
   describe('Ship Combat Tab', () => {
@@ -28,7 +28,7 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toContain('Movement Phase');
       expect(html).toContain('Defensive Fire Phase');
       expect(html).toContain('Offensive Fire Phase');
-      expect(html).toContain('Damage &amp; Repair Phase') || expect(html).toContain('Damage & Repair Phase');
+      expect(html).toMatch(/Damage &(amp;)? Repair Phase/);
 
       // Ship weapons table
       expect(html).toContain('Ship Weapons');
@@ -38,7 +38,7 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toContain('Range (Hexes)');
 
       // Defenses & Countermeasures
-      expect(html).toContain('Defenses &amp; Countermeasures') || expect(html).toContain('Defenses & Countermeasures');
+      expect(html).toMatch(/Defenses &(amp;)? Countermeasures/);
       expect(html).toContain('Reflective Hull');
       expect(html).toContain('Masking Screen');
       expect(html).toContain('ICM (Interceptors)');
@@ -73,7 +73,7 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toContain('Careful Aim');
 
       // Armor & Screens
-      expect(html).toContain('Armor &amp; Screens') || expect(html).toContain('Armor & Screens');
+      expect(html).toMatch(/Armor &(amp;)? Screens/);
       expect(html).toContain('Skeinsuit');
       expect(html).toContain('Albedo Screen');
     });

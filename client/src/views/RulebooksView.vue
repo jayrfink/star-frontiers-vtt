@@ -164,6 +164,8 @@
                 min="1"
                 :max="currentBookMaxPage"
                 class="page-input"
+                @change="clampPage"
+                @blur="clampPage"
               />
               <span class="page-total">/ {{ currentBookMaxPage }}</span>
             </div>
@@ -200,7 +202,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, shallowRef, computed, watch, onMounted } from 'vue';
 import lunr from 'lunr';
 import QuickReferenceTables from '../components/QuickReferenceTables.vue';
 
@@ -254,7 +256,7 @@ const searchQuery = ref(props.initialSearch);
 const selectedSystem = ref(props.initialSystem);
 const selectedBook = ref(props.initialBook);
 
-let index = null;
+const index = shallowRef(null);
 const docMap = new Map();
 
 watch(selectedSystem, () => {
@@ -294,16 +296,21 @@ const currentBookMaxPage = computed(() => {
   return bookMaxPages.value[pdfBookId.value] || 200;
 });
 
-watch(pdfPage, (newVal) => {
-  if (typeof newVal !== 'number' || isNaN(newVal) || newVal < 1) {
-    pdfPage.value = 1;
-    return;
-  }
+function clampPage() {
+  const val = Number(pdfPage.value);
   const max = currentBookMaxPage.value;
-  if (newVal > max && max > 0) {
+  if (isNaN(val) || val < 1) {
+    pdfPage.value = 1;
+  } else if (val > max && max > 0) {
     pdfPage.value = max;
+  } else {
+    pdfPage.value = Math.floor(val);
   }
-});
+}
+
+function onPageInputChange() {
+  clampPage();
+}
 
 watch(pdfBookId, () => {
   const max = currentBookMaxPage.value;
@@ -318,6 +325,7 @@ const pdfSrc = computed(() => {
 });
 
 function changePdfPage(delta) {
+  clampPage();
   const next = (pdfPage.value || 1) + delta;
   const max = currentBookMaxPage.value;
   if (next >= 1 && next <= max) {
@@ -328,6 +336,7 @@ function changePdfPage(delta) {
 function jumpToPage(bookId, page) {
   pdfBookId.value = bookId;
   pdfPage.value = page;
+  clampPage();
 }
 
 function escapeHtml(text) {
@@ -364,12 +373,12 @@ function highlightSnippet(content, rawQuery) {
   }
 
   let escaped = escapeHtml(snippetRaw);
-  for (const term of terms) {
-    const cleanTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (cleanTerm) {
-      const regex = new RegExp(`(${cleanTerm})`, 'gi');
-      escaped = escaped.replace(regex, '<mark>$1</mark>');
-    }
+  const cleanTerms = terms
+    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .filter(Boolean);
+  if (cleanTerms.length > 0) {
+    const regex = new RegExp(`(${cleanTerms.join('|')})`, 'gi');
+    escaped = escaped.replace(regex, '<mark>$1</mark>');
   }
   return escaped;
 }
@@ -385,7 +394,7 @@ function buildIndex() {
   docMap.clear();
   docs.value.forEach(d => docMap.set(d.id, d));
 
-  index = lunr(function () {
+  index.value = lunr(function () {
     this.ref('id');
     this.field('bookTitle');
     this.field('section');
@@ -397,12 +406,12 @@ function buildIndex() {
 
 const searchResults = computed(() => {
   const rawQ = searchQuery.value.trim();
-  if (!rawQ || !index) return [];
+  if (!rawQ || !index.value) return [];
 
   try {
     const terms = rawQ.split(/\s+/).filter(Boolean);
     const queryStr = terms.map(t => `${t}* ${t}`).join(' ');
-    const results = index.search(queryStr);
+    const results = index.value.search(queryStr);
 
     return results
       .map(r => {

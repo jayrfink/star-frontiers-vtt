@@ -125,6 +125,18 @@ describe('RulebooksView.vue', () => {
       expect(html).toContain('<mark>Vrusk</mark>');
     });
 
+    it('safely highlights multi-term searches without corrupting mark tags', async () => {
+      const html = await renderView({
+        initialViewMode: 'pdf',
+        initialDocs: mockDocs,
+        initialSearch: 'Humans mark'
+      });
+
+      expect(html).toContain('<mark>Humans</mark>');
+      expect(html).not.toContain('<<mark>');
+      expect(html).not.toContain('</mark></mark>');
+    });
+
     it('displays no matching sections message when search yields nothing', async () => {
       const html = await renderView({
         initialViewMode: 'pdf',
