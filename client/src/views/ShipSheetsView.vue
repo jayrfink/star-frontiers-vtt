@@ -20,7 +20,7 @@
         >
           <div class="ship-item-info">
             <span class="ship-name">{{ ship.name || 'Unnamed Ship' }}</span>
-            <span class="ship-sub">{{ ship.type || 'Fighter' }} • HP {{ ship.current_hull_points }}/{{ ship.max_hull_points }}</span>
+            <span class="ship-sub">{{ ship.ship_type || ship.type || 'Fighter' }} • HP {{ ship.current_hp ?? ship.current_hull_points ?? 0 }}/{{ ship.hull_points ?? ship.max_hull_points ?? 0 }}</span>
           </div>
           <button class="btn-delete-small" title="Delete Ship" @click.stop="deleteShip(ship.id)">✕</button>
         </li>
@@ -49,7 +49,7 @@
             <div class="type-wrap">
               <label>Class Preset:</label>
               <select
-                :value="selectedShip.type"
+                :value="selectedShip.ship_type || selectedShip.type"
                 @change="onEditPresetChange($event.target.value)"
                 class="input-type-select"
               >
@@ -445,12 +445,26 @@ export default {
         status: w.status || 'Online',
       }));
     },
+    normalizeShip(ship) {
+      if (!ship) return null;
+      const copy = JSON.parse(JSON.stringify(ship));
+      copy.ship_type = copy.ship_type || copy.type || 'Fighter';
+      copy.type = copy.ship_type;
+      copy.hull_points = copy.hull_points !== undefined ? copy.hull_points : (copy.max_hull_points || 50);
+      copy.max_hull_points = copy.hull_points;
+      copy.current_hp = copy.current_hp !== undefined ? copy.current_hp : (copy.current_hull_points !== undefined ? copy.current_hull_points : copy.hull_points);
+      copy.current_hull_points = copy.current_hp;
+      copy.defenses = this.normalizeDefenses(copy.defenses);
+      copy.weapons = this.normalizeWeapons(copy.weapons);
+      return copy;
+    },
     async fetchShips() {
       this.loading = true;
       try {
         const res = await fetch('/api/ships', { credentials: 'include' });
         if (res.ok) {
-          this.ships = await res.json();
+          const raw = await res.json();
+          this.ships = (raw || []).map((s) => this.normalizeShip(s));
           if (this.ships.length > 0 && !this.selectedShip) {
             this.selectShip(this.ships[0]);
           }
@@ -462,13 +476,11 @@ export default {
       }
     },
     selectShip(ship) {
-      const copy = JSON.parse(JSON.stringify(ship));
-      copy.type = copy.type || copy.ship_type || 'Fighter';
-      copy.max_hull_points = copy.max_hull_points !== undefined ? copy.max_hull_points : (copy.hull_points || 50);
-      copy.current_hull_points = copy.current_hull_points !== undefined ? copy.current_hull_points : (copy.current_hp !== undefined ? copy.current_hp : copy.max_hull_points);
-      copy.defenses = this.normalizeDefenses(copy.defenses);
-      copy.weapons = this.normalizeWeapons(copy.weapons);
-      this.selectedShip = copy;
+      if (!ship) {
+        this.selectedShip = null;
+        return;
+      }
+      this.selectedShip = this.normalizeShip(ship);
     },
     applyPresetToCreateForm() {
       const preset = this.presets.find((p) => p.type === this.selectedPresetType) || this.presets[0];
@@ -490,12 +502,15 @@ export default {
     onEditPresetChange(newType) {
       const preset = this.presets.find((p) => p.type === newType);
       this.selectedShip.type = newType;
+      this.selectedShip.ship_type = newType;
       if (preset && confirm(`Load stats, weapons, and defenses for ${newType}?`)) {
         this.selectedShip.adf = preset.adf;
         this.selectedShip.mr = preset.mr;
         this.selectedShip.dcr = preset.dcr;
         this.selectedShip.max_hull_points = preset.hull_points;
+        this.selectedShip.hull_points = preset.hull_points;
         this.selectedShip.current_hull_points = preset.hull_points;
+        this.selectedShip.current_hp = preset.hull_points;
         this.selectedShip.weapons = JSON.parse(JSON.stringify(preset.weapons));
         this.selectedShip.defenses = JSON.parse(JSON.stringify(preset.defenses));
       }
@@ -523,7 +538,8 @@ export default {
           body: JSON.stringify(payload),
         });
         if (res.ok) {
-          const created = await res.json();
+          const raw = await res.json();
+          const created = this.normalizeShip(raw);
           this.showCreateModal = false;
           if (!this.ships.some((s) => s.id === created.id)) {
             this.ships.push(created);
@@ -556,10 +572,11 @@ export default {
           body: JSON.stringify(payload),
         });
         if (res.ok) {
-          const updated = await res.json();
+          const raw = await res.json();
+          const updated = this.normalizeShip(raw);
           const idx = this.ships.findIndex((s) => s.id === updated.id);
           if (idx !== -1) {
-            this.ships[idx] = { ...updated };
+            this.ships[idx] = updated;
           }
         }
       } catch (err) {
@@ -568,9 +585,11 @@ export default {
     },
     adjustHullPoints(amount) {
       if (!this.selectedShip) return;
-      let newHp = (this.selectedShip.current_hull_points || 0) + amount;
-      newHp = Math.max(0, Math.min(this.selectedShip.max_hull_points || 100, newHp));
+      let newHp = (this.selectedShip.current_hull_points || this.selectedShip.current_hp || 0) + amount;
+      const maxHp = this.selectedShip.max_hull_points || this.selectedShip.hull_points || 100;
+      newHp = Math.max(0, Math.min(maxHp, newHp));
       this.selectedShip.current_hull_points = newHp;
+      this.selectedShip.current_hp = newHp;
       this.updateShip();
     },
     async deleteShip(id) {
@@ -656,7 +675,7 @@ export default {
     },
     handleSheetCreated(payload) {
       if (payload && payload.type === 'ship' && payload.sheet) {
-        const sheet = payload.sheet;
+        const sheet = this.normalizeShip(payload.sheet);
         const idx = this.ships.findIndex((s) => s.id === sheet.id);
         if (idx === -1) {
           this.ships.push(sheet);
@@ -667,7 +686,7 @@ export default {
     },
     handleSheetUpdated(payload) {
       if (payload && payload.type === 'ship' && payload.sheet) {
-        const sheet = payload.sheet;
+        const sheet = this.normalizeShip(payload.sheet);
         const idx = this.ships.findIndex((s) => s.id === sheet.id);
         if (idx !== -1) {
           this.ships[idx] = sheet;
