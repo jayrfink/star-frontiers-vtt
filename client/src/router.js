@@ -7,6 +7,7 @@ import SpaceVttView from './views/SpaceVttView.vue';
 import CharacterSheetsView from './views/CharacterSheetsView.vue';
 import ShipSheetsView from './views/ShipSheetsView.vue';
 import RulebooksView from './views/RulebooksView.vue';
+import AdminView from './views/AdminView.vue';
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -22,6 +23,7 @@ const routes = [
       { path: 'character-sheets', name: 'CharacterSheets', component: CharacterSheetsView },
       { path: 'ship-sheets', name: 'ShipSheets', component: ShipSheetsView },
       { path: 'rulebooks', name: 'Rulebooks', component: RulebooksView },
+      { path: 'admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true, requiresGm: true } },
     ],
   },
 ];
@@ -36,9 +38,14 @@ router.beforeEach(async (to, from, next) => {
   if (!auth.checked) {
     await auth.fetchUser();
   }
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const requiresGm = to.matched.some((record) => record.meta.requiresGm);
+
+  if (requiresAuth && !auth.isAuthenticated) {
     next('/login');
   } else if (to.meta.guest && auth.isAuthenticated) {
+    next('/dashboard');
+  } else if (requiresGm && auth.user?.role !== 'GameMaster') {
     next('/dashboard');
   } else {
     next();

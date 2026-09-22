@@ -43,3 +43,22 @@ export function requireAuth(req, res, next) {
     res.status(401).json({ error: 'Authentication required' });
   }
 }
+
+export function isGameMaster(db, userId) {
+  if (!userId) return false;
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+  return user && user.role === 'GameMaster';
+}
+
+export function requireGM(db) {
+  return (req, res, next) => {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (!isGameMaster(db, req.session.userId)) {
+      return res.status(403).json({ error: 'GameMaster access required' });
+    }
+    next();
+  };
+}
+

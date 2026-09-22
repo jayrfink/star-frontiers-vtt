@@ -2,14 +2,14 @@
   <div class="login-page">
     <div class="login-card">
       <h1>⭐ Star Frontiers VTT</h1>
-      <p class="subtitle">{{ isRegister ? 'Create your account' : 'Sign in to continue' }}</p>
+      <p class="subtitle">{{ isRegister ? 'Initial Setup: Create GameMaster Account' : 'Sign in to continue' }}</p>
       <AuthForm
         :mode="isRegister ? 'register' : 'login'"
         :error="error"
         :loading="loading"
         @submit="handleAuth"
       />
-      <p class="toggle">
+      <p v-if="showToggle" class="toggle">
         {{ isRegister ? 'Already have an account?' : "Don't have an account?" }}
         <a href="#" @click.prevent="toggleMode">
           {{ isRegister ? 'Sign in' : 'Create one' }}
@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
 import AuthForm from '../components/AuthForm.vue';
@@ -28,8 +28,20 @@ import AuthForm from '../components/AuthForm.vue';
 const auth = useAuthStore();
 const router = useRouter();
 const isRegister = ref(false);
+const showToggle = ref(false);
 const error = ref('');
 const loading = ref(false);
+
+onMounted(async () => {
+  const setup = await auth.checkSetup();
+  if (setup?.requiresSetup || auth.requiresSetup) {
+    isRegister.value = true;
+    showToggle.value = false;
+  } else {
+    isRegister.value = false;
+    showToggle.value = false;
+  }
+});
 
 function toggleMode() {
   isRegister.value = !isRegister.value;

@@ -14,7 +14,10 @@
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "express-session": "^1.18.0",
+    "jimp": "^0.22.10",
+    "multer": "^2.4.0",
     "pdf-parse": "^1.1.1",
+    "sharp": "^0.35.4",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {

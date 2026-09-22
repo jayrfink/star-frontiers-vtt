@@ -4,7 +4,22 @@ import { ref, computed } from 'vue';
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
   const checked = ref(false);
+  const requiresSetup = ref(false);
   const isAuthenticated = computed(() => !!user.value);
+
+  async function checkSetup() {
+    try {
+      const res = await fetch('/api/auth/setup');
+      if (res.ok) {
+        const data = await res.json();
+        requiresSetup.value = !!data.requiresSetup;
+        return data;
+      }
+    } catch (err) {
+      console.error('Failed to check setup status:', err);
+    }
+    return { requiresSetup: requiresSetup.value };
+  }
 
   async function fetchUser() {
     try {
@@ -48,23 +63,11 @@ export const useAuthStore = defineStore('auth', () => {
     await login(username, password);
   }
 
-  async function switchRole(newRole) {
-    const res = await fetch('/api/auth/role', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ role: newRole }),
-    });
-    if (res.ok) {
-      user.value = await res.json();
-    }
-  }
-
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     user.value = null;
     checked.value = false;
   }
 
-  return { user, checked, isAuthenticated, fetchUser, login, register, logout, switchRole };
+  return { user, checked, requiresSetup, isAuthenticated, fetchUser, login, register, logout, checkSetup };
 });

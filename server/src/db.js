@@ -38,6 +38,7 @@ function migrate(db) {
       skills TEXT DEFAULT '[]',
       inventory TEXT DEFAULT '[]',
       notes TEXT DEFAULT '',
+      avatar_url TEXT DEFAULT '',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -65,6 +66,7 @@ function migrate(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       name TEXT NOT NULL,
+      map_type TEXT DEFAULT 'rpg',
       background_url TEXT DEFAULT '',
       preset_bg TEXT DEFAULT 'grid_only',
       width INTEGER NOT NULL DEFAULT 20,
@@ -72,6 +74,7 @@ function migrate(db) {
       grid_size INTEGER NOT NULL DEFAULT 40,
       grid_color TEXT DEFAULT '#333333',
       is_active INTEGER NOT NULL DEFAULT 0,
+      fog_enabled INTEGER NOT NULL DEFAULT 0,
       fog_data TEXT DEFAULT '[]',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -99,6 +102,21 @@ function migrate(db) {
       FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
     );
   `);
+
+  const mapCols = db.prepare("PRAGMA table_info(maps)").all().map(c => c.name);
+  
+  if (!mapCols.includes('fog_enabled')) {
+    db.exec('ALTER TABLE maps ADD COLUMN fog_enabled INTEGER NOT NULL DEFAULT 0');
+  }
+if (!mapCols.includes('map_type')) {
+    db.exec('ALTER TABLE maps ADD COLUMN map_type TEXT DEFAULT "rpg"');
+  }
+
+  
+  const charCols = db.prepare("PRAGMA table_info(character_sheets)").all().map(c => c.name);
+  if (!charCols.includes('avatar_url')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');
+  }
 
   const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);
   if (!tokenCols.includes('rotation')) {

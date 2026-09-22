@@ -42,8 +42,8 @@ describe('Maps & Tokens API & Socket.io', () => {
       await gmAgent.post('/api/auth/login').send({ username: 'gm_user', password: 'password123' });
 
       const playerAgent = request.agent(app);
-      // Second user registered becomes Player
-      await playerAgent.post('/api/auth/register').send({ username: 'player_user', password: 'password123' });
+      // Second user registered becomes Player (registered by GM)
+      await gmAgent.post('/api/auth/register').send({ username: 'player_user', password: 'password123' });
       await playerAgent.post('/api/auth/login').send({ username: 'player_user', password: 'password123' });
 
       // Player attempting to create map should get 403
@@ -97,6 +97,47 @@ describe('Maps & Tokens API & Socket.io', () => {
       const map2 = mapsRes.body.find(m => m.id === map2Res.body.id);
       expect(map1.is_active).toBe(0);
       expect(map2.is_active).toBe(1);
+    });
+
+    it('supports independent active maps and filtering for rpg and space map types', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm_user', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm_user', password: 'password123' });
+
+      // Create RPG map 1 and 2
+      const rpg1 = await gmAgent.post('/api/maps').send({ name: 'RPG Map 1', map_type: 'rpg', is_active: 1 });
+      const rpg2 = await gmAgent.post('/api/maps').send({ name: 'RPG Map 2', map_type: 'rpg', is_active: 0 });
+
+      // Create Space map 1 and 2
+      const space1 = await gmAgent.post('/api/maps').send({ name: 'Space Map 1', map_type: 'space', is_active: 1 });
+      const space2 = await gmAgent.post('/api/maps').send({ name: 'Space Map 2', map_type: 'space', is_active: 0 });
+
+      // Check active maps
+      const activeRpg = await gmAgent.get('/api/maps/active?type=rpg');
+      expect(activeRpg.body.map.id).toBe(rpg1.body.id);
+
+      const activeSpace = await gmAgent.get('/api/maps/active?type=space');
+      expect(activeSpace.body.map.id).toBe(space1.body.id);
+
+      // Activate Space Map 2
+      await gmAgent.post(`/api/maps/${space2.body.id}/activate`);
+
+      // RPG Map 1 should STILL be active!
+      const activeRpgAfter = await gmAgent.get('/api/maps/active?type=rpg');
+      expect(activeRpgAfter.body.map.id).toBe(rpg1.body.id);
+
+      // Space Map 2 should now be active!
+      const activeSpaceAfter = await gmAgent.get('/api/maps/active?type=space');
+      expect(activeSpaceAfter.body.map.id).toBe(space2.body.id);
+
+      // Verify filtering GET /api/maps?type=rpg and GET /api/maps?type=space
+      const rpgList = await gmAgent.get('/api/maps?type=rpg');
+      expect(rpgList.body.every(m => m.map_type === 'rpg')).toBe(true);
+      expect(rpgList.body.length).toBe(2);
+
+      const spaceList = await gmAgent.get('/api/maps?type=space');
+      expect(spaceList.body.every(m => m.map_type === 'space')).toBe(true);
+      expect(spaceList.body.length).toBe(2);
     });
 
     it('updates map and fog_data', async () => {

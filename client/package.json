@@ -8,6 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@3d-dice/dice-box": "^1.1.4",
+    "@3d-dice/dice-themes": "^0.2.1",
     "lunr": "^2.3.9",
     "pinia": "^2.2.0",
     "socket.io-client": "^4.8.3",

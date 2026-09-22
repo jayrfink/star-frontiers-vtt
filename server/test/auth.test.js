@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
 
@@ -21,6 +18,23 @@ describe('Auth API', () => {
     if (server && server.close) server.close();
   });
 
+  describe('GET /api/auth/setup', () => {
+    it('returns requiresSetup: true when no users exist', async () => {
+      const res = await request(app).get('/api/auth/setup');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ requiresSetup: true });
+    });
+
+    it('returns requiresSetup: false when users exist', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'gm', password: 'password123' });
+      const res = await request(app).get('/api/auth/setup');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ requiresSetup: false });
+    });
+  });
+
   describe('POST /api/auth/register', () => {
     it('registers the first user as GameMaster', async () => {
       const res = await request(app)
@@ -32,22 +46,81 @@ describe('Auth API', () => {
       expect(res.body).not.toHaveProperty('password_hash');
     });
 
-    it('registers subsequent users as Player', async () => {
+    it('rejects registration of subsequent users if unauthenticated with 401', async () => {
       await request(app)
         .post('/api/auth/register')
         .send({ username: 'gm', password: 'password123' });
+
       const res = await request(app)
         .post('/api/auth/register')
         .send({ username: 'player1', password: 'password123' });
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects registration of subsequent users if authenticated as Player with 403', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent
+        .post('/api/auth/register')
+        .send({ username: 'player2', password: 'password123' });
+      expect(res.status).toBe(403);
+    });
+
+    it('registers subsequent users as Player by default when authenticated as GM', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await gmAgent
+        .post('/api/auth/register')
+        .send({ username: 'player1', password: 'password123' });
       expect(res.status).toBe(201);
+      expect(res.body.username).toBe('player1');
       expect(res.body.role).toBe('Player');
     });
 
-    it('rejects duplicate username with 409', async () => {
-      await request(app)
+    it('allows GM to specify role when registering a user', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res1 = await gmAgent
         .post('/api/auth/register')
-        .send({ username: 'gm', password: 'password123' });
-      const res = await request(app)
+        .send({ username: 'gm2', password: 'password123', role: 'GameMaster' });
+      expect(res1.status).toBe(201);
+      expect(res1.body.role).toBe('GameMaster');
+
+      const res2 = await gmAgent
+        .post('/api/auth/register')
+        .send({ username: 'player2', password: 'password123', role: 'Player' });
+      expect(res2.status).toBe(201);
+      expect(res2.body.role).toBe('Player');
+    });
+
+    it('rejects invalid role with 400', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await gmAgent
+        .post('/api/auth/register')
+        .send({ username: 'user3', password: 'password123', role: 'Admin' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid role');
+    });
+
+    it('rejects duplicate username with 409', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await gmAgent
         .post('/api/auth/register')
         .send({ username: 'gm', password: 'otherpass123' });
       expect(res.status).toBe(409);
@@ -141,6 +214,199 @@ describe('Auth API', () => {
     it('returns 401 when not authenticated', async () => {
       const res = await request(app).post('/api/auth/logout');
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe('PUT /api/auth/role (removed)', () => {
+    it('returns 404 because role escalation route was removed', async () => {
+      const agent = request.agent(app);
+      await agent
+        .post('/api/auth/register')
+        .send({ username: 'gm', password: 'password123' });
+      await agent
+        .post('/api/auth/login')
+        .send({ username: 'gm', password: 'password123' });
+
+      const res = await agent.put('/api/auth/role').send({ role: 'Player' });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/auth/users', () => {
+    it('returns 401 when not authenticated', async () => {
+      const res = await request(app).get('/api/auth/users');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when authenticated as Player', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent.get('/api/auth/users');
+      expect(res.status).toBe(403);
+    });
+
+    it('returns list of users without password_hash when authenticated as GM', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const res = await gmAgent.get('/api/auth/users');
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(2);
+      expect(res.body[0]).toHaveProperty('id');
+      expect(res.body[0]).toHaveProperty('username', 'gm');
+      expect(res.body[0]).toHaveProperty('role', 'GameMaster');
+      expect(res.body[0]).not.toHaveProperty('password_hash');
+      expect(res.body[1]).toHaveProperty('username', 'player1');
+      expect(res.body[1]).toHaveProperty('role', 'Player');
+      expect(res.body[1]).not.toHaveProperty('password_hash');
+    });
+  });
+
+  describe('DELETE /api/auth/users/:id', () => {
+    it('returns 401 when not authenticated', async () => {
+      const res = await request(app).delete('/api/auth/users/1');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when authenticated as Player', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent.delete(`/api/auth/users/${regRes.body.id}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 404 when target user does not exist', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await gmAgent.delete('/api/auth/users/9999');
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 400 when attempting to delete the last GameMaster', async () => {
+      const gmAgent = request.agent(app);
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await gmAgent.delete(`/api/auth/users/${regRes.body.id}`);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Cannot delete the last GameMaster');
+    });
+
+    it('successfully deletes a Player', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const delRes = await gmAgent.delete(`/api/auth/users/${regRes.body.id}`);
+      expect(delRes.status).toBe(200);
+      expect(delRes.body.ok).toBe(true);
+
+      const usersRes = await gmAgent.get('/api/auth/users');
+      expect(usersRes.body).toHaveLength(1);
+      expect(usersRes.body[0].username).toBe('gm');
+    });
+
+    it('successfully deletes a GameMaster when multiple GameMasters exist', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+      const gm2Res = await gmAgent
+        .post('/api/auth/register')
+        .send({ username: 'gm2', password: 'password123', role: 'GameMaster' });
+
+      const delRes = await gmAgent.delete(`/api/auth/users/${gm2Res.body.id}`);
+      expect(delRes.status).toBe(200);
+      expect(delRes.body.ok).toBe(true);
+
+      const usersRes = await gmAgent.get('/api/auth/users');
+      expect(usersRes.body).toHaveLength(1);
+      expect(usersRes.body[0].username).toBe('gm1');
+    });
+  });
+
+  describe('PUT /api/auth/users/:id/password', () => {
+    it('returns 401 when not authenticated', async () => {
+      const res = await request(app).put('/api/auth/users/1/password').send({ password: 'newpassword123' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when authenticated as Player', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent.put(`/api/auth/users/${regRes.body.id}/password`).send({ password: 'newpassword123' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 400 if password is missing or < 6 characters', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const res1 = await gmAgent.put(`/api/auth/users/${regRes.body.id}/password`).send({});
+      expect(res1.status).toBe(400);
+
+      const res2 = await gmAgent.put(`/api/auth/users/${regRes.body.id}/password`).send({ password: '123' });
+      expect(res2.status).toBe(400);
+    });
+
+    it('returns 404 when target user does not exist', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await gmAgent.put('/api/auth/users/9999/password').send({ password: 'newpassword123' });
+      expect(res.status).toBe(404);
+    });
+
+    it('successfully updates user password and allows login with new password', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const updateRes = await gmAgent
+        .put(`/api/auth/users/${regRes.body.id}/password`)
+        .send({ password: 'brandnewpassword' });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.ok).toBe(true);
+
+      // Verify old password fails
+      const failedLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'player1', password: 'password123' });
+      expect(failedLogin.status).toBe(401);
+
+      // Verify new password succeeds
+      const successfulLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'player1', password: 'brandnewpassword' });
+      expect(successfulLogin.status).toBe(200);
+      expect(successfulLogin.body.username).toBe('player1');
     });
   });
 });

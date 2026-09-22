@@ -84,6 +84,7 @@ export function createCharacterRouter(db, io) {
         return res.status(400).json({ error: 'Name and race are required' });
       }
 
+      console.log('Incoming PUT character body:', req.body);
       const validRaces = ['Human', 'Dralasite', 'Vrusk', 'Yazirian'];
       if (!validRaces.includes(race)) {
         return res.status(400).json({ error: 'Invalid race' });
@@ -97,18 +98,18 @@ export function createCharacterRouter(db, io) {
         INSERT INTO character_sheets (
           user_id, name, race, gender, height, weight,
           str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
-          racial_abilities, skills, inventory, notes
+          racial_abilities, skills, inventory, notes, avatar_url
         ) VALUES (
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?
+          ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         req.session.userId, name, race, gender, height, weight,
         str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
-        racialAbilitiesStr, skillsStr, inventoryStr, notes
+        racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || ''
       );
 
       const created = db.prepare('SELECT * FROM character_sheets WHERE id = ?').get(result.lastInsertRowid);
@@ -153,6 +154,7 @@ export function createCharacterRouter(db, io) {
         notes = existing.notes,
       } = req.body;
 
+      console.log('Incoming PUT character body:', req.body);
       const validRaces = ['Human', 'Dralasite', 'Vrusk', 'Yazirian'];
       if (!validRaces.includes(race)) {
         return res.status(400).json({ error: 'Invalid race' });
@@ -167,7 +169,7 @@ export function createCharacterRouter(db, io) {
           name = ?, race = ?, gender = ?, height = ?, weight = ?,
           str = ?, sta = ?, current_sta = ?, dex = ?, rs = ?,
           int_stat = ?, log_stat = ?, per = ?, ldr = ?,
-          racial_abilities = ?, skills = ?, inventory = ?, notes = ?,
+          racial_abilities = ?, skills = ?, inventory = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
@@ -176,7 +178,7 @@ export function createCharacterRouter(db, io) {
         name, race, gender, height, weight,
         str, sta, current_sta, dex, rs,
         int_stat, log_stat, per, ldr,
-        racialAbilitiesStr, skillsStr, inventoryStr, notes,
+        racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || existing.avatar_url || '',
         req.params.id
       );
 
