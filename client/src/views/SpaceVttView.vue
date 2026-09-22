@@ -251,7 +251,7 @@
 
         <div class="sidebar-content">
           <!-- Token Creation Button -->
-          <button class="primary full-width" @click="openAddTokenModal">+ Add New Token</button>
+          <button class="primary full-width btn-add-token" @click="openAddTokenModal">+ Add New Token</button>
 
           <!-- Selected Token Details -->
           <div v-if="selectedToken" class="section-box token-inspector">
@@ -1357,14 +1357,31 @@ onBeforeUnmount(() => {
 }
 
 .btn-gm {
-  background: #3a9c83;
-  border-color: #3a9c83;
-  color: #fff;
+  background: #082d33;
+  border: 1px solid #007fff;
+  color: #00ffff;
 }
 
 .btn-gm:hover {
-  background: #45b497;
-  border-color: #45b497;
+  background: #0d3b44;
+  border-color: #3399ff;
+  color: #00ffff;
+}
+
+.btn-add-token {
+  background: #0d2818 !important;
+  border: 1px solid #00ffff !important;
+  color: #007fff !important;
+  font-weight: 700;
+  box-shadow: none;
+  text-shadow: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-add-token:hover {
+  background: #143d24 !important;
+  border-color: #33ffff !important;
+  color: #3399ff !important;
 }
 
 /* Main Body Layout */
@@ -1402,12 +1419,19 @@ onBeforeUnmount(() => {
   text-align: left;
 }
 
-.vtt-toolbar button.active {
-  background: #3a859c;
-  color: #ffffff;
+.vtt-toolbar > button.active {
+  background: #000000;
+  color: #007fff;
   font-weight: 600;
-  border-color: #3a859c;
-  box-shadow: 0 0 8px rgba(58, 133, 156, 0.4);
+  border: 1px solid #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.vtt-toolbar > button.active:hover {
+  background: #000000;
+  color: #3399ff;
+  border-color: #33ffff;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
 }
 
 .toolbar-divider {
