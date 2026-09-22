@@ -324,7 +324,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   // Token Colored Ring Border
   ctx.beginPath();
   ctx.arc(0, 0, size, 0, Math.PI * 2);
-  ctx.strokeStyle = token.color || '#3b82f6';
+  ctx.strokeStyle = token.color || '#84d1d1';
   ctx.lineWidth = 3;
   ctx.stroke();
   
@@ -360,16 +360,16 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   // Speed badge
   const speed = token.current_speed ?? token.speed;
   if (speed !== null && speed !== undefined) {
-    ctx.fillStyle = '#1e40af'; // dark blue background for speed
+    ctx.fillStyle = '#69c79e'; // speed indicator background
     ctx.beginPath();
     ctx.arc(cx + size * 0.7, cy - size * 0.7, 10, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#60a5fa';
+    ctx.strokeStyle = '#489d78';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.font = 'bold 10px sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#081c15';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(speed.toString(), cx + size * 0.7, cy - size * 0.7);

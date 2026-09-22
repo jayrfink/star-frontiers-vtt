@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>Character Sheets</h3>
-        <button class="btn-primary" @click="openCreateModal">+ New Character</button>
+        <button class="btn-primary btn-new-character" @click="openCreateModal">+ New Character</button>
       </div>
 
       <div v-if="loading" class="sidebar-loading">Loading characters...</div>
@@ -1530,6 +1530,32 @@ export default {
 }
 
 /* Buttons & Controls */
+.btn-new-character {
+  background: #082d33 !important;
+  border: 1px solid #007fff !important;
+  color: #00ffff !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
+}
+.btn-new-character:hover {
+  background: #0d3b44 !important;
+  border-color: #3399ff !important;
+  color: #00ffff !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+.btn-new-character:active {
+  transform: translateY(1px);
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #14b8a6 100%);
   color: #07131e;

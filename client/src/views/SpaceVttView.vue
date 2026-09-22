@@ -258,7 +258,7 @@
             <div class="token-title-row">
               <span
                 class="token-color-badge"
-                :style="{ backgroundColor: selectedToken.color || '#3b82f6' }"
+                :style="{ backgroundColor: selectedToken.color || '#84d1d1' }"
               ></span>
               <h4>{{ selectedToken.name }}</h4>
             </div>
@@ -400,7 +400,7 @@
                 @click="selectedTokenId = t.id"
               >
                 <div class="token-item-left">
-                  <span class="token-dot" :style="{ backgroundColor: t.color || '#3b82f6' }"></span>
+                  <span class="token-dot" :style="{ backgroundColor: t.color || '#84d1d1' }"></span>
                   <strong>{{ t.name }}</strong>
                 </div>
                 <div class="token-item-right">
@@ -665,7 +665,7 @@ const counterPresets = [
     name: 'UPF Assault Scout',
     avatar_url: '/tokens/space/upf_assault_scout.png',
     hp: 15,
-    color: '#3b82f6',
+    color: '#84d1d1',
   },
   {
     name: 'Sathar Destroyer',
@@ -713,7 +713,7 @@ const newMapForm = reactive({
 
 const newTokenForm = reactive({
   name: '',
-  color: '#3b82f6',
+  color: '#84d1d1',
   avatar_url: '/tokens/space/upf_assault_scout.png',
   x: 0,
   y: 0,
@@ -727,7 +727,7 @@ const newTokenForm = reactive({
 const selectedTokenForm = reactive({
   current_hp: 0,
   max_hp: 0,
-  color: '#3b82f6',
+  color: '#84d1d1',
   size: 1,
   status_effects: [],
   current_speed: 0,
@@ -744,7 +744,7 @@ watch(selectedToken, (newToken) => {
   if (newToken) {
     selectedTokenForm.current_hp = newToken.current_hp ?? 0;
     selectedTokenForm.max_hp = newToken.max_hp ?? 0;
-    selectedTokenForm.color = newToken.color || '#3b82f6';
+    selectedTokenForm.color = newToken.color || '#84d1d1';
     selectedTokenForm.size = newToken.size || 1;
     selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
     selectedTokenForm.current_speed = newToken.current_speed ?? 0;
@@ -997,7 +997,7 @@ async function deleteMap(mapId) {
 function openAddTokenModal() {
   selectedShipId.value = null;
   newTokenForm.name = 'UPF Assault Scout';
-  newTokenForm.color = '#3b82f6';
+  newTokenForm.color = '#84d1d1';
   newTokenForm.avatar_url = '/tokens/space/upf_assault_scout.png';
   newTokenForm.x = 0;
   newTokenForm.y = 0;
@@ -1229,7 +1229,7 @@ function setupSocketListeners() {
         if (selectedTokenId.value === token.id) {
           selectedTokenForm.current_hp = token.current_hp ?? 0;
           selectedTokenForm.max_hp = token.max_hp ?? 0;
-          selectedTokenForm.color = token.color || '#3b82f6';
+          selectedTokenForm.color = token.color || '#84d1d1';
           selectedTokenForm.size = token.size || 1;
           selectedTokenForm.status_effects = [...(token.status_effects || [])];
           selectedTokenForm.current_speed = token.current_speed ?? 0;
@@ -1760,8 +1760,9 @@ onBeforeUnmount(() => {
 
 .badge-speed {
   font-size: 11px;
-  background: #1e40af;
-  color: #bfdbfe;
+  background: rgba(105, 199, 158, 0.2);
+  color: #69c79e;
+  border: 1px solid rgba(105, 199, 158, 0.5);
   padding: 1px 5px;
   border-radius: 4px;
   font-weight: 600;
