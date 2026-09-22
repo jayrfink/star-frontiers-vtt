@@ -20,7 +20,7 @@
         >
           <div class="ship-item-info">
             <span class="ship-name">{{ ship.name || 'Unnamed Ship' }}</span>
-            <span class="ship-sub">{{ ship.type || 'Fighter' }} • HP {{ ship.current_hull_points }}/{{ ship.max_hull_points }}</span>
+            <span class="ship-sub">{{ ship.ship_type || ship.type || 'Fighter' }} • HP {{ ship.current_hp ?? ship.current_hull_points ?? 50 }}/{{ ship.hull_points ?? ship.max_hull_points ?? 50 }}</span>
           </div>
           <button class="btn-delete-small" title="Delete Ship" @click.stop="deleteShip(ship.id)">✕</button>
         </li>
@@ -719,7 +719,7 @@ export default {
 .sidebar-header h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: #58a6ff;
+  color: #3a859c;
 }
 
 .sidebar-loading,
@@ -754,7 +754,7 @@ export default {
 
 .ship-list li.active {
   background: #1f6feb22;
-  border-left: 4px solid #58a6ff;
+  border-left: 4px solid #3a859c;
 }
 
 .ship-item-info {
@@ -852,7 +852,7 @@ export default {
 .input-type-select {
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #58a6ff;
+  color: #3a859c;
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 1rem;
@@ -867,7 +867,7 @@ export default {
 }
 .hull-header h4 {
   margin: 0;
-  color: #58a6ff;
+  color: #3a859c;
 }
 
 .hull-values {
@@ -931,7 +931,7 @@ export default {
 /* Primary Stats Grid */
 .stats-section h4 {
   margin: 0 0 12px 0;
-  color: #58a6ff;
+  color: #3a859c;
 }
 
 .stats-grid {
@@ -969,7 +969,7 @@ export default {
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
-  color: #58a6ff;
+  color: #3a859c;
   border-radius: 4px;
   padding: 4px;
   margin-top: 4px;
@@ -990,7 +990,7 @@ export default {
 }
 .list-header h4 {
   margin: 0;
-  color: #58a6ff;
+  color: #3a859c;
 }
 
 .defenses-list {
@@ -1259,7 +1259,7 @@ export default {
 
 .modal-card h3 {
   margin-top: 0;
-  color: #58a6ff;
+  color: #3a859c;
   margin-bottom: 16px;
 }
 
