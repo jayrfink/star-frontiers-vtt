@@ -1052,6 +1052,7 @@ async function updateSelectedToken() {
 function adjustSelectedHp(delta) {
   if (!selectedToken.value) return;
   selectedTokenForm.current_hp = Math.max(0, (selectedTokenForm.current_hp || 0) + delta);
+  selectedToken.value.current_hp = selectedTokenForm.current_hp;
   updateSelectedToken();
 }
 
@@ -1065,6 +1066,9 @@ function toggleStatus(statusKey) {
     selectedTokenForm.status_effects.push(statusKey);
   } else {
     selectedTokenForm.status_effects.splice(idx, 1);
+  }
+  if (selectedToken.value) {
+    selectedToken.value.status_effects = [...selectedTokenForm.status_effects];
   }
   updateSelectedToken();
 }

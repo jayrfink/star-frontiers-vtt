@@ -374,6 +374,50 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     ctx.textBaseline = 'middle';
     ctx.fillText(speed.toString(), cx + size * 0.7, cy - size * 0.7);
   }
+
+  // Status Icons (💥 Damaged, 🛰️ Adrift, ⚡ Disabled, 🔥 Burning, etc.)
+  const rawStatus = token.status_effects;
+  let statusEffects = [];
+  if (Array.isArray(rawStatus)) {
+    statusEffects = rawStatus;
+  } else if (typeof rawStatus === 'string' && rawStatus) {
+    try {
+      statusEffects = JSON.parse(rawStatus);
+    } catch {
+      statusEffects = [];
+    }
+  }
+
+  if (statusEffects.length > 0) {
+    const iconMap = {
+      damaged: '💥',
+      adrift: '🛰️',
+      disabled: '⚡',
+      burning: '🔥',
+      stunned: '⚡',
+      unconscious: '💀',
+      wounded: '🩸',
+      '💥': '💥',
+      '🛰️': '🛰️',
+      '⚡': '⚡',
+      '🔥': '🔥',
+      '💀': '💀',
+      '🩸': '🩸',
+    };
+    const activeIcons = statusEffects.map((s) => iconMap[s] || s);
+    const iconStr = activeIcons.join('');
+
+    ctx.save();
+    ctx.font = `${Math.max(12, Math.round(size * 0.4))}px sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    ctx.fillText(iconStr, cx - size * 0.85, cy - size * 0.85);
+    ctx.restore();
+  }
 }
 
 function drawInitials(ctx, name, cx, cy, radius) {
