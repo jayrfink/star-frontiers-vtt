@@ -129,7 +129,7 @@ async function main() {
   }
 
   const tensDiffuseBuffer = await makeDiffuse(0x77, 0xd1, 0x9e); // #77d19e
-  const onesDiffuseBuffer = await makeDiffuse(0xd1, 0xce, 0xa5); // #d1cea5
+  const onesDiffuseBuffer = await makeDiffuse(0x22, 0x38, 0x4a); // #22384a
 
   // --- 5. Write to both custom-tens and custom-ones ---
   const tensDir = path.join(root, 'public/assets/dice-box/themes/custom-tens');
@@ -142,7 +142,7 @@ async function main() {
   fs.writeFileSync(path.join(onesDir, 'diffuse-light.png'), onesDiffuseBuffer);
   fs.writeFileSync(path.join(onesDir, 'diffuse-dark.png'), onesDiffuseBuffer);
   fs.writeFileSync(path.join(onesDir, 'normal.png'), normBuffer);
-  console.log('Saved updated textures to custom-ones (#d1cea5)');
+  console.log('Saved updated textures to custom-ones (#22384a)');
 
   console.log('All textures successfully generated with centered 0 and cleaned normal map!');
 }

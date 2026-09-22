@@ -552,7 +552,7 @@ function rollPercentile() {
   if (diceBoxInstance) {
     diceBoxInstance.roll([
       { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }, // Tens
-      { sides: 10, theme: 'custom-ones', themeColor: '#4a2242', qty: 1 }  // Ones
+      { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 }  // Ones
     ]);
   }
 }
