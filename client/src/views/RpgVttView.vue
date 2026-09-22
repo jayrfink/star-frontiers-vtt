@@ -1252,9 +1252,9 @@ onBeforeUnmount(() => {
 }
 
 .btn-add-token {
-  background: #0d2818 !important;
-  border: 1px solid #00ffff !important;
-  color: #007fff !important;
+  background: #082d33 !important;
+  border: 1px solid #14b8a6 !important;
+  color: #2dd4bf !important;
   font-weight: 700;
   box-shadow: none;
   text-shadow: none;
@@ -1262,9 +1262,9 @@ onBeforeUnmount(() => {
 }
 
 .btn-add-token:hover {
-  background: #143d24 !important;
-  border-color: #33ffff !important;
-  color: #3399ff !important;
+  background: #0d3b44 !important;
+  border-color: #2dd4bf !important;
+  color: #5eead4 !important;
 }
 
 /* Main Body Layout */
@@ -1303,18 +1303,18 @@ onBeforeUnmount(() => {
 }
 
 .vtt-toolbar > button.active {
-  background: #000000;
-  color: #007fff;
+  background: #082d33;
+  color: #2dd4bf;
   font-weight: 600;
-  border: 1px solid #00ffff;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+  border: 1px solid #14b8a6;
+  box-shadow: 0 0 8px rgba(20, 184, 166, 0.4);
 }
 
 .vtt-toolbar > button.active:hover {
-  background: #000000;
-  color: #3399ff;
-  border-color: #33ffff;
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
+  background: #0d3b44;
+  color: #5eead4;
+  border-color: #2dd4bf;
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.6);
 }
 
 .toolbar-divider {
