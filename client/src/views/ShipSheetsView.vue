@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>Ship Sheets</h3>
-        <button class="btn-primary" @click="openCreateModal">+ New Ship</button>
+        <button class="btn-primary btn-new-ship" @click="openCreateModal">+ New Ship</button>
       </div>
 
       <div v-if="loading" class="sidebar-loading">Loading ships...</div>
@@ -1038,16 +1038,30 @@ export default {
   border-radius: 4px;
   font-weight: 700;
   font-size: 0.8rem;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 .toggle-btn.active {
-  background: #238636;
-  color: #ffffff;
+  background: #0d2818;
+  border-color: #4ade80;
+  color: #39d353;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.25);
+}
+.toggle-btn.active:hover {
+  background: #143d24;
+  border-color: #56d364;
+  color: #56d364;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.45);
 }
 .toggle-btn.offline {
   background: #21262d;
+  border-color: #30363d;
   color: #8b949e;
+}
+.toggle-btn.offline:hover {
+  background: #282e37;
+  color: #c9d1d9;
 }
 
 .defense-counter-box {
@@ -1075,19 +1089,29 @@ export default {
 }
 
 .btn-action {
-  background: #1f6feb;
-  color: #ffffff;
-  border: none;
+  background: #0d2818;
+  color: #39d353;
+  border: 1px solid #4ade80;
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+.btn-action:hover:not(:disabled) {
+  background: #143d24;
+  border-color: #56d364;
+  color: #56d364;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.45);
 }
 .btn-action:disabled {
-  background: #21262d;
+  background: #161b22;
+  border-color: #30363d;
   color: #8b949e;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .empty-list {
@@ -1190,19 +1214,29 @@ export default {
 }
 
 .btn-fire {
-  background: #da3633;
-  color: #ffffff;
-  border: none;
+  background: #340c0e;
+  color: #f85149;
+  border: 1px solid #da3633;
   padding: 3px 10px;
   border-radius: 4px;
   font-weight: 700;
   font-size: 0.8rem;
   cursor: pointer;
+  box-shadow: 0 0 6px rgba(218, 54, 51, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+.btn-fire:hover:not(:disabled) {
+  background: #4a1316;
+  border-color: #ff6b6b;
+  color: #ff8585;
+  box-shadow: 0 0 10px rgba(248, 81, 73, 0.45);
 }
 .btn-fire:disabled {
-  background: #21262d;
+  background: #161b22;
+  border: 1px solid #30363d;
   color: #8b949e;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .item-level-input {
@@ -1227,17 +1261,36 @@ export default {
 }
 
 /* Buttons & Controls */
-.btn-primary {
-  background: #238636;
-  color: #ffffff;
-  border: none;
+.btn-primary,
+.btn-new-ship {
+  background: #082d33;
+  color: #2dd4bf;
+  border: 1px solid #14b8a6;
   padding: 6px 12px;
   border-radius: 4px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.35);
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
 }
-.btn-primary:hover {
-  background: #2ea043;
+.btn-primary:hover,
+.btn-new-ship:hover {
+  background: #0c3e47;
+  border-color: #2dd4bf;
+  color: #5eead4;
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.6);
+}
+.btn-primary:active,
+.btn-new-ship:active {
+  transform: translateY(1px);
+}
+.btn-primary:disabled {
+  background: #161b22;
+  border-color: #30363d;
+  color: #8b949e;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-secondary {
