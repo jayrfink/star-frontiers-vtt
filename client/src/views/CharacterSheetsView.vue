@@ -37,35 +37,42 @@
 
       <div v-else class="sheet-container">
         <!-- Header Info -->
-        <header class="sheet-header">
-          <div class="header-main">
-            <input
-              type="text"
-              v-model="selectedChar.name"
-              @change="updateCharacter"
-              class="input-name"
-              placeholder="Character Name"
-            />
-            <div class="race-select-wrap">
-              <label>Race:</label>
-              <select v-model="selectedChar.race" @change="updateCharacter" class="select-race">
-                <option value="Human">Human</option>
-                <option value="Dralasite">Dralasite</option>
-                <option value="Vrusk">Vrusk</option>
-                <option value="Yazirian">Yazirian</option>
-              </select>
-            </div>
-            <div class="psa-select-wrap">
-              <label>PSA:</label>
-              <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
-                <option value="Military">Military</option>
-                <option value="Technological">Technological</option>
-                <option value="Biosocial">Biosocial</option>
-              </select>
-            </div>
+        <header class="sheet-header" style="display: flex; gap: 16px; align-items: flex-start;">
+          <div class="portrait-box" @click="$refs.avatarInput.click()" title="Click to upload character portrait">
+            <img v-if="selectedChar.avatar_url" :src="selectedChar.avatar_url" class="portrait-img" alt="Character Portrait" />
+            <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
+            <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
           </div>
-          <div class="race-ability-banner">
-            <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
+          <div style="flex: 1;">
+            <div class="header-main">
+              <input
+                type="text"
+                v-model="selectedChar.name"
+                @change="updateCharacter"
+                class="input-name"
+                placeholder="Character Name"
+              />
+              <div class="race-select-wrap">
+                <label>Race:</label>
+                <select v-model="selectedChar.race" @change="updateCharacter" class="select-race">
+                  <option value="Human">Human</option>
+                  <option value="Dralasite">Dralasite</option>
+                  <option value="Vrusk">Vrusk</option>
+                  <option value="Yazirian">Yazirian</option>
+                </select>
+              </div>
+              <div class="psa-select-wrap">
+                <label>PSA:</label>
+                <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
+                  <option value="Military">Military</option>
+                  <option value="Technological">Technological</option>
+                  <option value="Biosocial">Biosocial</option>
+                </select>
+              </div>
+            </div>
+            <div class="race-ability-banner">
+              <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
+            </div>
           </div>
         </header>
 
@@ -337,20 +344,42 @@
           <section class="card list-card">
             <div class="list-header">
               <h4>Inventory & Mass</h4>
-              <button class="btn-secondary" @click="addInventoryItem">+ Add Item</button>
+              <div class="list-header-actions">
+                <button class="btn-secondary" @click="showEquipmentModal = true">+ Add Equipment</button>
+                <button class="btn-secondary" @click="addInventoryItem">+ Custom Item</button>
+              </div>
             </div>
-            <div v-if="!selectedChar.inventory || selectedChar.inventory.length === 0" class="empty-list">
-              No equipment in inventory.
+            <div class="inventory-search-wrap" style="margin-bottom: 12px;">
+              <input 
+                type="text" 
+                v-model="searchInventoryQuery" 
+                placeholder="Search Inventory..." 
+                class="item-name-input" 
+                style="width: 100%; box-sizing: border-box;"
+              />
             </div>
-            <ul class="items-list">
-              <li v-for="(item, index) in selectedChar.inventory" :key="index" class="item-row inventory-row">
-                <input
-                  type="text"
-                  v-model="item.name"
-                  @change="updateCharacter"
-                  placeholder="Item Name"
-                  class="item-name-input"
-                />
+            <div v-if="!filteredInventory || filteredInventory.length === 0" class="empty-list">
+              {{ searchInventoryQuery ? 'No matching items in inventory.' : 'No equipment in inventory. Search available equipment or add a custom item!' }}
+            </div>
+            <ul v-else class="items-list">
+              <li v-for="(item, index) in filteredInventory" :key="index" class="item-row inventory-row">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <input
+                    type="text"
+                    v-model="item.name"
+                    @change="updateCharacter"
+                    placeholder="Item Name"
+                    class="item-name-input"
+                  />
+                  <input 
+                    type="text"
+                    v-model="item.notes"
+                    @change="updateCharacter"
+                    placeholder="Notes / Capabilities"
+                    class="item-name-input"
+                    style="font-size: 0.8rem; color: #8b949e; background: transparent; border: 1px dashed #30363d;"
+                  />
+                </div>
                 <div class="item-weight-wrap">
                   <label>Kg:</label>
                   <input
@@ -372,7 +401,7 @@
                     class="item-level-input"
                   />
                 </div>
-                <button class="btn-remove" @click="removeInventoryItem(index)">✕</button>
+                <button class="btn-remove" title="Remove Item" @click="removeInventoryItem(item)">✕</button>
               </li>
             </ul>
           </section>
@@ -433,6 +462,50 @@
         </form>
       </div>
     </div>
+
+    <!-- Equipment Catalog Modal -->
+    <div v-if="showEquipmentModal" class="modal-backdrop" @click.self="showEquipmentModal = false">
+      <div class="modal-card equipment-modal">
+        <div class="equipment-modal-header">
+          <h3>Available Equipment Catalog</h3>
+          <button class="btn-close-modal" title="Close" @click="showEquipmentModal = false">✕</button>
+        </div>
+        <p class="equipment-modal-desc">
+          Search weapons, defenses, and gear from the Star Frontiers catalog. Click <strong>+ Add</strong> to add an item to your character's inventory.
+        </p>
+        <input 
+          type="text" 
+          v-model="equipmentSearchQuery" 
+          placeholder="Search available equipment by name, category, or capability..." 
+          class="modal-search"
+          autofocus
+        />
+        <div class="equipment-list">
+          <div v-if="filteredEquipmentList.length === 0" class="empty-list">No equipment found matching your search.</div>
+          <div v-for="item in filteredEquipmentList" :key="item.name" class="equipment-card">
+            <div class="eq-header">
+              <span class="eq-name">{{ item.name }}</span>
+              <button
+                class="btn-secondary eq-add-btn"
+                :class="{ 'btn-added': recentlyAddedMap[item.name] }"
+                @click="addEquipment(item)"
+              >
+                {{ recentlyAddedMap[item.name] ? '✓ Added' : '+ Add' }}
+              </button>
+            </div>
+            <div class="eq-details">
+              <span class="eq-tag">{{ item.category }}</span>
+              <span class="eq-cost">{{ item.cost }} Cr</span>
+              <span class="eq-weight">{{ item.weight }} kg</span>
+            </div>
+            <div class="eq-capabilities">{{ item.capabilities }}</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" @click="showEquipmentModal = false">Done</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -459,6 +532,11 @@ export default {
       showCreateModal: false,
       racesData: RACES_DATA,
       officialSkills: OFFICIAL_SKILLS,
+      equipmentList: [],
+      showEquipmentModal: false,
+      equipmentSearchQuery: '',
+      searchInventoryQuery: '',
+      recentlyAddedMap: {},
       newCharForm: {
         name: '',
         race: 'Human',
@@ -473,6 +551,24 @@ export default {
     };
   },
   computed: {
+    filteredEquipmentList() {
+      if (!this.equipmentSearchQuery) return this.equipmentList;
+      const q = this.equipmentSearchQuery.toLowerCase().trim();
+      return this.equipmentList.filter(item => 
+        (item.name && item.name.toLowerCase().includes(q)) || 
+        (item.category && item.category.toLowerCase().includes(q)) || 
+        (item.capabilities && item.capabilities.toLowerCase().includes(q))
+      );
+    },
+    filteredInventory() {
+      if (!this.selectedChar || !this.selectedChar.inventory) return [];
+      if (!this.searchInventoryQuery) return this.selectedChar.inventory;
+      const q = this.searchInventoryQuery.toLowerCase().trim();
+      return this.selectedChar.inventory.filter(item => 
+        (item.name && item.name.toLowerCase().includes(q)) ||
+        (item.notes && item.notes.toLowerCase().includes(q))
+      );
+    },
     staminaPercentage() {
       if (!this.selectedChar || !this.selectedChar.max_stamina) return 0;
       const pct = (this.selectedChar.current_stamina / this.selectedChar.max_stamina) * 100;
@@ -541,6 +637,7 @@ export default {
   },
   mounted() {
     this.fetchCharacters();
+    this.fetchEquipment();
     this.setupSocketListeners();
   },
   beforeUnmount() {
@@ -565,6 +662,7 @@ export default {
 
       if (!c.skills) c.skills = [];
       if (!c.inventory) c.inventory = [];
+      c.avatar_url = c.avatar_url || '';
       return c;
     },
     async fetchCharacters() {
@@ -751,13 +849,73 @@ export default {
       const lvlBonus = (skill.level || 1) * 10;
       return baseVal + lvlBonus;
     },
-    addInventoryItem() {
+    async uploadAvatar(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.selectedChar.avatar_url = data.url;
+          this.updateCharacter();
+        } else {
+          console.error('Upload failed');
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+      }
+    },
+    async fetchEquipment() {
+      try {
+        const res = await fetch('/api/equipment', { credentials: 'include' });
+        if (res.ok) {
+          this.equipmentList = await res.json();
+        }
+      } catch (err) {
+        console.error('Error fetching equipment:', err);
+      }
+    },
+    addEquipment(item) {
+      if (!this.selectedChar) return;
       if (!this.selectedChar.inventory) this.selectedChar.inventory = [];
-      this.selectedChar.inventory.push({ name: 'New Item', quantity: 1, weight: 1.0 });
+      this.selectedChar.inventory.push({
+        name: item.name,
+        quantity: 1,
+        weight: Number(item.weight) || 0,
+        notes: item.capabilities || ''
+      });
+      this.updateCharacter();
+      this.recentlyAddedMap = { ...this.recentlyAddedMap, [item.name]: true };
+      setTimeout(() => {
+        const copy = { ...this.recentlyAddedMap };
+        delete copy[item.name];
+        this.recentlyAddedMap = copy;
+      }, 1500);
+    },
+    addInventoryItem() {
+      if (!this.selectedChar) return;
+      if (!this.selectedChar.inventory) this.selectedChar.inventory = [];
+      this.selectedChar.inventory.push({ name: 'New Item', quantity: 1, weight: 1.0, notes: '' });
       this.updateCharacter();
     },
-    removeInventoryItem(index) {
-      this.selectedChar.inventory.splice(index, 1);
+    removeInventoryItem(itemOrIndex) {
+      if (!this.selectedChar || !this.selectedChar.inventory) return;
+      if (typeof itemOrIndex === 'number') {
+        this.selectedChar.inventory.splice(itemOrIndex, 1);
+      } else {
+        const idx = this.selectedChar.inventory.indexOf(itemOrIndex);
+        if (idx !== -1) {
+          this.selectedChar.inventory.splice(idx, 1);
+        }
+      }
       this.updateCharacter();
     },
     setupSocketListeners() {
@@ -1484,5 +1642,182 @@ export default {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
+}
+
+.list-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.equipment-modal {
+  max-width: 650px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.equipment-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.equipment-modal-header h3 {
+  margin: 0;
+  color: #3a859c;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.btn-close-modal:hover {
+  color: var(--text-primary);
+}
+
+.equipment-modal-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.modal-search {
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.equipment-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-right: 6px;
+  max-height: 55vh;
+}
+
+.equipment-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.equipment-card:hover {
+  border-color: rgba(58, 133, 156, 0.5);
+}
+
+.eq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.eq-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: #3a859c;
+}
+
+.eq-add-btn {
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.eq-add-btn.btn-added {
+  background: #0d2818 !important;
+  border-color: #4ade80 !important;
+  color: #39d353 !important;
+}
+
+.eq-details {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.eq-tag {
+  background: rgba(58, 133, 156, 0.18);
+  color: #3a859c;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.eq-cost {
+  color: #e6edf3;
+  font-weight: 500;
+}
+
+.eq-weight {
+  color: #8b949e;
+}
+
+.eq-capabilities {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.portrait-box {
+  width: 96px;
+  height: 96px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+
+.portrait-box:hover {
+  border-color: var(--accent);
+}
+
+.portrait-placeholder {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style>
