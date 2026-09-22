@@ -285,7 +285,7 @@
             <div class="token-title-row">
               <span
                 class="token-color-badge"
-                :style="{ backgroundColor: selectedToken.color || '#3b82f6' }"
+                :style="{ backgroundColor: selectedToken.color || '#3e636b' }"
               ></span>
               <h4>{{ selectedToken.name }}</h4>
             </div>
@@ -387,7 +387,7 @@
                 :class="{ active: selectedTokenId === t.id }"
                 @click="selectedTokenId = t.id"
               >
-                <span class="token-dot" :style="{ backgroundColor: t.color || '#3b82f6' }"></span>
+                <span class="token-dot" :style="{ backgroundColor: t.color || '#3e636b' }"></span>
                 <strong>{{ t.name }}</strong>
                 <small>({{ t.x }}, {{ t.y }})</small>
               </li>
@@ -640,7 +640,7 @@ const newMapForm = reactive({
 const selectedCharacterId = ref(null);
 const newTokenForm = reactive({
   name: '',
-  color: '#3b82f6',
+  color: '#3e636b',
   avatar_url: '',
   x: 0,
   y: 0,
@@ -652,7 +652,7 @@ const newTokenForm = reactive({
 const selectedTokenForm = reactive({
   current_hp: 0,
   max_hp: 0,
-  color: '#3b82f6',
+  color: '#3e636b',
   size: 1,
   status_effects: [],
 });
@@ -667,7 +667,7 @@ watch(selectedToken, (newToken) => {
   if (newToken) {
     selectedTokenForm.current_hp = newToken.current_hp ?? 0;
     selectedTokenForm.max_hp = newToken.max_hp ?? 0;
-    selectedTokenForm.color = newToken.color || '#3b82f6';
+    selectedTokenForm.color = newToken.color || '#3e636b';
     selectedTokenForm.size = newToken.size || 1;
     selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
   }
@@ -891,7 +891,7 @@ async function deleteMap(mapId) {
 function openAddTokenModal() {
   selectedCharacterId.value = null;
   newTokenForm.name = '';
-  newTokenForm.color = '#3b82f6';
+  newTokenForm.color = '#3e636b';
   newTokenForm.avatar_url = '';
   newTokenForm.x = 0;
   newTokenForm.y = 0;

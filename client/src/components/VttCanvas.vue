@@ -360,7 +360,7 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   // Token Colored Ring Border
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = token.color || '#3b82f6';
+  ctx.strokeStyle = token.color || '#3e636b';
   ctx.lineWidth = 3;
   ctx.stroke();
 
@@ -429,7 +429,7 @@ function drawInitials(ctx, name, cx, cy, radius) {
 function drawFogOfWar(ctx, mapW, mapH) {
   if (!props.map) return;
   const fogData = props.map.fog_data;
-  if (!fogData || !Array.isArray(fogData)) return;
+  if (!props.map.fog_enabled || !fogData || !Array.isArray(fogData)) return;
 
   ctx.save();
   const fogAlpha = props.isGm ? 0.5 : 0.96;
