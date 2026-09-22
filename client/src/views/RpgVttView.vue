@@ -58,15 +58,7 @@
         </button>
 
         <template v-if="isGm">
-          
-        <button class="btn-tool" @click="rollPercentile">
-          🎲 Roll d%
-        </button>
-        <button class="btn-tool" @click="clearDice">
-          ✖ Clear Dice
-        </button>
-        <div class="toolbar-divider"></div>
-
+          <div class="toolbar-divider"></div>
           <button
             :class="{ active: activeTool === 'fog_reveal' }"
             title="Fog of War: Reveal Area"
@@ -85,11 +77,7 @@
       </nav>
 
       <!-- Canvas Area -->
-      <div class="vtt-canvas-wrapper" style="position: relative;">
-
-        <!-- Dice Box Overlay -->
-        <div id="dice-box" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;"></div>
-
+      <div class="vtt-canvas-wrapper">
         <VttCanvas
           :map="activeMap"
           :tokens="tokens"
@@ -382,21 +370,13 @@
 
           <div class="form-group">
             <label>Custom Image URL (Optional)</label>
-            <input type="text" v-model="newMapForm.background_url" placeholder="Image URL or upload file" />
-            <input type="file" accept="image/*" @change="e => uploadMapImage(e, newMapForm)" />
+            <input type="text" v-model="newMapForm.background_url" placeholder="https://..." />
           </div>
 
           <div class="form-group checkbox-group">
             <label>
               <input type="checkbox" v-model="newMapForm.is_active" />
               Set as Active Map immediately
-            </label>
-          </div>
-
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" v-model="newMapForm.fog_enabled" />
-              Enable Fog of War
             </label>
           </div>
 
@@ -466,9 +446,8 @@
           </div>
 
           <div class="form-group">
-            <label>Avatar Image (Optional)</label>
-            <input type="text" v-model="newTokenForm.avatar_url" placeholder="https://... or upload file" />
-            <input type="file" accept="image/*" @change="uploadImage" />
+            <label>Avatar Image URL (Optional)</label>
+            <input type="text" v-model="newTokenForm.avatar_url" placeholder="https://..." />
           </div>
 
           <div class="modal-actions">
@@ -486,30 +465,9 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import VttCanvas from '../components/VttCanvas.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
-import DiceBox from '@3d-dice/dice-box';
-
 
 const authStore = useAuthStore();
 const isGm = computed(() => authStore.user?.role === 'GameMaster');
-
-
-// Dice state
-let diceBoxInstance = null;
-
-function rollPercentile() {
-  if (diceBoxInstance) {
-    diceBoxInstance.roll([
-      { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }, // Tens
-      { sides: 10, theme: 'custom-ones', themeColor: '#4a2242', qty: 1 }  // Ones
-    ]);
-  }
-}
-
-function clearDice() {
-  if (diceBoxInstance) {
-    diceBoxInstance.clear();
-  }
-}
 
 // Map & Token state
 const activeMap = ref(null);
@@ -535,7 +493,6 @@ const activeMapForm = reactive({
 
 const newMapForm = reactive({
   name: '',
-  map_type: 'rpg',
   width: 20,
   height: 20,
   grid_size: 40,
@@ -543,7 +500,6 @@ const newMapForm = reactive({
   preset_bg: 'grid_only',
   background_url: '',
   is_active: true,
-  fog_enabled: false,
 });
 
 const selectedCharacterId = ref(null);
@@ -594,7 +550,7 @@ watch(activeMap, (map) => {
 // API Calls
 async function fetchActiveMap() {
   try {
-    const res = await fetch('/api/maps/active?type=rpg', { credentials: 'include' });
+    const res = await fetch('/api/maps/active', { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
       activeMap.value = data.map;
@@ -607,7 +563,7 @@ async function fetchActiveMap() {
 
 async function fetchMapList() {
   try {
-    const res = await fetch('/api/maps?type=rpg', { credentials: 'include' });
+    const res = await fetch('/api/maps', { credentials: 'include' });
     if (res.ok) {
       mapList.value = await res.json();
     }
@@ -656,7 +612,6 @@ async function updateActiveMapSettings() {
         grid_size: activeMapForm.grid_size,
         grid_color: activeMapForm.grid_color,
         preset_bg: activeMapForm.preset_bg,
-        fog_enabled: activeMapForm.fog_enabled,
       }),
     });
     if (res.ok) {
@@ -710,34 +665,8 @@ async function saveFog(fogData, immediate = false) {
   }
 }
 
-
-async function uploadMapImage(e, formObject) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      formObject.background_url = data.url;
-    } else {
-      console.error('Upload failed');
-    }
-  } catch (err) {
-    console.error('Upload error:', err);
-  }
-}
-
 function openCreateMapModal() {
   newMapForm.name = '';
-  newMapForm.map_type = 'rpg';
   newMapForm.width = 20;
   newMapForm.height = 20;
   newMapForm.grid_size = 40;
@@ -745,7 +674,6 @@ function openCreateMapModal() {
   newMapForm.preset_bg = 'grid_only';
   newMapForm.background_url = '';
   newMapForm.is_active = true;
-  newMapForm.fog_enabled = false;
   showCreateMapModal.value = true;
 }
 
@@ -800,28 +728,6 @@ function openAddTokenModal() {
   newTokenForm.current_hp = 30;
   newTokenForm.max_hp = 30;
   showAddTokenModal.value = true;
-}
-
-async function uploadImage(event) {
-  const file = event.target?.files?.[0];
-  if (!file) return;
-  const formData = new FormData();
-  formData.append('file', file);
-  try {
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      newTokenForm.avatar_url = data.url || data;
-    } else {
-      console.error('Failed to upload image: status', res.status);
-    }
-  } catch (err) {
-    console.error('Failed to upload image:', err);
-  }
 }
 
 function onCharacterSelected() {
@@ -967,10 +873,8 @@ function adjustZoom(delta) {
 // Socket.io Real-time Event Listeners
 function setupSocketListeners() {
   socket.on('map:activated', ({ map, tokens: newTokens }) => {
-    if (map && map.map_type === 'rpg') {
-      activeMap.value = map;
-      tokens.value = newTokens || [];
-    }
+    activeMap.value = map;
+    tokens.value = newTokens || [];
   });
 
   socket.on('map:updated', ({ map }) => {
@@ -1049,19 +953,6 @@ onMounted(() => {
   if (isGm.value) {
     fetchMapList();
   }
-  
-  if (!diceBoxInstance) {
-    diceBoxInstance = new DiceBox({
-      id: "dice-canvas",
-      container: "#dice-box",
-      assetPath: '/assets/dice-box/',
-      theme: 'default',
-      scale: 5,
-      offscreen: false
-    });
-    diceBoxInstance.init();
-  }
-
   setupSocketListeners();
 });
 
@@ -1146,7 +1037,6 @@ onBeforeUnmount(() => {
 
 .btn-gm:hover {
   background: #45b497;
-  border-color: #45b497;
 }
 
 /* Main Body Layout */

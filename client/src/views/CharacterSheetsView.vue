@@ -37,15 +37,7 @@
 
       <div v-else class="sheet-container">
         <!-- Header Info -->
-        
-        <header class="sheet-header" style="display: flex; gap: 16px; align-items: flex-start;">
-          <div class="portrait-box" @click="$refs.avatarInput.click()">
-            <img v-if="selectedChar.avatar_url" :src="selectedChar.avatar_url" class="portrait-img" />
-            <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
-            <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
-          </div>
-          <div style="flex: 1;">
-
+        <header class="sheet-header">
           <div class="header-main">
             <input
               type="text"
@@ -75,7 +67,6 @@
           <div class="race-ability-banner">
             <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
           </div>
-                  </div>
         </header>
 
         <!-- Derived Tactical Sub-Stats Bar -->
@@ -346,40 +337,20 @@
           <section class="card list-card">
             <div class="list-header">
               <h4>Inventory & Mass</h4>
-              <button class="btn-secondary" @click="showEquipmentModal = true">+ Add Equipment</button>
+              <button class="btn-secondary" @click="addInventoryItem">+ Add Item</button>
             </div>
-            <div class="inventory-search-wrap" style="margin-bottom: 12px;">
-              <input 
-                type="text" 
-                v-model="searchInventoryQuery" 
-                placeholder="Search Inventory..." 
-                class="item-name-input" 
-                style="width: 100%; box-sizing: border-box;"
-              />
-            </div>
-            <div v-if="!filteredInventory || filteredInventory.length === 0" class="empty-list">
-              No equipment found in inventory.
+            <div v-if="!selectedChar.inventory || selectedChar.inventory.length === 0" class="empty-list">
+              No equipment in inventory.
             </div>
             <ul class="items-list">
-              <li v-for="(item, index) in filteredInventory" :key="index" class="item-row inventory-row">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-                  <input
-                    type="text"
-                    v-model="item.name"
-                    @change="updateCharacter"
-                    placeholder="Item Name"
-                    class="item-name-input"
-                  />
-                  <input 
-                    v-if="item.notes !== undefined"
-                    type="text"
-                    v-model="item.notes"
-                    @change="updateCharacter"
-                    placeholder="Notes/Capabilities"
-                    class="item-name-input"
-                    style="font-size: 0.8rem; color: #8b949e; background: transparent; border: 1px dashed #30363d;"
-                  />
-                </div>
+              <li v-for="(item, index) in selectedChar.inventory" :key="index" class="item-row inventory-row">
+                <input
+                  type="text"
+                  v-model="item.name"
+                  @change="updateCharacter"
+                  placeholder="Item Name"
+                  class="item-name-input"
+                />
                 <div class="item-weight-wrap">
                   <label>Kg:</label>
                   <input
@@ -401,7 +372,7 @@
                     class="item-level-input"
                   />
                 </div>
-                <button class="btn-remove" @click="removeInventoryItem(item)">✕</button>
+                <button class="btn-remove" @click="removeInventoryItem(index)">✕</button>
               </li>
             </ul>
           </section>
@@ -462,39 +433,6 @@
         </form>
       </div>
     </div>
-
-    <!-- Equipment Catalog Modal -->
-    <div v-if="showEquipmentModal" class="modal-overlay" @click.self="showEquipmentModal = false">
-      <div class="modal-content equipment-modal">
-        <h3>Equipment Catalog</h3>
-        <input 
-          type="text" 
-          v-model="equipmentSearchQuery" 
-          placeholder="Search available equipment by name, category, or capability..." 
-          class="modal-search"
-          autofocus
-        />
-        <div class="equipment-list">
-          <div v-if="filteredEquipmentList.length === 0" class="empty-list">No equipment found.</div>
-          <div v-for="item in filteredEquipmentList" :key="item.name" class="equipment-card">
-            <div class="eq-header">
-              <span class="eq-name">{{ item.name }}</span>
-              <button class="btn-secondary eq-add-btn" @click="addEquipment(item)">Add</button>
-            </div>
-            <div class="eq-details">
-              <span class="eq-tag">{{ item.category }}</span>
-              <span class="eq-cost">{{ item.cost }} Cr</span>
-              <span class="eq-weight">{{ item.weight }} kg</span>
-            </div>
-            <div class="eq-capabilities">{{ item.capabilities }}</div>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button @click="showEquipmentModal = false">Close</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -521,10 +459,6 @@ export default {
       showCreateModal: false,
       racesData: RACES_DATA,
       officialSkills: OFFICIAL_SKILLS,
-      equipmentList: [],
-      showEquipmentModal: false,
-      equipmentSearchQuery: '',
-      searchInventoryQuery: '',
       newCharForm: {
         name: '',
         race: 'Human',
@@ -604,29 +538,9 @@ export default {
     battleRageChance() {
       return 5;
     },
-    
-    filteredEquipmentList() {
-      if (!this.equipmentSearchQuery) return this.equipmentList;
-      const q = this.equipmentSearchQuery.toLowerCase();
-      return this.equipmentList.filter(item => 
-        item.name.toLowerCase().includes(q) || 
-        item.category.toLowerCase().includes(q) || 
-        (item.capabilities && item.capabilities.toLowerCase().includes(q))
-      );
-    },
-filteredInventory() {
-      if (!this.selectedChar || !this.selectedChar.inventory) return [];
-      if (!this.searchInventoryQuery) return this.selectedChar.inventory;
-      const q = this.searchInventoryQuery.toLowerCase();
-      return this.selectedChar.inventory.filter(item => 
-        (item.name && item.name.toLowerCase().includes(q)) ||
-        (item.notes && item.notes.toLowerCase().includes(q))
-      );
-    },
   },
   mounted() {
     this.fetchCharacters();
-    this.fetchEquipment();
     this.setupSocketListeners();
   },
   beforeUnmount() {
@@ -640,7 +554,6 @@ filteredInventory() {
       if (c.str === undefined) c.str = c.str_sta || 50;
       if (c.sta === undefined) c.sta = c.max_stamina !== undefined ? c.max_stamina : (c.str_sta || 50);
       c.max_stamina = c.sta;
-      c.avatar_url = c.avatar_url || "";
       c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : c.sta);
 
       if (c.dex === undefined) c.dex = c.dex_rs || 50;
@@ -838,64 +751,14 @@ filteredInventory() {
       const lvlBonus = (skill.level || 1) * 10;
       return baseVal + lvlBonus;
     },
-        async uploadAvatar(e) {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          credentials: 'include',
-          body: formData,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          this.selectedChar.avatar_url = data.url;
-          this.updateCharacter();
-        } else {
-          console.error('Upload failed');
-        }
-      } catch (err) {
-        console.error('Upload error:', err);
-      }
-    },
-
-    async fetchEquipment() {
-      try {
-        const res = await fetch('/api/equipment', { credentials: 'include' });
-        if (res.ok) {
-          this.equipmentList = await res.json();
-        }
-      } catch (err) {
-        console.error('Error fetching equipment:', err);
-      }
-    },
-    
-    addEquipment(item) {
-      if (!this.selectedChar.inventory) this.selectedChar.inventory = [];
-      this.selectedChar.inventory.push({
-        name: item.name,
-        quantity: 1,
-        weight: item.weight,
-        notes: item.capabilities
-      });
-      this.updateCharacter();
-    },
-
     addInventoryItem() {
       if (!this.selectedChar.inventory) this.selectedChar.inventory = [];
       this.selectedChar.inventory.push({ name: 'New Item', quantity: 1, weight: 1.0 });
       this.updateCharacter();
     },
-    removeInventoryItem(item) {
-      const idx = this.selectedChar.inventory.indexOf(item);
-      if (idx !== -1) {
-        this.selectedChar.inventory.splice(idx, 1);
-        this.updateCharacter();
-      }
+    removeInventoryItem(index) {
+      this.selectedChar.inventory.splice(index, 1);
+      this.updateCharacter();
     },
     setupSocketListeners() {
       socket.on('sheet:created', this.handleSheetCreated);
@@ -1622,98 +1485,4 @@ filteredInventory() {
   gap: 8px;
   margin-top: 20px;
 }
-
-.equipment-modal {
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-}
-.modal-search {
-  margin-bottom: 16px;
-  padding: 8px 12px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  border-radius: 4px;
-}
-.equipment-list {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding-right: 8px;
-}
-.equipment-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-}
-.eq-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.eq-name {
-  font-weight: 700;
-  font-size: 16px;
-  color: var(--accent);
-}
-.eq-add-btn {
-  padding: 4px 12px;
-  font-size: 13px;
-}
-.eq-details {
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-.eq-tag {
-  background: rgba(58, 133, 156, 0.15);
-  color: #3a859c;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 600;
-}
-.eq-capabilities {
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-
-.portrait-box {
-  width: 96px;
-  height: 96px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--bg-tertiary);
-  flex-shrink: 0;
-  transition: border-color 0.2s;
-}
-.portrait-box:hover {
-  border-color: var(--accent);
-}
-.portrait-placeholder {
-  font-size: 11px;
-  color: var(--text-secondary);
-  text-align: center;
-  line-height: 1.3;
-}
-.portrait-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 </style>

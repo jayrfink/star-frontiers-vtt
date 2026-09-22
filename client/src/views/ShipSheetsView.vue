@@ -20,7 +20,7 @@
         >
           <div class="ship-item-info">
             <span class="ship-name">{{ ship.name || 'Unnamed Ship' }}</span>
-            <span class="ship-sub">{{ ship.ship_type || ship.type || 'Fighter' }} • HP {{ ship.current_hp ?? ship.current_hull_points ?? 50 }}/{{ ship.hull_points ?? ship.max_hull_points ?? 50 }}</span>
+            <span class="ship-sub">{{ ship.type || 'Fighter' }} • HP {{ ship.current_hull_points }}/{{ ship.max_hull_points }}</span>
           </div>
           <button class="btn-delete-small" title="Delete Ship" @click.stop="deleteShip(ship.id)">✕</button>
         </li>
