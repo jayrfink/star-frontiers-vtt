@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from './middleware.js';
+import { requireAuth, requireGM, isGameMaster } from './middleware.js';
 
 function safeJsonParse(str, fallback) {
   if (!str) return fallback;
@@ -14,6 +14,7 @@ function formatMap(row) {
   if (!row) return null;
   return {
     ...row,
+    fog_enabled: Boolean(row.fog_enabled),
     fog_data: safeJsonParse(row.fog_data, []),
   };
 }
@@ -26,33 +27,22 @@ function formatToken(row) {
   };
 }
 
-function isGameMaster(db, userId) {
-  if (!userId) return false;
-  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
-  return user && user.role === 'GameMaster';
-}
-
-function requireGM(db) {
-  return (req, res, next) => {
-    if (!req.session || !req.session.userId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    if (!isGameMaster(db, req.session.userId)) {
-      return res.status(403).json({ error: 'GameMaster access required' });
-    }
-    next();
-  };
-}
 
 export function createMapRouter(db, io) {
   const router = Router();
 
   router.use(requireAuth);
 
-  // GET /api/maps - List all maps
+  // GET /api/maps - List maps (optionally filtered by type)
   router.get('/', (req, res) => {
     try {
-      const rows = db.prepare('SELECT * FROM maps ORDER BY created_at DESC, id DESC').all();
+      const type = req.query.type;
+      let rows;
+      if (type) {
+        rows = db.prepare('SELECT * FROM maps WHERE map_type = ? ORDER BY created_at DESC').all(type);
+      } else {
+        rows = db.prepare('SELECT * FROM maps ORDER BY created_at DESC').all();
+      }
       res.json(rows.map(formatMap));
     } catch (err) {
       console.error('Error listing maps:', err);
@@ -63,7 +53,8 @@ export function createMapRouter(db, io) {
   // GET /api/maps/active - Get currently active map with its tokens
   router.get('/active', (req, res) => {
     try {
-      const mapRow = db.prepare('SELECT * FROM maps WHERE is_active = 1 LIMIT 1').get();
+      const type = req.query.type || 'rpg';
+      const mapRow = db.prepare('SELECT * FROM maps WHERE is_active = 1 AND map_type = ? LIMIT 1').get(type);
       if (!mapRow) {
         return res.json({ map: null, tokens: [] });
       }
@@ -99,8 +90,10 @@ export function createMapRouter(db, io) {
     try {
       const {
         name,
+        map_type = 'rpg',
         background_url = '',
         preset_bg = 'grid_only',
+        fog_enabled = false,
         width = 20,
         height = 20,
         grid_size = 40,
@@ -115,18 +108,22 @@ export function createMapRouter(db, io) {
 
       const fogDataStr = typeof fog_data === 'string' ? fog_data : JSON.stringify(fog_data);
 
+      if (is_active) {
+        db.prepare('UPDATE maps SET is_active = 0 WHERE map_type = ?').run(map_type);
+      }
+
       const stmt = db.prepare(`
         INSERT INTO maps (
-          user_id, name, background_url, preset_bg, width, height,
-          grid_size, grid_color, is_active, fog_data
+          user_id, name, map_type, background_url, preset_bg, width, height,
+          grid_size, grid_color, is_active, fog_enabled, fog_data
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
-        req.session.userId, name, background_url, preset_bg, width, height,
-        grid_size, grid_color, is_active ? 1 : 0, fogDataStr
+        req.session.userId, name, map_type, background_url, preset_bg, width, height,
+        grid_size, grid_color, is_active ? 1 : 0, fog_enabled ? 1 : 0, fogDataStr
       );
 
       const created = db.prepare('SELECT * FROM maps WHERE id = ?').get(result.lastInsertRowid);
@@ -134,6 +131,9 @@ export function createMapRouter(db, io) {
 
       if (io) {
         io.emit('map:created', { map });
+        if (is_active) {
+          io.emit('map:activated', { map, tokens: [] });
+        }
       }
 
       res.status(201).json(map);
@@ -151,11 +151,11 @@ export function createMapRouter(db, io) {
         return res.status(404).json({ error: 'Map not found' });
       }
 
-      const activateTransaction = db.transaction((mapId) => {
-        db.prepare('UPDATE maps SET is_active = 0').run();
+      const activateTransaction = db.transaction((mapId, mapType) => {
+        db.prepare('UPDATE maps SET is_active = 0 WHERE map_type = ?').run(mapType);
         db.prepare('UPDATE maps SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(mapId);
       });
-      activateTransaction(req.params.id);
+      activateTransaction(req.params.id, mapRow.map_type);
 
       const updated = db.prepare('SELECT * FROM maps WHERE id = ?').get(req.params.id);
       const map = formatMap(updated);
@@ -190,6 +190,7 @@ export function createMapRouter(db, io) {
         height = existing.height,
         grid_size = existing.grid_size,
         grid_color = existing.grid_color,
+        fog_enabled = existing.fog_enabled,
         is_active = existing.is_active,
         fog_data = safeJsonParse(existing.fog_data, []),
       } = req.body;
@@ -199,14 +200,14 @@ export function createMapRouter(db, io) {
       const stmt = db.prepare(`
         UPDATE maps SET
           name = ?, background_url = ?, preset_bg = ?, width = ?, height = ?,
-          grid_size = ?, grid_color = ?, is_active = ?, fog_data = ?,
+          grid_size = ?, grid_color = ?, is_active = ?, fog_enabled = ?, fog_data = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         name, background_url, preset_bg, width, height,
-        grid_size, grid_color, is_active ? 1 : 0, fogDataStr,
+        grid_size, grid_color, is_active ? 1 : 0, fog_enabled ? 1 : 0, fogDataStr,
         req.params.id
       );
 

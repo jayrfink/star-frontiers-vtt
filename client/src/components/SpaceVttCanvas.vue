@@ -218,7 +218,15 @@ function drawBackground(ctx, mapW, mapH) {
   // Fill with dark space background
   ctx.fillStyle = '#030712';
   ctx.fillRect(0, 0, mapW, mapH);
-  
+
+  if (props.map?.background_url) {
+    const bgImg = getCachedImage(props.map.background_url);
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, mapW, mapH);
+      return;
+    }
+  }
+
   // Draw random white stars
   stars.forEach(star => {
     ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
@@ -231,8 +239,8 @@ function drawBackground(ctx, mapW, mapH) {
 function drawGrid(ctx, mapW, mapH) {
   if (!props.map) return;
   const hexSize = props.map.grid_size || 40;
-  
-  ctx.strokeStyle = '#334155';
+
+  ctx.strokeStyle = props.map.grid_color || '#334155';
   ctx.lineWidth = 1;
 
   ctx.beginPath();
