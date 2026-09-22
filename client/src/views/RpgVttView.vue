@@ -60,6 +60,60 @@
         <button class="btn-tool" @click="rollPercentile">
           🎲 Roll d%
         </button>
+
+        <!-- Damage Dice Roller -->
+        <div class="dmg-roller-wrapper" ref="dmgMenuRef">
+          <div class="dmg-btn-group">
+            <button
+              class="btn-tool btn-dmg-main"
+              :class="{ active: showDmgMenu }"
+              @click="toggleDmgMenu"
+              title="Click to configure and roll damage dice"
+            >
+              💥 DMG Die ({{ damageDiceCount }}d10)
+            </button>
+            <button
+              class="btn-dmg-step"
+              @click.stop="adjustDamageCount(-1)"
+              title="Decrease dice"
+              :disabled="damageDiceCount <= 1"
+            >−</button>
+            <button
+              class="btn-dmg-step"
+              @click.stop="adjustDamageCount(1)"
+              title="Increase dice"
+              :disabled="damageDiceCount >= 20"
+            >+</button>
+          </div>
+
+          <div v-if="showDmgMenu" class="dmg-popover">
+            <div class="dmg-popover-header">
+              <span>💥 Damage Dice</span>
+              <button class="dmg-popover-close" @click.stop="showDmgMenu = false">×</button>
+            </div>
+            <div class="dmg-stepper">
+              <button type="button" class="stepper-btn" @click.stop="adjustDamageCount(-1)" :disabled="damageDiceCount <= 1">−</button>
+              <span class="stepper-val">{{ damageDiceCount }}d10</span>
+              <button type="button" class="stepper-btn" @click.stop="adjustDamageCount(1)" :disabled="damageDiceCount >= 20">+</button>
+            </div>
+            <div class="dmg-presets">
+              <button
+                v-for="n in [1, 2, 3, 4, 5]"
+                :key="n"
+                type="button"
+                class="preset-btn"
+                :class="{ active: damageDiceCount === n }"
+                @click.stop="damageDiceCount = n"
+              >
+                {{ n }}d10
+              </button>
+            </div>
+            <button type="button" class="btn-roll-dmg-action" @click.stop="rollDamage">
+              🎲 Roll {{ damageDiceCount }}d10 Damage
+            </button>
+          </div>
+        </div>
+
         <button class="btn-tool" @click="clearDice">
           ✖ Clear Dice
         </button>
@@ -504,6 +558,17 @@ const isGm = computed(() => authStore.user?.role === 'GameMaster');
 
 // Dice state
 let diceBoxInstance = null;
+const damageDiceCount = ref(1);
+const showDmgMenu = ref(false);
+const dmgMenuRef = ref(null);
+
+function adjustDamageCount(delta) {
+  damageDiceCount.value = Math.max(1, Math.min(20, damageDiceCount.value + delta));
+}
+
+function toggleDmgMenu() {
+  showDmgMenu.value = !showDmgMenu.value;
+}
 
 function rollPercentile() {
   if (diceBoxInstance) {
@@ -514,9 +579,24 @@ function rollPercentile() {
   }
 }
 
+function rollDamage() {
+  if (diceBoxInstance) {
+    diceBoxInstance.roll([
+      { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
+    ]);
+  }
+  showDmgMenu.value = false;
+}
+
 function clearDice() {
   if (diceBoxInstance) {
     diceBoxInstance.clear();
+  }
+}
+
+function onDocClick(e) {
+  if (showDmgMenu.value && dmgMenuRef.value && !dmgMenuRef.value.contains(e.target)) {
+    showDmgMenu.value = false;
   }
 }
 
@@ -1082,10 +1162,12 @@ onMounted(() => {
   }
 
   setupSocketListeners();
+  document.addEventListener('click', onDocClick);
 });
 
 onBeforeUnmount(() => {
   cleanupSocketListeners();
+  document.removeEventListener('click', onDocClick);
 });
 </script>
 
@@ -1215,6 +1297,200 @@ onBeforeUnmount(() => {
   height: 1px;
   background: var(--border);
   margin: 4px 0;
+}
+
+/* Damage Dice Roller */
+.dmg-roller-wrapper {
+  position: relative;
+}
+
+.dmg-btn-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.btn-dmg-main {
+  flex: 1;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-dmg-main:hover,
+.btn-dmg-main.active {
+  border-color: #f29249;
+  color: #f29249;
+}
+
+.btn-dmg-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  padding: 0 !important;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-left: none;
+  color: var(--text-primary);
+  font-size: 13px !important;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 0 !important;
+}
+
+.btn-dmg-step:last-child {
+  border-top-right-radius: 4px !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+.btn-dmg-step:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: #f29249;
+  border-color: #f29249;
+}
+
+.btn-dmg-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dmg-popover {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  width: 200px;
+  background: rgba(22, 27, 34, 0.98);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.dmg-popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f29249;
+}
+
+.dmg-popover-close {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px !important;
+  line-height: 1;
+}
+
+.dmg-popover-close:hover {
+  color: var(--text-primary);
+}
+
+.dmg-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.stepper-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: #f29249;
+  color: #140409;
+  border-color: #f29249;
+}
+
+.stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stepper-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f29249;
+  text-align: center;
+}
+
+.dmg-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.preset-btn {
+  padding: 4px 0 !important;
+  font-size: 11px !important;
+  text-align: center !important;
+  justify-content: center !important;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.preset-btn:hover {
+  border-color: #f29249;
+  color: #f29249;
+}
+
+.preset-btn.active {
+  background: rgba(242, 146, 73, 0.2);
+  border-color: #f29249;
+  color: #f29249;
+  font-weight: 600;
+}
+
+.btn-roll-dmg-action {
+  padding: 8px 10px !important;
+  background: #f29249 !important;
+  color: #140409 !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  border: none !important;
+  cursor: pointer;
+  text-align: center !important;
+  justify-content: center !important;
+  transition: filter 0.15s ease;
+}
+
+.btn-roll-dmg-action:hover {
+  filter: brightness(1.15);
 }
 
 /* Canvas Area */

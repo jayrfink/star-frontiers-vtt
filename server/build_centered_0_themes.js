@@ -144,6 +144,21 @@ async function main() {
   fs.writeFileSync(path.join(onesDir, 'normal.png'), normBuffer);
   console.log('Saved updated textures to custom-ones (#22384a)');
 
+  // --- 6. Write custom-dmg theme (#f29249 numbers) ---
+  const dmgDiffuseBuffer = await makeDiffuse(0xf2, 0x92, 0x49); // #f29249
+  const dmgDir = path.join(root, 'public/assets/dice-box/themes/custom-dmg');
+  if (!fs.existsSync(dmgDir)) {
+    fs.mkdirSync(dmgDir, { recursive: true });
+  }
+  const filesToCopy = ['default.json', 'package.json', 'specular.jpg', 'theme.config.json'];
+  for (const file of filesToCopy) {
+    fs.copyFileSync(path.join(tensDir, file), path.join(dmgDir, file));
+  }
+  fs.writeFileSync(path.join(dmgDir, 'diffuse-light.png'), dmgDiffuseBuffer);
+  fs.writeFileSync(path.join(dmgDir, 'diffuse-dark.png'), dmgDiffuseBuffer);
+  fs.writeFileSync(path.join(dmgDir, 'normal.png'), normBuffer);
+  console.log('Saved updated textures to custom-dmg (#f29249)');
+
   console.log('All textures successfully generated with centered 0 and cleaned normal map!');
 }
 
