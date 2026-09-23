@@ -104,6 +104,13 @@
             <button type="button" class="btn-roll-dmg-action" @click.stop="rollDamage">
               🎲 Roll {{ damageDiceCount }}d10 Damage
             </button>
+            <div v-if="lastDamageRoll" class="dmg-last-roll-card">
+              <div class="last-roll-header">Last Roll ({{ lastDamageRoll.count }}d10):</div>
+              <div class="last-roll-result">
+                <span class="last-roll-total">{{ lastDamageRoll.total }}</span>
+                <span class="last-roll-breakdown">[{{ lastDamageRoll.dice.join(', ') }}]</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -121,6 +128,24 @@
 
       <!-- Canvas Area -->
       <div class="vtt-canvas-wrapper" style="position: relative;">
+
+        <!-- Floating Damage HUD Banner -->
+        <transition name="hud-pop">
+          <div
+            v-if="showDamageHud && lastDamageRoll"
+            class="damage-hud-banner"
+            @click="showDamageHud = false"
+          >
+            <div class="hud-header">
+              <span class="hud-title">💥 DAMAGE TOTAL ({{ lastDamageRoll.count }}d10)</span>
+              <button class="hud-close" @click.stop="showDamageHud = false">×</button>
+            </div>
+            <div class="hud-body">
+              <span class="hud-total">{{ lastDamageRoll.total }}</span>
+              <span class="hud-dice">({{ lastDamageRoll.dice.join(' + ') }})</span>
+            </div>
+          </div>
+        </transition>
 
         <!-- Dice Box Overlay -->
         <div id="dice-box" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;"></div>
@@ -593,6 +618,7 @@ import SpaceVttCanvas from '../components/SpaceVttCanvas.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
+import { calculateDamageRoll } from '../utils/diceUtils.js';
 
 
 const authStore = useAuthStore();
@@ -604,6 +630,9 @@ let diceBoxInstance = null;
 const damageDiceCount = ref(1);
 const showDmgMenu = ref(false);
 const dmgMenuRef = ref(null);
+const lastDamageRoll = ref(null);
+const showDamageHud = ref(false);
+let damageHudTimeout = null;
 
 function adjustDamageCount(delta) {
   damageDiceCount.value = Math.max(1, Math.min(20, damageDiceCount.value + delta));
@@ -622,13 +651,27 @@ function rollPercentile() {
   }
 }
 
-function rollDamage() {
+async function rollDamage() {
   if (diceBoxInstance) {
-    diceBoxInstance.roll([
-      { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
-    ]);
+    showDamageHud.value = false;
+    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
+      ]);
+      const rollSummary = calculateDamageRoll(results);
+      if (rollSummary.count > 0) {
+        lastDamageRoll.value = rollSummary;
+        showDamageHud.value = true;
+        damageHudTimeout = setTimeout(() => {
+          showDamageHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Damage dice roll failed:', err);
+    }
   }
-  showDmgMenu.value = false;
 }
 
 function clearDice() {
@@ -1286,6 +1329,7 @@ onBeforeUnmount(() => {
   cleanupSocketListeners();
   window.removeEventListener('keydown', onKeyDown);
   document.removeEventListener('click', onDocClick);
+  if (damageHudTimeout) clearTimeout(damageHudTimeout);
 });
 </script>
 
@@ -1632,6 +1676,119 @@ onBeforeUnmount(() => {
 
 .btn-roll-dmg-action:hover {
   filter: brightness(1.15);
+}
+
+/* Damage HUD Banner */
+.damage-hud-banner {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 4, 9, 0.94);
+  border: 2px solid #f29249;
+  border-radius: 8px;
+  padding: 10px 18px;
+  color: #f29249;
+  z-index: 120;
+  box-shadow: 0 0 20px rgba(242, 146, 73, 0.45), 0 8px 32px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: blur(4px);
+}
+
+.damage-hud-banner .hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.damage-hud-banner .hud-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f29249aa;
+  text-transform: uppercase;
+}
+
+.damage-hud-banner .hud-close {
+  background: transparent;
+  border: none;
+  color: #f29249;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.damage-hud-banner .hud-body {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.damage-hud-banner .hud-total {
+  font-size: 32px;
+  font-weight: 900;
+  color: #f29249;
+  text-shadow: 0 0 10px rgba(242, 146, 73, 0.7);
+  line-height: 1;
+}
+
+.damage-hud-banner .hud-dice {
+  font-size: 13px;
+  color: #e5c07b;
+  font-weight: 600;
+}
+
+/* Transitions */
+.hud-pop-enter-active,
+.hud-pop-leave-active {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.hud-pop-enter-from,
+.hud-pop-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -20px) scale(0.9);
+}
+
+/* DMG Menu Dropdown Card */
+.dmg-last-roll-card {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #140409;
+  border: 1px solid #f2924966;
+  border-radius: 4px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dmg-last-roll-card .last-roll-header {
+  color: #8b949e;
+}
+
+.dmg-last-roll-card .last-roll-result {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dmg-last-roll-card .last-roll-total {
+  color: #f29249;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.dmg-last-roll-card .last-roll-breakdown {
+  color: #e5c07b;
+  font-size: 11px;
 }
 
 .shortcut-tip {
