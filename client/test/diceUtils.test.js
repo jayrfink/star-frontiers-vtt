@@ -32,6 +32,16 @@ describe('calculateDamageRoll', () => {
     });
   });
 
+  it('handles nested arrays from dice-box die groups properly', () => {
+    const raw = [[{ value: 4 }, { value: 7 }]];
+    const result = calculateDamageRoll(raw);
+    expect(result).toEqual({
+      total: 11,
+      dice: [4, 7],
+      count: 2
+    });
+  });
+
   it('handles empty or missing input safely', () => {
     expect(calculateDamageRoll(null)).toEqual({ total: 0, dice: [], count: 0 });
     expect(calculateDamageRoll([])).toEqual({ total: 0, dice: [], count: 0 });

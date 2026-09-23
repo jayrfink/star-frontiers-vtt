@@ -655,6 +655,7 @@ async function rollDamage() {
   if (diceBoxInstance) {
     showDamageHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
+    showDmgMenu.value = false;
 
     try {
       const results = await diceBoxInstance.roll([

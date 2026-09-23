@@ -11,7 +11,8 @@ export function calculateDamageRoll(results) {
     return { total: 0, dice: [], count: 0 };
   }
 
-  const dice = results.map((d) => {
+  const flatResults = results.flat(Infinity);
+  const dice = flatResults.map((d) => {
     const rawVal = Number(d?.value) || 0;
     return rawVal === 0 ? 10 : rawVal;
   });
