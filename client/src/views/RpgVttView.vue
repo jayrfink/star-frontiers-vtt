@@ -365,7 +365,7 @@
 
             <div class="form-group">
               <label>Size (grid cells):</label>
-              <select v-model.number="selectedTokenForm.size" @change="updateSelectedToken">
+              <select v-model.number="selectedTokenForm.size" @change="updateSelectedToken" class="size-select">
                 <option :value="1">1x1 (Medium/Small)</option>
                 <option :value="2">2x2 (Large)</option>
                 <option :value="3">3x3 (Huge)</option>
@@ -498,7 +498,7 @@
             </div>
             <div class="form-group">
               <label>Size (Cells)</label>
-              <select v-model.number="newTokenForm.size">
+              <select v-model.number="newTokenForm.size" class="size-select">
                 <option :value="1">1x1 (Medium)</option>
                 <option :value="2">2x2 (Large)</option>
                 <option :value="3">3x3 (Huge)</option>
@@ -1776,6 +1776,28 @@ onBeforeUnmount(() => {
   border-color: #ff6b6b !important;
   color: #ff8585 !important;
   box-shadow: 0 0 10px rgba(248, 81, 73, 0.45);
+}
+
+.size-select,
+.size-select option {
+  background-color: #000000 !important;
+  color: #39d353 !important;
+  -webkit-text-fill-color: #39d353;
+}
+
+.size-select {
+  border: 1px solid #238636;
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+}
+
+.size-select:focus {
+  outline: none;
+  border-color: #39d353;
+  box-shadow: 0 0 6px rgba(57, 211, 83, 0.4);
 }
 
 .fog-actions {
