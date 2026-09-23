@@ -374,7 +374,7 @@
 
             <!-- Action Buttons -->
             <div class="inspector-actions">
-              <button class="danger full-width" @click="deleteSelectedToken">Delete Token</button>
+              <button class="danger full-width btn-delete-token" @click="deleteSelectedToken">Delete Token</button>
             </div>
           </div>
 
@@ -1759,6 +1759,23 @@ onBeforeUnmount(() => {
   background: var(--danger);
   color: #fff;
   border-color: var(--danger);
+}
+
+.btn-delete-token,
+.inspector-actions .danger {
+  background: #340c0e !important;
+  color: #f85149 !important;
+  border: 1px solid #da3633 !important;
+  box-shadow: 0 0 6px rgba(218, 54, 51, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-delete-token:hover:not(:disabled),
+.inspector-actions .danger:hover:not(:disabled) {
+  background: #4a1316 !important;
+  border-color: #ff6b6b !important;
+  color: #ff8585 !important;
+  box-shadow: 0 0 10px rgba(248, 81, 73, 0.45);
 }
 
 .fog-actions {
