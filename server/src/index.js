@@ -21,7 +21,7 @@ export function createApp(db, sessionDir, uploadDir) {
   const server = http.createServer(app);
   const io = new Server(server, {
     cors: {
-      origin: 'http://localhost:3001',
+      origin: true,
       credentials: true,
     },
   });
@@ -32,7 +32,7 @@ export function createApp(db, sessionDir, uploadDir) {
   }
 
   app.use(cors({
-    origin: 'http://localhost:3001',
+    origin: true,
     credentials: true,
   }));
   app.use(express.json());
