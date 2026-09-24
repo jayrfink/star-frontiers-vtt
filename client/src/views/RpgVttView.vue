@@ -165,6 +165,24 @@
           </div>
         </transition>
 
+        <!-- Floating Percentile HUD Banner -->
+        <transition name="hud-pop">
+          <div
+            v-if="showPercentileHud && lastPercentileRoll"
+            class="percentile-hud-banner"
+            @click="showPercentileHud = false"
+          >
+            <div class="hud-header">
+              <span class="hud-title">🎲 PERCENTILE ROLL (d%)</span>
+              <button class="hud-close" @click.stop="showPercentileHud = false">×</button>
+            </div>
+            <div class="hud-body">
+              <span class="hud-total">{{ lastPercentileRoll.total }}</span>
+              <span class="hud-dice">(Tens: {{ lastPercentileRoll.tens }}, Ones: {{ lastPercentileRoll.ones }})</span>
+            </div>
+          </div>
+        </transition>
+
         <!-- Dice Box Overlay -->
         <div id="dice-box" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;"></div>
 
@@ -575,7 +593,7 @@ import VttCanvas from '../components/VttCanvas.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
-import { calculateDamageRoll } from '../utils/diceUtils.js';
+import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
 
 
 const authStore = useAuthStore();
@@ -591,6 +609,10 @@ const lastDamageRoll = ref(null);
 const showDamageHud = ref(false);
 let damageHudTimeout = null;
 
+const lastPercentileRoll = ref(null);
+const showPercentileHud = ref(false);
+let percentileHudTimeout = null;
+
 function adjustDamageCount(delta) {
   damageDiceCount.value = Math.max(1, Math.min(20, damageDiceCount.value + delta));
 }
@@ -599,18 +621,35 @@ function toggleDmgMenu() {
   showDmgMenu.value = !showDmgMenu.value;
 }
 
-function rollPercentile() {
+async function rollPercentile() {
   if (diceBoxInstance) {
-    diceBoxInstance.roll([
-      { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }, // Tens
-      { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 }  // Ones
-    ]);
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
+        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
+      ]);
+      const rollSummary = calculatePercentileRoll(results);
+      if (rollSummary.valid) {
+        lastPercentileRoll.value = rollSummary;
+        showPercentileHud.value = true;
+        percentileHudTimeout = setTimeout(() => {
+          showPercentileHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Percentile dice roll failed:', err);
+    }
   }
 }
 
 async function rollDamage() {
   if (diceBoxInstance) {
     showDamageHud.value = false;
+    showPercentileHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
     showDmgMenu.value = false;
 
@@ -1213,6 +1252,7 @@ onBeforeUnmount(() => {
   cleanupSocketListeners();
   document.removeEventListener('click', onDocClick);
   if (damageHudTimeout) clearTimeout(damageHudTimeout);
+  if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 });
 </script>
 
@@ -1627,6 +1667,74 @@ onBeforeUnmount(() => {
 .damage-hud-banner .hud-dice {
   font-size: 13px;
   color: #e5c07b;
+  font-weight: 600;
+}
+
+/* Percentile HUD Banner */
+.percentile-hud-banner {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(34, 56, 74, 0.94);
+  border: 2px solid #77d19e;
+  border-radius: 8px;
+  padding: 10px 18px;
+  color: #77d19e;
+  z-index: 120;
+  box-shadow: 0 0 20px rgba(119, 209, 158, 0.45), 0 8px 32px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: blur(4px);
+}
+
+.percentile-hud-banner .hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.percentile-hud-banner .hud-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(119, 209, 158, 0.75);
+  text-transform: uppercase;
+}
+
+.percentile-hud-banner .hud-close {
+  background: transparent;
+  border: none;
+  color: #77d19e;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.percentile-hud-banner .hud-body {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.percentile-hud-banner .hud-total {
+  font-size: 32px;
+  font-weight: 900;
+  color: #77d19e;
+  text-shadow: 0 0 10px rgba(119, 209, 158, 0.7);
+  line-height: 1;
+}
+
+.percentile-hud-banner .hud-dice {
+  font-size: 13px;
+  color: #bbf2d4;
   font-weight: 600;
 }
 
