@@ -124,24 +124,6 @@
         <button class="btn-tool" @click="clearDice">
           ✖ Clear Dice
         </button>
-        <div class="toolbar-divider"></div>
-
-        <template v-if="isGm">
-          <button
-            :class="{ active: activeTool === 'fog_reveal' }"
-            title="Fog of War: Reveal Area"
-            @click="activeTool = 'fog_reveal'"
-          >
-            👁️ Reveal Fog
-          </button>
-          <button
-            :class="{ active: activeTool === 'fog_hide' }"
-            title="Fog of War: Hide Area"
-            @click="activeTool = 'fog_hide'"
-          >
-            🙈 Hide Fog
-          </button>
-        </template>
       </nav>
 
       <!-- Canvas Area -->
@@ -195,7 +177,6 @@
           :selected-token-id="selectedTokenId"
           @token-moved="onTokenMoved"
           @token-selected="onTokenSelected"
-          @fog-changed="onFogChanged"
         />
 
         <!-- No Active Map Overlay -->
@@ -271,12 +252,6 @@
                   @change="updateActiveMapSettings"
                 />
                 <input type="file" accept="image/*" @change="onActiveMapUpload" />
-              </div>
-
-              <!-- Fog Controls -->
-              <div class="fog-actions">
-                <button @click="clearFog">Clear Fog (Reveal All)</button>
-                <button @click="resetFog">Reset Fog (Hide All)</button>
               </div>
             </div>
 
@@ -473,13 +448,6 @@
             </label>
           </div>
 
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" v-model="newMapForm.fog_enabled" />
-              Enable Fog of War
-            </label>
-          </div>
-
           <div class="modal-actions">
             <button type="button" @click="showCreateMapModal = false">Cancel</button>
             <button type="submit" class="primary">Create Map</button>
@@ -667,7 +635,6 @@ const activeMapForm = reactive({
   grid_color: '#333333',
   preset_bg: 'grid_only',
   background_url: '',
-  fog_enabled: false,
 });
 
 const newMapForm = reactive({
@@ -680,7 +647,6 @@ const newMapForm = reactive({
   preset_bg: 'grid_only',
   background_url: '',
   is_active: true,
-  fog_enabled: false,
 });
 
 const selectedCharacterId = ref(null);
@@ -720,7 +686,6 @@ watch(activeMap, (map) => {
     activeMapForm.grid_color = map.grid_color || '#333333';
     activeMapForm.preset_bg = map.preset_bg || 'grid_only';
     activeMapForm.background_url = map.background_url || '';
-    activeMapForm.fog_enabled = Boolean(map.fog_enabled);
   }
 });
 
@@ -790,7 +755,6 @@ async function updateActiveMapSettings() {
         grid_size: activeMapForm.grid_size,
         grid_color: activeMapForm.grid_color,
         preset_bg: activeMapForm.preset_bg,
-        fog_enabled: activeMapForm.fog_enabled,
       }),
     });
     if (res.ok) {
@@ -800,50 +764,6 @@ async function updateActiveMapSettings() {
     console.error('Failed to update map settings:', err);
   }
 }
-
-async function clearFog() {
-  if (!activeMap.value) return;
-  // Reveal entire map by filling with rect covering full dimensions
-  const fullRect = [{ x: 0, y: 0, w: activeMap.value.width, h: activeMap.value.height }];
-  await saveFog(fullRect);
-}
-
-async function resetFog() {
-  if (!activeMap.value) return;
-  // Hide all by clearing revealed array
-  await saveFog([]);
-}
-
-let fogSaveTimer = null;
-
-async function saveFog(fogData, immediate = false) {
-  if (!activeMap.value) return;
-
-  const performSave = async () => {
-    try {
-      const res = await fetch(`/api/maps/${activeMap.value.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ fog_data: fogData }),
-      });
-      if (res.ok) {
-        activeMap.value = await res.json();
-      }
-    } catch (err) {
-      console.error('Failed to save fog:', err);
-    }
-  };
-
-  if (immediate) {
-    if (fogSaveTimer) clearTimeout(fogSaveTimer);
-    await performSave();
-  } else {
-    if (fogSaveTimer) clearTimeout(fogSaveTimer);
-    fogSaveTimer = setTimeout(performSave, 200);
-  }
-}
-
 
 async function uploadMapImage(e, formObject) {
   const file = e.target.files?.[0];
@@ -884,7 +804,6 @@ function openCreateMapModal() {
   newMapForm.preset_bg = 'grid_only';
   newMapForm.background_url = '';
   newMapForm.is_active = true;
-  newMapForm.fog_enabled = false;
   showCreateMapModal.value = true;
 }
 
@@ -1020,12 +939,6 @@ function onTokenSelected(token) {
   selectedTokenId.value = token ? token.id : null;
 }
 
-function onFogChanged(updatedFog) {
-  if (!activeMap.value) return;
-  activeMap.value.fog_data = updatedFog;
-  saveFog(updatedFog);
-}
-
 async function updateSelectedToken() {
   if (!selectedToken.value) return;
   try {
@@ -1145,12 +1058,6 @@ function setupSocketListeners() {
       selectedTokenId.value = null;
     }
   });
-
-  socket.on('fog:updated', ({ mapId, fog_data }) => {
-    if (activeMap.value && activeMap.value.id === mapId) {
-      activeMap.value.fog_data = fog_data;
-    }
-  });
 }
 
 function cleanupSocketListeners() {
@@ -1162,7 +1069,6 @@ function cleanupSocketListeners() {
   socket.off('token:moved');
   socket.off('token:updated');
   socket.off('token:deleted');
-  socket.off('fog:updated');
 }
 
 onMounted(() => {
@@ -1981,18 +1887,6 @@ onBeforeUnmount(() => {
   outline: none;
   border-color: #39d353;
   box-shadow: 0 0 6px rgba(57, 211, 83, 0.4);
-}
-
-.fog-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.fog-actions button {
-  flex: 1;
-  font-size: 12px;
-  padding: 6px;
 }
 
 .empty-text {
