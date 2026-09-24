@@ -103,6 +103,43 @@ describe('Sheets API & Socket.io', () => {
       });
     });
 
+    it('creates character with specified PSA and allows updating PSA', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      // Create with Technological PSA
+      const createRes = await agent.post('/api/characters').send({
+        name: 'Tech Specialist',
+        race: 'Yazirian',
+        psa: 'Technological',
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.psa).toBe('Technological');
+      const charId = createRes.body.id;
+
+      // Fetch by ID
+      const getRes = await agent.get(`/api/characters/${charId}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.psa).toBe('Technological');
+
+      // Update to Biosocial PSA
+      const emitSpy = vi.spyOn(io, 'emit');
+      const updateRes = await agent.put(`/api/characters/${charId}`).send({
+        psa: 'Biosocial',
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.psa).toBe('Biosocial');
+      expect(emitSpy).toHaveBeenCalledWith('sheet:updated', {
+        type: 'character',
+        sheet: expect.objectContaining({ id: charId, psa: 'Biosocial' }),
+      });
+
+      // Verify persistence via GET
+      const verifyRes = await agent.get(`/api/characters/${charId}`);
+      expect(verifyRes.body.psa).toBe('Biosocial');
+    });
+
     it('deletes character sheet and emits sheet:deleted', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });

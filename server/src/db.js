@@ -22,6 +22,7 @@ function migrate(db) {
       user_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       race TEXT NOT NULL CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian')),
+      psa TEXT NOT NULL DEFAULT 'Military' CHECK(psa IN ('Military', 'Technological', 'Biosocial')),
       gender TEXT,
       height TEXT,
       weight TEXT,
@@ -116,6 +117,9 @@ if (!mapCols.includes('map_type')) {
   const charCols = db.prepare("PRAGMA table_info(character_sheets)").all().map(c => c.name);
   if (!charCols.includes('avatar_url')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');
+  }
+  if (!charCols.includes('psa')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN psa TEXT NOT NULL DEFAULT "Military"');
   }
 
   const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);

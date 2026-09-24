@@ -110,4 +110,38 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
     CharacterSheetsView.methods.removeInventoryItem.call(vm, 0);
     expect(vm.selectedChar.inventory.length).toBe(0);
   });
+
+  describe('PSA Selection & Normalization', () => {
+    it('preserves non-Military PSA during normalization and defaults missing PSA to Military', () => {
+      const normalize = CharacterSheetsView.methods.normalizeCharacterData;
+
+      const techChar = normalize({ name: 'Techie', psa: 'Technological' });
+      expect(techChar.psa).toBe('Technological');
+
+      const bioChar = normalize({ name: 'Medic', psa: 'Biosocial' });
+      expect(bioChar.psa).toBe('Biosocial');
+
+      const militaryChar = normalize({ name: 'Soldier', psa: 'Military' });
+      expect(militaryChar.psa).toBe('Military');
+
+      const defaultChar = normalize({ name: 'Recruit' });
+      expect(defaultChar.psa).toBe('Military');
+    });
+
+    it('calculates XP cost based on active PSA', () => {
+      const vmTech = {
+        selectedChar: { psa: 'Technological' },
+      };
+      const vmMil = {
+        selectedChar: { psa: 'Military' },
+      };
+
+      // Computer is Technological PSA (base cost 4)
+      const costInPSA = CharacterSheetsView.methods.getXPCost.call(vmTech, 'Computer', 2);
+      expect(costInPSA).toBe(8); // 2 * 4
+
+      const costOutOfPSA = CharacterSheetsView.methods.getXPCost.call(vmMil, 'Computer', 2);
+      expect(costOutOfPSA).toBe(16); // 2 * (4 * 2)
+    });
+  });
 });

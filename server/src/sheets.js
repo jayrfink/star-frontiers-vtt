@@ -14,6 +14,7 @@ function formatCharacterSheet(row) {
   if (!row) return null;
   return {
     ...row,
+    psa: row.psa || 'Military',
     racial_abilities: safeJsonParse(row.racial_abilities, {}),
     skills: safeJsonParse(row.skills, []),
     inventory: safeJsonParse(row.inventory, []),
@@ -62,6 +63,7 @@ export function createCharacterRouter(db, io) {
       const {
         name,
         race,
+        psa = 'Military',
         gender = null,
         height = null,
         weight = null,
@@ -90,24 +92,27 @@ export function createCharacterRouter(db, io) {
         return res.status(400).json({ error: 'Invalid race' });
       }
 
+      const validPsas = ['Military', 'Technological', 'Biosocial'];
+      const characterPsa = validPsas.includes(psa) ? psa : 'Military';
+
       const racialAbilitiesStr = typeof racial_abilities === 'string' ? racial_abilities : JSON.stringify(racial_abilities);
       const skillsStr = typeof skills === 'string' ? skills : JSON.stringify(skills);
       const inventoryStr = typeof inventory === 'string' ? inventory : JSON.stringify(inventory);
 
       const stmt = db.prepare(`
         INSERT INTO character_sheets (
-          user_id, name, race, gender, height, weight,
+          user_id, name, race, psa, gender, height, weight,
           str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url
         ) VALUES (
-          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
-        req.session.userId, name, race, gender, height, weight,
+        req.session.userId, name, race, characterPsa, gender, height, weight,
         str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || ''
       );
@@ -136,6 +141,7 @@ export function createCharacterRouter(db, io) {
       const {
         name = existing.name,
         race = existing.race,
+        psa = existing.psa || 'Military',
         gender = existing.gender,
         height = existing.height,
         weight = existing.weight,
@@ -160,13 +166,16 @@ export function createCharacterRouter(db, io) {
         return res.status(400).json({ error: 'Invalid race' });
       }
 
+      const validPsas = ['Military', 'Technological', 'Biosocial'];
+      const characterPsa = validPsas.includes(psa) ? psa : (existing.psa || 'Military');
+
       const racialAbilitiesStr = typeof racial_abilities === 'string' ? racial_abilities : JSON.stringify(racial_abilities);
       const skillsStr = typeof skills === 'string' ? skills : JSON.stringify(skills);
       const inventoryStr = typeof inventory === 'string' ? inventory : JSON.stringify(inventory);
 
       const stmt = db.prepare(`
         UPDATE character_sheets SET
-          name = ?, race = ?, gender = ?, height = ?, weight = ?,
+          name = ?, race = ?, psa = ?, gender = ?, height = ?, weight = ?,
           str = ?, sta = ?, current_sta = ?, dex = ?, rs = ?,
           int_stat = ?, log_stat = ?, per = ?, ldr = ?,
           racial_abilities = ?, skills = ?, inventory = ?, notes = ?, avatar_url = ?,
@@ -175,7 +184,7 @@ export function createCharacterRouter(db, io) {
       `);
 
       stmt.run(
-        name, race, gender, height, weight,
+        name, race, characterPsa, gender, height, weight,
         str, sta, current_sta, dex, rs,
         int_stat, log_stat, per, ldr,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || existing.avatar_url || '',
