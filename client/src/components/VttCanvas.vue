@@ -364,32 +364,6 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // Floating HP Bar
-  if (token.max_hp !== null && token.max_hp !== undefined && token.max_hp > 0) {
-    const currentHp = Math.max(0, token.current_hp ?? token.max_hp);
-    const hpRatio = Math.max(0, Math.min(1, currentHp / token.max_hp));
-    const barW = tokenPx - 8;
-    const barH = 5;
-    const barX = px + 4;
-    const barY = py + tokenPx - 7;
-
-    // HP background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    ctx.fillRect(barX, barY, barW, barH);
-
-    // HP fill color
-    let hpColor = '#3fb950'; // Green
-    if (hpRatio < 0.25) hpColor = '#f85149'; // Red
-    else if (hpRatio < 0.5) hpColor = '#e3b341'; // Yellow
-
-    ctx.fillStyle = hpColor;
-    ctx.fillRect(barX, barY, barW * hpRatio, barH);
-
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barX, barY, barW, barH);
-  }
-
   // Status Icons (⚡ Stunned, 💀 Unconscious, 🩸 Wounded)
   if (token.status_effects && Array.isArray(token.status_effects) && token.status_effects.length > 0) {
     const iconMap = {

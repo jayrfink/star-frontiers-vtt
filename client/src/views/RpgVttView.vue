@@ -345,32 +345,6 @@
               <span class="value">({{ selectedToken.x }}, {{ selectedToken.y }})</span>
             </div>
 
-            <!-- HP Adjuster -->
-            <div class="hp-section">
-              <label>Hit Points:</label>
-              <div class="hp-inputs">
-                <input
-                  type="number"
-                  v-model.number="selectedTokenForm.current_hp"
-                  placeholder="Current"
-                  @change="updateSelectedToken"
-                />
-                <span>/</span>
-                <input
-                  type="number"
-                  v-model.number="selectedTokenForm.max_hp"
-                  placeholder="Max"
-                  @change="updateSelectedToken"
-                />
-              </div>
-              <div class="hp-quick-buttons">
-                <button @click="adjustSelectedHp(-5)">-5</button>
-                <button @click="adjustSelectedHp(-1)">-1</button>
-                <button @click="adjustSelectedHp(1)">+1</button>
-                <button @click="adjustSelectedHp(5)">+5</button>
-              </div>
-            </div>
-
             <!-- Status Icons Toggles -->
             <div class="status-section">
               <label>Status Effects:</label>
@@ -551,17 +525,6 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Current HP</label>
-              <input type="number" v-model.number="newTokenForm.current_hp" placeholder="30" />
-            </div>
-            <div class="form-group">
-              <label>Max HP</label>
-              <input type="number" v-model.number="newTokenForm.max_hp" placeholder="30" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
               <label>Start X</label>
               <input type="number" v-model.number="newTokenForm.x" min="0" />
             </div>
@@ -728,13 +691,9 @@ const newTokenForm = reactive({
   x: 0,
   y: 0,
   size: 1,
-  current_hp: 30,
-  max_hp: 30,
 });
 
 const selectedTokenForm = reactive({
-  current_hp: 0,
-  max_hp: 0,
   color: '#3e636b',
   size: 1,
   status_effects: [],
@@ -748,8 +707,6 @@ const selectedToken = computed(() => {
 // Watch selectedToken to sync reactive form
 watch(selectedToken, (newToken) => {
   if (newToken) {
-    selectedTokenForm.current_hp = newToken.current_hp ?? 0;
-    selectedTokenForm.max_hp = newToken.max_hp ?? 0;
     selectedTokenForm.color = newToken.color || '#3e636b';
     selectedTokenForm.size = newToken.size || 1;
     selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
@@ -979,8 +936,6 @@ function openAddTokenModal() {
   newTokenForm.x = 0;
   newTokenForm.y = 0;
   newTokenForm.size = 1;
-  newTokenForm.current_hp = 30;
-  newTokenForm.max_hp = 30;
   showAddTokenModal.value = true;
 }
 
@@ -1012,11 +967,6 @@ function onCharacterSelected() {
   if (char) {
     newTokenForm.name = char.name;
     if (char.avatar_url) newTokenForm.avatar_url = char.avatar_url;
-    if (char.max_stamina || char.stamina) {
-      const hp = char.max_stamina || char.stamina || 30;
-      newTokenForm.current_hp = hp;
-      newTokenForm.max_hp = hp;
-    }
   }
 }
 
@@ -1036,8 +986,6 @@ async function submitAddToken() {
         x: newTokenForm.x,
         y: newTokenForm.y,
         size: newTokenForm.size,
-        current_hp: newTokenForm.current_hp,
-        max_hp: newTokenForm.max_hp,
       }),
     });
     if (res.ok) {
@@ -1086,8 +1034,6 @@ async function updateSelectedToken() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        current_hp: selectedTokenForm.current_hp,
-        max_hp: selectedTokenForm.max_hp,
         color: selectedTokenForm.color,
         size: selectedTokenForm.size,
         status_effects: selectedTokenForm.status_effects,
@@ -1101,12 +1047,6 @@ async function updateSelectedToken() {
   } catch (err) {
     console.error('Failed to update token:', err);
   }
-}
-
-function adjustSelectedHp(delta) {
-  if (!selectedToken.value) return;
-  selectedTokenForm.current_hp = Math.max(0, (selectedTokenForm.current_hp || 0) + delta);
-  updateSelectedToken();
 }
 
 function isStatusActive(statusKey) {
@@ -1921,29 +1861,6 @@ onBeforeUnmount(() => {
 
 .info-row .label {
   color: var(--text-secondary);
-}
-
-.hp-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.hp-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hp-quick-buttons {
-  display: flex;
-  gap: 6px;
-}
-
-.hp-quick-buttons button {
-  flex: 1;
-  padding: 4px;
-  font-size: 12px;
 }
 
 .status-toggles {
