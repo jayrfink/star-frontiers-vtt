@@ -27,7 +27,7 @@ const props = defineProps({
   },
   activeTool: {
     type: String,
-    default: 'select', // 'select', 'pan', 'measure', 'fog_reveal', 'fog_hide'
+    default: 'select', // 'select', 'pan', 'measure'
   },
   zoomLevel: {
     type: Number,
@@ -47,7 +47,6 @@ const emit = defineEmits([
   'update:zoomLevel',
   'token-moved',
   'token-selected',
-  'fog-changed',
 ]);
 
 const containerRef = ref(null);
@@ -67,9 +66,6 @@ const dragCell = ref({ x: 0, y: 0 });
 // Ruler state
 const rulerStart = ref(null);
 const rulerEnd = ref(null);
-
-// Fog drawing state
-const isDrawingFog = ref(false);
 
 // Image cache
 const imageCache = new Map();
@@ -187,10 +183,7 @@ function drawCanvas() {
     drawGhostToken(ctx, draggingToken.value, dragCell.value);
   }
 
-  // 5. Draw Fog of War
-  drawFogOfWar(ctx, mapW, mapH);
-
-  // 6. Draw Measurement Ruler
+  // 5. Draw Measurement Ruler
   if (rulerStart.value && rulerEnd.value) {
     drawMeasurementRuler(ctx);
   }
@@ -400,30 +393,6 @@ function drawInitials(ctx, name, cx, cy, radius) {
   ctx.fillText(initials, cx, cy);
 }
 
-function drawFogOfWar(ctx, mapW, mapH) {
-  if (!props.map) return;
-  const fogData = props.map.fog_data;
-  if (!props.map.fog_enabled || !fogData || !Array.isArray(fogData)) return;
-
-  ctx.save();
-  const fogAlpha = props.isGm ? 0.5 : 0.96;
-  ctx.fillStyle = `rgba(0, 0, 0, ${fogAlpha})`;
-
-  ctx.beginPath();
-  ctx.rect(0, 0, mapW, mapH);
-
-  fogData.forEach((rect) => {
-    const rx = rect.x * gridPx.value;
-    const ry = rect.y * gridPx.value;
-    const rw = (rect.w || 1) * gridPx.value;
-    const rh = (rect.h || 1) * gridPx.value;
-    ctx.rect(rx + rw, ry, -rw, rh);
-  });
-
-  ctx.fill('evenodd');
-  ctx.restore();
-}
-
 function drawMeasurementRuler(ctx) {
   const startCell = rulerStart.value;
   const endCell = rulerEnd.value;
@@ -514,9 +483,6 @@ function onMouseDown(e) {
     } else if (props.activeTool === 'measure') {
       rulerStart.value = cell;
       rulerEnd.value = cell;
-    } else if ((props.activeTool === 'fog_reveal' || props.activeTool === 'fog_hide') && props.isGm) {
-      isDrawingFog.value = true;
-      applyFogBrush(cell);
     }
   }
 }
@@ -540,10 +506,6 @@ function onMouseMove(e) {
     rulerEnd.value = cell;
     return;
   }
-
-  if (isDrawingFog.value && props.isGm) {
-    applyFogBrush(cell);
-  }
 }
 
 function onMouseUp() {
@@ -560,10 +522,6 @@ function onMouseUp() {
       });
     }
     draggingToken.value = null;
-  }
-
-  if (isDrawingFog.value) {
-    isDrawingFog.value = false;
   }
 }
 
@@ -584,25 +542,6 @@ function onWheel(e) {
   }
 
   emit('update:zoomLevel', newZoom);
-}
-
-function applyFogBrush(cell) {
-  if (!props.map) return;
-  const currentFog = props.map.fog_data ? [...props.map.fog_data] : [];
-  const revealMode = props.activeTool === 'fog_reveal';
-
-  if (revealMode) {
-    const exists = currentFog.some((r) => r.x === cell.x && r.y === cell.y && r.w === 1 && r.h === 1);
-    if (!exists) {
-      currentFog.push({ x: cell.x, y: cell.y, w: 1, h: 1 });
-      emit('fog-changed', currentFog);
-    }
-  } else {
-    const updated = currentFog.filter((r) => !(r.x === cell.x && r.y === cell.y));
-    if (updated.length !== currentFog.length) {
-      emit('fog-changed', updated);
-    }
-  }
 }
 
 function onKeyDown(e) {
