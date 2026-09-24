@@ -359,31 +359,6 @@
               </div>
             </div>
 
-            <!-- Hull Points (HP) Adjuster -->
-            <div class="hp-section">
-              <label>Hull Points (HP):</label>
-              <div class="hp-inputs">
-                <input
-                  type="number"
-                  v-model.number="selectedTokenForm.current_hp"
-                  placeholder="Current"
-                  @change="updateSelectedToken"
-                />
-                <span>/</span>
-                <input
-                  type="number"
-                  v-model.number="selectedTokenForm.max_hp"
-                  placeholder="Max"
-                  @change="updateSelectedToken"
-                />
-              </div>
-              <div class="hp-quick-buttons">
-                <button @click="adjustSelectedHp(-5)">-5</button>
-                <button @click="adjustSelectedHp(-1)">-1</button>
-                <button @click="adjustSelectedHp(1)">+1</button>
-                <button @click="adjustSelectedHp(5)">+5</button>
-              </div>
-            </div>
 
             <!-- Tactical Status Effects -->
             <div class="status-section">
@@ -592,16 +567,6 @@
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Current HP / Hull</label>
-              <input type="number" v-model.number="newTokenForm.current_hp" placeholder="15" />
-            </div>
-            <div class="form-group">
-              <label>Max HP / Hull</label>
-              <input type="number" v-model.number="newTokenForm.max_hp" placeholder="15" />
-            </div>
-          </div>
 
           <div class="form-row">
             <div class="form-group">
@@ -747,19 +712,16 @@ const counterPresets = [
   {
     name: 'UPF Assault Scout',
     avatar_url: '/tokens/space/upf_assault_scout.png',
-    hp: 15,
     color: '#84d1d1',
   },
   {
     name: 'Sathar Destroyer',
     avatar_url: '/tokens/space/sathar_destroyer.png',
-    hp: 50,
     color: '#ef4444',
   },
   {
     name: 'Planet Volturnus',
     avatar_url: '/tokens/space/planet_volturnus.png',
-    hp: 100,
     color: '#10b981',
   },
 ];
@@ -767,8 +729,6 @@ const counterPresets = [
 function applyCounterPreset(preset) {
   newTokenForm.name = preset.name;
   newTokenForm.avatar_url = preset.avatar_url;
-  newTokenForm.current_hp = preset.hp;
-  newTokenForm.max_hp = preset.hp;
   newTokenForm.color = preset.color;
 }
 
@@ -801,15 +761,11 @@ const newTokenForm = reactive({
   x: 0,
   y: 0,
   size: 1,
-  current_hp: 15,
-  max_hp: 15,
   current_speed: 0,
   rotation: 0,
 });
 
 const selectedTokenForm = reactive({
-  current_hp: 0,
-  max_hp: 0,
   color: '#84d1d1',
   size: 1,
   status_effects: [],
@@ -825,8 +781,6 @@ const selectedToken = computed(() => {
 // Watch selectedToken to sync reactive form
 watch(selectedToken, (newToken) => {
   if (newToken) {
-    selectedTokenForm.current_hp = newToken.current_hp ?? 0;
-    selectedTokenForm.max_hp = newToken.max_hp ?? 0;
     selectedTokenForm.color = newToken.color || '#84d1d1';
     selectedTokenForm.size = newToken.size || 1;
     selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
@@ -1085,8 +1039,6 @@ function openAddTokenModal() {
   newTokenForm.x = 0;
   newTokenForm.y = 0;
   newTokenForm.size = 1;
-  newTokenForm.current_hp = 15;
-  newTokenForm.max_hp = 15;
   newTokenForm.current_speed = 0;
   newTokenForm.rotation = 0;
   showAddTokenModal.value = true;
@@ -1120,9 +1072,6 @@ function onShipSelected() {
   const ship = ships.value.find((s) => s.id === selectedShipId.value);
   if (ship) {
     newTokenForm.name = ship.name;
-    const hp = ship.current_hp ?? ship.hull_points ?? 30;
-    newTokenForm.current_hp = hp;
-    newTokenForm.max_hp = ship.hull_points ?? hp;
     if (ship.ship_type?.toLowerCase().includes('scout')) {
       newTokenForm.avatar_url = '/tokens/space/upf_assault_scout.png';
     } else if (ship.ship_type?.toLowerCase().includes('destroyer')) {
@@ -1147,8 +1096,6 @@ async function submitAddToken() {
         x: newTokenForm.x,
         y: newTokenForm.y,
         size: newTokenForm.size,
-        current_hp: newTokenForm.current_hp,
-        max_hp: newTokenForm.max_hp,
         rotation: newTokenForm.rotation || 0,
         current_speed: newTokenForm.current_speed || 0,
       }),
@@ -1193,8 +1140,6 @@ async function updateSelectedToken() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        current_hp: selectedTokenForm.current_hp,
-        max_hp: selectedTokenForm.max_hp,
         color: selectedTokenForm.color,
         size: selectedTokenForm.size,
         status_effects: selectedTokenForm.status_effects,
@@ -1210,13 +1155,6 @@ async function updateSelectedToken() {
   } catch (err) {
     console.error('Failed to update token:', err);
   }
-}
-
-function adjustSelectedHp(delta) {
-  if (!selectedToken.value) return;
-  selectedTokenForm.current_hp = Math.max(0, (selectedTokenForm.current_hp || 0) + delta);
-  selectedToken.value.current_hp = selectedTokenForm.current_hp;
-  updateSelectedToken();
 }
 
 function isStatusActive(statusKey) {
@@ -1310,8 +1248,6 @@ function setupSocketListeners() {
       if (idx !== -1) {
         tokens.value[idx] = token;
         if (selectedTokenId.value === token.id) {
-          selectedTokenForm.current_hp = token.current_hp ?? 0;
-          selectedTokenForm.max_hp = token.max_hp ?? 0;
           selectedTokenForm.color = token.color || '#84d1d1';
           selectedTokenForm.size = token.size || 1;
           selectedTokenForm.status_effects = [...(token.status_effects || [])];
@@ -2125,28 +2061,6 @@ onBeforeUnmount(() => {
   border-radius: 3px;
 }
 
-.hp-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.hp-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hp-quick-buttons {
-  display: flex;
-  gap: 6px;
-}
-
-.hp-quick-buttons button {
-  flex: 1;
-  padding: 4px;
-  font-size: 12px;
-}
 
 .status-toggles {
   display: flex;
