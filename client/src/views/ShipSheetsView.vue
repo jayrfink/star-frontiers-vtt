@@ -252,15 +252,7 @@
             <div v-else class="weapons-wrapper">
               <div v-for="(wpn, index) in selectedShip.weapons" :key="wpn.id || index" class="weapon-card">
                 <div class="weapon-main-row">
-                  <span class="weapon-title-label">Weapon:</span>
-                  <input
-                    type="text"
-                    v-model="wpn.type"
-                    @input="wpn.name = wpn.type"
-                    @change="updateShip"
-                    placeholder="e.g. Laser Battery"
-                    class="item-name-input"
-                  />
+                  <span class="weapon-title-name">{{ wpn.type || wpn.name || 'Laser Battery' }}</span>
                   <select
                     v-model="wpn.status"
                     @change="updateShip"
@@ -1284,12 +1276,13 @@ export default {
   gap: 8px;
 }
 
-.weapon-title-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: aquamarine;
-  -webkit-text-fill-color: aquamarine;
-  white-space: nowrap;
+.weapon-title-name {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
+  letter-spacing: 0.3px;
 }
 
 .weapon-details-row {
@@ -1309,23 +1302,6 @@ export default {
 
 .ammo-field {
   margin-left: auto;
-}
-
-.item-name-input {
-  flex: 1;
-  background-color: #000000 !important;
-  border: 1px solid rgba(0, 128, 128, 0.6) !important;
-  color: #00ffff !important;
-  -webkit-text-fill-color: #00ffff !important;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-.item-name-input:focus {
-  outline: none;
-  border-color: aqua !important;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .item-dmg-input {
