@@ -830,11 +830,12 @@ export default {
 .ship-list li {
   padding: 12px 16px;
   border-bottom: 1px solid #21262d;
+  border-left: 4px solid transparent;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .ship-list li:hover {
@@ -842,8 +843,20 @@ export default {
 }
 
 .ship-list li.active {
-  background: #1f6feb22;
-  border-left: 4px solid #3a859c;
+  background: #05282e;
+  border-left: 4px solid aquamarine;
+}
+
+.ship-list li.active:hover {
+  background: #083841;
+}
+
+.ship-list li.active .ship-name {
+  color: #a8ffea;
+}
+
+.ship-list li.active .ship-sub {
+  color: #80cbc4;
 }
 
 .ship-item-info {

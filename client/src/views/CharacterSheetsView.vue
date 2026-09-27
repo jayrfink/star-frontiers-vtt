@@ -1013,11 +1013,12 @@ export default {
 .character-list li {
   padding: 12px 16px;
   border-bottom: 1px solid #21262d;
+  border-left: 4px solid transparent;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .character-list li:hover {
@@ -1025,8 +1026,20 @@ export default {
 }
 
 .character-list li.active {
-  background: #1f6feb22;
-  border-left: 4px solid #3a859c;
+  background: #05282e;
+  border-left: 4px solid aquamarine;
+}
+
+.character-list li.active:hover {
+  background: #083841;
+}
+
+.character-list li.active .char-name {
+  color: #a8ffea;
+}
+
+.character-list li.active .char-sub {
+  color: #80cbc4;
 }
 
 .char-item-info {
