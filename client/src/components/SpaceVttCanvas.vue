@@ -324,8 +324,8 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   // Token Colored Ring Border
   ctx.beginPath();
   ctx.arc(0, 0, size, 0, Math.PI * 2);
-  ctx.strokeStyle = token.color || '#84d1d1';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = token.color || '#666666';
+  ctx.lineWidth = 3.5;
   ctx.stroke();
   
   // Restore context so badges stay upright

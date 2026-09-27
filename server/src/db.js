@@ -88,7 +88,7 @@ function migrate(db) {
       map_id INTEGER NOT NULL,
       character_id INTEGER,
       name TEXT NOT NULL,
-      color TEXT DEFAULT '#ff0000',
+      color TEXT DEFAULT '#666666',
       avatar_url TEXT DEFAULT '',
       x INTEGER NOT NULL DEFAULT 0,
       y INTEGER NOT NULL DEFAULT 0,

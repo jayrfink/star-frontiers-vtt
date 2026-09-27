@@ -303,7 +303,7 @@
             <div class="token-title-row">
               <span
                 class="token-color-badge"
-                :style="{ backgroundColor: selectedToken.color || '#3e636b' }"
+                :style="{ backgroundColor: selectedToken.color || '#666666' }"
               ></span>
               <h4>{{ selectedToken.name }}</h4>
             </div>
@@ -351,6 +351,7 @@
               <input
                 type="color"
                 v-model="selectedTokenForm.color"
+                @input="onColorInput"
                 @change="updateSelectedToken"
               />
             </div>
@@ -379,7 +380,7 @@
                 :class="{ active: selectedTokenId === t.id }"
                 @click="selectedTokenId = t.id"
               >
-                <span class="token-dot" :style="{ backgroundColor: t.color || '#3e636b' }"></span>
+                <span class="token-dot" :style="{ backgroundColor: t.color || '#666666' }"></span>
                 <strong>{{ t.name }}</strong>
                 <small>({{ t.x }}, {{ t.y }})</small>
               </li>
@@ -652,7 +653,7 @@ const newMapForm = reactive({
 const selectedCharacterId = ref(null);
 const newTokenForm = reactive({
   name: '',
-  color: '#3e636b',
+  color: '#666666',
   avatar_url: '',
   x: 0,
   y: 0,
@@ -660,7 +661,7 @@ const newTokenForm = reactive({
 });
 
 const selectedTokenForm = reactive({
-  color: '#3e636b',
+  color: '#666666',
   size: 1,
   status_effects: [],
 });
@@ -673,7 +674,7 @@ const selectedToken = computed(() => {
 // Watch selectedToken to sync reactive form
 watch(selectedToken, (newToken) => {
   if (newToken) {
-    selectedTokenForm.color = newToken.color || '#3e636b';
+    selectedTokenForm.color = newToken.color || '#666666';
     selectedTokenForm.size = newToken.size || 1;
     selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
   }
@@ -850,7 +851,7 @@ async function deleteMap(mapId) {
 function openAddTokenModal() {
   selectedCharacterId.value = null;
   newTokenForm.name = '';
-  newTokenForm.color = '#3e636b';
+  newTokenForm.color = '#666666';
   newTokenForm.avatar_url = '';
   newTokenForm.x = 0;
   newTokenForm.y = 0;
@@ -910,6 +911,8 @@ async function submitAddToken() {
     if (res.ok) {
       const created = await res.json();
       showAddTokenModal.value = false;
+      const exists = tokens.value.some((t) => t.id === created.id);
+      if (!exists) tokens.value.push(created);
       selectedTokenId.value = created.id;
     }
   } catch (err) {
@@ -939,8 +942,15 @@ function onTokenSelected(token) {
   selectedTokenId.value = token ? token.id : null;
 }
 
+function onColorInput() {
+  if (selectedToken.value) {
+    selectedToken.value.color = selectedTokenForm.color;
+  }
+}
+
 async function updateSelectedToken() {
   if (!selectedToken.value) return;
+  selectedToken.value.color = selectedTokenForm.color;
   try {
     const res = await fetch(`/api/tokens/${selectedToken.value.id}`, {
       method: 'PUT',

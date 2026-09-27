@@ -301,7 +301,7 @@
             <div class="token-title-row">
               <span
                 class="token-color-badge"
-                :style="{ backgroundColor: selectedToken.color || '#84d1d1' }"
+                :style="{ backgroundColor: selectedToken.color || '#666666' }"
               ></span>
               <h4>{{ selectedToken.name }}</h4>
             </div>
@@ -397,6 +397,7 @@
               <input
                 type="color"
                 v-model="selectedTokenForm.color"
+                @input="onColorInput"
                 @change="updateSelectedToken"
               />
             </div>
@@ -418,7 +419,7 @@
                 @click="selectedTokenId = t.id"
               >
                 <div class="token-item-left">
-                  <span class="token-dot" :style="{ backgroundColor: t.color || '#84d1d1' }"></span>
+                  <span class="token-dot" :style="{ backgroundColor: t.color || '#666666' }"></span>
                   <strong>{{ t.name }}</strong>
                 </div>
                 <div class="token-item-right">
@@ -565,7 +566,7 @@
           <div class="form-group avatar-upload-section">
             <label>Token Image / Avatar (Optional)</label>
             <div class="avatar-upload-box">
-              <div class="avatar-preview-wrapper" :style="{ borderColor: newTokenForm.color || '#84d1d1' }" title="Token Image Preview">
+              <div class="avatar-preview-wrapper" :style="{ borderColor: newTokenForm.color || '#666666' }" title="Token Image Preview">
                 <img v-if="newTokenForm.avatar_url" :src="newTokenForm.avatar_url" alt="Token Preview" class="token-avatar-preview" />
                 <span v-else class="avatar-empty-placeholder">No Image</span>
               </div>
@@ -740,7 +741,7 @@ const newMapForm = reactive({
 
 const newTokenForm = reactive({
   name: '',
-  color: '#84d1d1',
+  color: '#666666',
   avatar_url: '',
   x: 0,
   y: 0,
@@ -750,7 +751,7 @@ const newTokenForm = reactive({
 });
 
 const selectedTokenForm = reactive({
-  color: '#84d1d1',
+  color: '#666666',
   size: 1,
   status_effects: [],
   current_speed: 0,
@@ -765,7 +766,7 @@ const selectedToken = computed(() => {
 // Watch selectedToken to sync reactive form
 watch(selectedToken, (newToken) => {
   if (newToken) {
-    selectedTokenForm.color = newToken.color || '#84d1d1';
+    selectedTokenForm.color = newToken.color || '#666666';
     selectedTokenForm.size = newToken.size || 1;
     selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
     selectedTokenForm.current_speed = newToken.current_speed ?? 0;
@@ -1018,7 +1019,7 @@ async function deleteMap(mapId) {
 function openAddTokenModal() {
   selectedShipId.value = null;
   newTokenForm.name = '';
-  newTokenForm.color = '#84d1d1';
+  newTokenForm.color = '#666666';
   newTokenForm.avatar_url = '';
   newTokenForm.x = 0;
   newTokenForm.y = 0;
@@ -1092,6 +1093,8 @@ async function submitAddToken() {
     if (res.ok) {
       const created = await res.json();
       showAddTokenModal.value = false;
+      const exists = tokens.value.some((t) => t.id === created.id);
+      if (!exists) tokens.value.push(created);
       selectedTokenId.value = created.id;
     }
   } catch (err) {
@@ -1121,8 +1124,15 @@ function onTokenSelected(token) {
   selectedTokenId.value = token ? token.id : null;
 }
 
+function onColorInput() {
+  if (selectedToken.value) {
+    selectedToken.value.color = selectedTokenForm.color;
+  }
+}
+
 async function updateSelectedToken() {
   if (!selectedToken.value) return;
+  selectedToken.value.color = selectedTokenForm.color;
   try {
     const res = await fetch(`/api/tokens/${selectedToken.value.id}`, {
       method: 'PUT',
@@ -1237,7 +1247,7 @@ function setupSocketListeners() {
       if (idx !== -1) {
         tokens.value[idx] = token;
         if (selectedTokenId.value === token.id) {
-          selectedTokenForm.color = token.color || '#84d1d1';
+          selectedTokenForm.color = token.color || '#666666';
           selectedTokenForm.size = token.size || 1;
           selectedTokenForm.status_effects = [...(token.status_effects || [])];
           selectedTokenForm.current_speed = token.current_speed ?? 0;
@@ -2166,7 +2176,7 @@ onBeforeUnmount(() => {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: 3px solid #84d1d1;
+  border: 3px solid #666666;
   background: #000;
   display: flex;
   align-items: center;

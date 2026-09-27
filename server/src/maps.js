@@ -23,6 +23,7 @@ function formatToken(row) {
   if (!row) return null;
   return {
     ...row,
+    color: row.color || '#666666',
     status_effects: safeJsonParse(row.status_effects, []),
   };
 }
@@ -295,7 +296,7 @@ export function createTokenRouter(db, io) {
         map_id,
         character_id = null,
         name,
-        color = '#ff0000',
+        color = '#666666',
         avatar_url = '',
         x = 0,
         y = 0,

@@ -353,7 +353,7 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   // Token Colored Ring Border
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = token.color || '#3e636b';
+  ctx.strokeStyle = token.color || '#666666';
   ctx.lineWidth = 3;
   ctx.stroke();
 

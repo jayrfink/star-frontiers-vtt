@@ -226,6 +226,7 @@ describe('Maps & Tokens API & Socket.io', () => {
         x: 0,
         y: 0,
       });
+      expect(createRes.body.color).toBe('#666666');
       const tokenId = createRes.body.id;
 
       const emitSpy = vi.spyOn(io, 'emit');
@@ -234,17 +235,19 @@ describe('Maps & Tokens API & Socket.io', () => {
         x: 3,
         y: 4,
         current_hp: 25,
+        color: '#123456',
       });
 
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.x).toBe(3);
       expect(updateRes.body.y).toBe(4);
+      expect(updateRes.body.color).toBe('#123456');
 
       expect(emitSpy).toHaveBeenCalledWith('token:moved', expect.objectContaining({
         token: expect.objectContaining({ id: tokenId, x: 3, y: 4 }),
       }));
       expect(emitSpy).toHaveBeenCalledWith('token:updated', expect.objectContaining({
-        token: expect.objectContaining({ id: tokenId, current_hp: 25 }),
+        token: expect.objectContaining({ id: tokenId, current_hp: 25, color: '#123456' }),
       }));
     });
 
