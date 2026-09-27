@@ -1051,7 +1051,7 @@ export default {
 
 .char-name {
   font-weight: 600;
-  color: #f0f6fc;
+  color: #e0e0e0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1059,7 +1059,7 @@ export default {
 
 .char-sub {
   font-size: 0.8rem;
-  color: #8b949e;
+  color: #e0e0e0;
 }
 
 .btn-delete-small {

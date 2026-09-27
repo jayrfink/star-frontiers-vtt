@@ -868,7 +868,7 @@ export default {
 
 .ship-name {
   font-weight: 600;
-  color: #f0f6fc;
+  color: #e0e0e0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -876,7 +876,7 @@ export default {
 
 .ship-sub {
   font-size: 0.8rem;
-  color: #8b949e;
+  color: #e0e0e0;
 }
 
 .btn-delete-small {
@@ -1164,6 +1164,8 @@ export default {
 .defense-label {
   font-weight: 600;
   font-size: 0.9rem;
+  color: #e0e0e0 !important;
+  -webkit-text-fill-color: #e0e0e0;
 }
 
 .toggle-btn {
@@ -1280,8 +1282,8 @@ export default {
   flex: 1;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #00ffff !important;
-  -webkit-text-fill-color: #00ffff !important;
+  color: #e0e0e0 !important;
+  -webkit-text-fill-color: #e0e0e0 !important;
   letter-spacing: 0.3px;
 }
 
