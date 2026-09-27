@@ -1278,8 +1278,8 @@ export default {
 
 .weapon-title-name {
   flex: 1;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff !important;
   letter-spacing: 0.3px;
