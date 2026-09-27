@@ -37,42 +37,40 @@
 
       <div v-else class="sheet-container">
         <!-- Header Info -->
-        <header class="sheet-header" style="display: flex; gap: 16px; align-items: flex-start;">
-          <div class="portrait-box" @click="$refs.avatarInput.click()" title="Click to upload character portrait">
-            <img v-if="selectedChar.avatar_url" :src="selectedChar.avatar_url" class="portrait-img" alt="Character Portrait" />
-            <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
-            <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
+        <header class="sheet-header">
+          <div class="header-main">
+            <div class="portrait-box" @click="$refs.avatarInput.click()" title="Click to upload character portrait">
+              <img v-if="selectedChar.avatar_url" :src="selectedChar.avatar_url" class="portrait-img" alt="Character Portrait" />
+              <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
+              <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
+            </div>
+            <input
+              type="text"
+              v-model="selectedChar.name"
+              @change="updateCharacter"
+              class="input-name"
+              placeholder="Character Name"
+            />
+            <div class="race-select-wrap">
+              <label>Race:</label>
+              <select v-model="selectedChar.race" @change="updateCharacter" class="select-race">
+                <option value="Human">Human</option>
+                <option value="Dralasite">Dralasite</option>
+                <option value="Vrusk">Vrusk</option>
+                <option value="Yazirian">Yazirian</option>
+              </select>
+            </div>
+            <div class="psa-select-wrap">
+              <label>PSA:</label>
+              <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
+                <option value="Military">Military</option>
+                <option value="Technological">Technological</option>
+                <option value="Biosocial">Biosocial</option>
+              </select>
+            </div>
           </div>
-          <div style="flex: 1;">
-            <div class="header-main">
-              <input
-                type="text"
-                v-model="selectedChar.name"
-                @change="updateCharacter"
-                class="input-name"
-                placeholder="Character Name"
-              />
-              <div class="race-select-wrap">
-                <label>Race:</label>
-                <select v-model="selectedChar.race" @change="updateCharacter" class="select-race">
-                  <option value="Human">Human</option>
-                  <option value="Dralasite">Dralasite</option>
-                  <option value="Vrusk">Vrusk</option>
-                  <option value="Yazirian">Yazirian</option>
-                </select>
-              </div>
-              <div class="psa-select-wrap">
-                <label>PSA:</label>
-                <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
-                  <option value="Military">Military</option>
-                  <option value="Technological">Technological</option>
-                  <option value="Biosocial">Biosocial</option>
-                </select>
-              </div>
-            </div>
-            <div class="race-ability-banner">
-              <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
-            </div>
+          <div class="race-ability-banner">
+            <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
           </div>
         </header>
 
@@ -1939,29 +1937,31 @@ export default {
 }
 
 .portrait-box {
-  width: 96px;
-  height: 96px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border: 1px dashed rgba(0, 128, 128, 0.6);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
-  background: var(--bg-tertiary);
+  background: #000000;
   flex-shrink: 0;
-  transition: border-color 0.2s;
+  transition: all 0.15s ease-in-out;
 }
 
 .portrait-box:hover {
-  border-color: var(--accent);
+  border-color: aqua;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .portrait-placeholder {
-  font-size: 11px;
+  font-size: 9px;
   color: var(--text-secondary);
   text-align: center;
-  line-height: 1.3;
+  line-height: 1.15;
+  padding: 2px;
 }
 
 .portrait-img {
