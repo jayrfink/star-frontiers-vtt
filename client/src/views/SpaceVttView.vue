@@ -532,7 +532,7 @@
           <!-- Link to Ship Sheet -->
           <div class="form-group" v-if="ships.length > 0">
             <label>Link to Ship Sheet (Optional)</label>
-            <select v-model="selectedShipId" @change="onShipSelected">
+            <select v-model="selectedShipId" @change="onShipSelected" class="ship-sheet-select">
               <option :value="null">-- None (Custom Ship / Token) --</option>
               <option v-for="s in ships" :key="s.id" :value="s.id">
                 {{ s.name }} ({{ s.ship_type || 'Ship' }})
@@ -2129,6 +2129,27 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+}
+
+.ship-sheet-select,
+.ship-sheet-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
+.ship-sheet-select {
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.ship-sheet-select:focus {
+  outline: none;
+  border-color: aqua;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
 .modal-actions {
