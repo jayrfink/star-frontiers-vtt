@@ -38,6 +38,11 @@
       <div v-else class="sheet-container">
         <!-- Header Info -->
         <header class="sheet-header card">
+          <div class="portrait-box" @click="$refs.avatarInput.click()" title="Click to upload ship token image">
+            <img v-if="selectedShip.avatar_url" :src="selectedShip.avatar_url" class="portrait-img" alt="Ship Token Image" />
+            <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
+            <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
+          </div>
           <div class="header-main">
             <input
               type="text"
@@ -340,6 +345,16 @@
             <input type="text" v-model="newShipForm.name" required placeholder="e.g. UPF Gullwind" />
           </div>
           <div class="form-group">
+            <label>Token Image / Avatar (Optional)</label>
+            <div class="modal-avatar-row">
+              <div v-if="newShipForm.avatar_url" class="modal-avatar-preview">
+                <img :src="newShipForm.avatar_url" alt="Ship Token Preview" />
+                <button type="button" class="btn-remove-avatar" title="Remove image" @click="newShipForm.avatar_url = ''">✕</button>
+              </div>
+              <input type="file" ref="createAvatarInput" accept="image/*" @change="uploadCreateAvatar" class="avatar-file-input" />
+            </div>
+          </div>
+          <div class="form-group">
             <label>Type / Class Label</label>
             <input type="text" v-model="newShipForm.type" placeholder="e.g. Assault Scout" />
           </div>
@@ -391,6 +406,7 @@ export default {
       newShipForm: {
         name: '',
         type: 'Assault Scout',
+        avatar_url: '',
         adf: 5,
         mr: 4,
         dcr: 35,
@@ -448,6 +464,7 @@ export default {
     normalizeShip(ship) {
       if (!ship) return null;
       const copy = JSON.parse(JSON.stringify(ship));
+      copy.avatar_url = copy.avatar_url || '';
       copy.ship_type = copy.ship_type || copy.type || 'Fighter';
       copy.type = copy.ship_type;
       copy.hull_points = copy.hull_points !== undefined ? copy.hull_points : (copy.max_hull_points || 50);
@@ -497,6 +514,10 @@ export default {
       this.selectedPresetType = 'Assault Scout';
       this.applyPresetToCreateForm();
       this.newShipForm.name = '';
+      this.newShipForm.avatar_url = '';
+      if (this.$refs.createAvatarInput) {
+        this.$refs.createAvatarInput.value = '';
+      }
       this.showCreateModal = true;
     },
     onEditPresetChange(newType) {
@@ -523,6 +544,7 @@ export default {
         const payload = {
           name: this.newShipForm.name.trim(),
           ship_type: this.newShipForm.type || 'Fighter',
+          avatar_url: this.newShipForm.avatar_url || '',
           adf: this.newShipForm.adf || 2,
           mr: this.newShipForm.mr || 2,
           dcr: this.newShipForm.dcr || 50,
@@ -561,6 +583,7 @@ export default {
       try {
         const payload = {
           ...this.selectedShip,
+          avatar_url: this.selectedShip.avatar_url || '',
           ship_type: this.selectedShip.type || this.selectedShip.ship_type || 'Fighter',
           hull_points: this.selectedShip.max_hull_points || this.selectedShip.hull_points || 50,
           current_hp: this.selectedShip.current_hull_points !== undefined ? this.selectedShip.current_hull_points : (this.selectedShip.current_hp || 50),
@@ -581,6 +604,53 @@ export default {
         }
       } catch (err) {
         console.error('Error updating ship:', err);
+      }
+    },
+    async uploadAvatar(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.selectedShip.avatar_url = data.url;
+          this.updateShip();
+        } else {
+          console.error('Upload failed');
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+      }
+    },
+    async uploadCreateAvatar(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.newShipForm.avatar_url = data.url;
+        } else {
+          console.error('Upload failed');
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
       }
     },
     adjustHullPoints(amount) {
@@ -844,7 +914,46 @@ export default {
 }
 
 /* Header */
+.sheet-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.portrait-box {
+  width: 96px;
+  height: 96px;
+  border: 1px dashed var(--border, #30363d);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-tertiary, #0d1117);
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+
+.portrait-box:hover {
+  border-color: var(--accent, #3a859c);
+}
+
+.portrait-placeholder {
+  font-size: 11px;
+  color: var(--text-secondary, #8b949e);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .header-main {
+  flex: 1;
   display: flex;
   gap: 16px;
   align-items: center;
@@ -1368,5 +1477,51 @@ export default {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
+}
+
+.modal-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-avatar-preview {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #30363d;
+  flex-shrink: 0;
+}
+
+.modal-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-remove-avatar {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ff6b6b;
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.avatar-file-input {
+  font-size: 0.85rem;
+  color: #8b949e;
 }
 </style>

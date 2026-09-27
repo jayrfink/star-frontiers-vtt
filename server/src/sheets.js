@@ -25,6 +25,7 @@ function formatShipSheet(row) {
   if (!row) return null;
   return {
     ...row,
+    avatar_url: row.avatar_url || '',
     weapons: safeJsonParse(row.weapons, []),
     defenses: safeJsonParse(row.defenses, []),
   };
@@ -269,6 +270,7 @@ export function createShipRouter(db, io) {
         weapons = [],
         defenses = [],
         notes = '',
+        avatar_url = '',
       } = req.body;
 
       if (!name || !ship_type) {
@@ -281,16 +283,16 @@ export function createShipRouter(db, io) {
       const stmt = db.prepare(`
         INSERT INTO ship_sheets (
           user_id, name, ship_type, hull_points, current_hp, adf, mr, dcr,
-          weapons, defenses, notes
+          weapons, defenses, notes, avatar_url
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?
+          ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         req.session.userId, name, ship_type, hull_points, current_hp, adf, mr, dcr,
-        weaponsStr, defensesStr, notes
+        weaponsStr, defensesStr, notes, req.body.avatar_url || ''
       );
 
       const created = db.prepare('SELECT * FROM ship_sheets WHERE id = ?').get(result.lastInsertRowid);
@@ -325,6 +327,7 @@ export function createShipRouter(db, io) {
         weapons = safeJsonParse(existing.weapons, []),
         defenses = safeJsonParse(existing.defenses, []),
         notes = existing.notes,
+        avatar_url = existing.avatar_url || '',
       } = req.body;
 
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
@@ -333,14 +336,14 @@ export function createShipRouter(db, io) {
       const stmt = db.prepare(`
         UPDATE ship_sheets SET
           name = ?, ship_type = ?, hull_points = ?, current_hp = ?,
-          adf = ?, mr = ?, dcr = ?, weapons = ?, defenses = ?, notes = ?,
+          adf = ?, mr = ?, dcr = ?, weapons = ?, defenses = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         name, ship_type, hull_points, current_hp,
-        adf, mr, dcr, weaponsStr, defensesStr, notes,
+        adf, mr, dcr, weaponsStr, defensesStr, notes, avatar_url,
         req.params.id
       );
 

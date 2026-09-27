@@ -58,6 +58,7 @@ function migrate(db) {
       weapons TEXT DEFAULT '[]',
       defenses TEXT DEFAULT '[]',
       notes TEXT DEFAULT '',
+      avatar_url TEXT DEFAULT '',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -120,6 +121,11 @@ if (!mapCols.includes('map_type')) {
   }
   if (!charCols.includes('psa')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN psa TEXT NOT NULL DEFAULT "Military"');
+  }
+
+  const shipCols = db.prepare("PRAGMA table_info(ship_sheets)").all().map(c => c.name);
+  if (!shipCols.includes('avatar_url')) {
+    db.exec('ALTER TABLE ship_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');
   }
 
   const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);

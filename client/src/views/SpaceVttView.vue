@@ -1065,7 +1065,7 @@ function onShipSelected() {
   const ship = ships.value.find((s) => s.id === selectedShipId.value);
   if (ship) {
     newTokenForm.name = ship.name;
-    newTokenForm.avatar_url = '';
+    newTokenForm.avatar_url = ship.avatar_url || '';
   }
 }
 
