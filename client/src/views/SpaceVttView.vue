@@ -562,10 +562,34 @@
             </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group avatar-upload-section">
             <label>Token Image / Avatar (Optional)</label>
-            <input type="text" v-model="newTokenForm.avatar_url" placeholder="Image URL or upload file" />
-            <input type="file" accept="image/*" @change="uploadImage" class="token-file-input" />
+            <div class="avatar-upload-box">
+              <div class="avatar-preview-wrapper" :style="{ borderColor: newTokenForm.color || '#84d1d1' }" title="Token Image Preview">
+                <img v-if="newTokenForm.avatar_url" :src="newTokenForm.avatar_url" alt="Token Preview" class="token-avatar-preview" />
+                <span v-else class="avatar-empty-placeholder">No Image</span>
+              </div>
+              <div class="avatar-controls">
+                <div class="file-btn-wrapper">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="uploadImage"
+                    class="token-file-input"
+                    ref="tokenFileInput"
+                    :disabled="uploadingAvatar"
+                  />
+                  <span v-if="uploadingAvatar" class="uploading-spinner">Uploading...</span>
+                  <button v-else-if="newTokenForm.avatar_url" type="button" class="btn-clear-avatar" @click="clearAvatar">Remove</button>
+                </div>
+                <input
+                  type="text"
+                  v-model="newTokenForm.avatar_url"
+                  placeholder="Or enter image URL (https://...)"
+                  class="avatar-url-input"
+                />
+              </div>
+            </div>
           </div>
 
           <div class="modal-actions">
@@ -689,6 +713,8 @@ const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
 const selectedShipId = ref(null);
+const tokenFileInput = ref(null);
+const uploadingAvatar = ref(false);
 
 // Forms
 const activeMapForm = reactive({
@@ -999,12 +1025,14 @@ function openAddTokenModal() {
   newTokenForm.size = 1;
   newTokenForm.current_speed = 0;
   newTokenForm.rotation = 0;
+  if (tokenFileInput.value) tokenFileInput.value.value = '';
   showAddTokenModal.value = true;
 }
 
 async function uploadImage(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
+  uploadingAvatar.value = true;
   const formData = new FormData();
   formData.append('file', file);
   try {
@@ -1021,7 +1049,14 @@ async function uploadImage(event) {
     }
   } catch (err) {
     console.error('Failed to upload image:', err);
+  } finally {
+    uploadingAvatar.value = false;
   }
+}
+
+function clearAvatar() {
+  newTokenForm.avatar_url = '';
+  if (tokenFileInput.value) tokenFileInput.value.value = '';
 }
 
 
@@ -2106,15 +2141,76 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
+.avatar-upload-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.avatar-preview-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #84d1d1;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.token-avatar-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-empty-placeholder {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.1;
+}
+
+.avatar-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-btn-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .token-file-input {
-  margin-top: 6px;
-  padding: 4px 0;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--text-secondary);
+  width: auto;
 }
 
-.token-file-input::file-selector-button,
+.token-file-input::file-selector-button {
+  background-color: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: all 0.15s ease-in-out;
+}
+
 .token-file-input::-webkit-file-upload-button {
   background-color: #000000 !important;
   border: 1px solid teal !important;
@@ -2128,13 +2224,46 @@ onBeforeUnmount(() => {
   transition: all 0.15s ease-in-out;
 }
 
-.token-file-input::file-selector-button:hover,
+.token-file-input::file-selector-button:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
 .token-file-input::-webkit-file-upload-button:hover {
   background-color: #051414 !important;
   border-color: #00a8a8 !important;
   color: #00a8a8 !important;
   -webkit-text-fill-color: #00a8a8;
   box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-clear-avatar {
+  background: transparent;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: #f85149;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.btn-clear-avatar:hover {
+  background: rgba(248, 81, 73, 0.1);
+  border-color: #f85149;
+}
+
+.uploading-spinner {
+  font-size: 12px;
+  color: #00a8a8;
+  font-style: italic;
+}
+
+.avatar-url-input {
+  font-size: 12px;
+  padding: 6px 10px;
 }
 
 .btn-add-token-submit {
