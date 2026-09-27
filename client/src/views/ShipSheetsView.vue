@@ -252,9 +252,11 @@
             <div v-else class="weapons-wrapper">
               <div v-for="(wpn, index) in selectedShip.weapons" :key="wpn.id || index" class="weapon-card">
                 <div class="weapon-main-row">
+                  <span class="weapon-title-label">Weapon:</span>
                   <input
                     type="text"
                     v-model="wpn.type"
+                    @input="wpn.name = wpn.type"
                     @change="updateShip"
                     placeholder="e.g. Laser Battery"
                     class="item-name-input"
@@ -451,15 +453,20 @@ export default {
     },
     normalizeWeapons(weapons) {
       if (!Array.isArray(weapons)) return [];
-      return weapons.map((w, idx) => ({
-        id: w.id || `w_${Date.now()}_${idx}`,
-        type: w.type || w.name || 'Laser Battery',
-        damage: w.damage || '1d10',
-        range: w.range !== undefined ? w.range : 9,
-        ammo_max: w.ammo_max !== undefined ? w.ammo_max : 0,
-        ammo_current: w.ammo_current !== undefined ? w.ammo_current : 0,
-        status: w.status || 'Online',
-      }));
+      return weapons.map((w, idx) => {
+        const weaponName = (w.type && w.type.trim()) || (w.name && w.name.trim()) || 'Laser Battery';
+        return {
+          ...w,
+          id: w.id || `w_${Date.now()}_${idx}`,
+          name: weaponName,
+          type: weaponName,
+          damage: w.damage || '1d10',
+          range: w.range !== undefined ? w.range : 9,
+          ammo_max: w.ammo_max !== undefined ? w.ammo_max : 0,
+          ammo_current: w.ammo_current !== undefined ? w.ammo_current : 0,
+          status: w.status || 'Online',
+        };
+      });
     },
     normalizeShip(ship) {
       if (!ship) return null;
@@ -708,6 +715,7 @@ export default {
       if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
       this.selectedShip.weapons.push({
         id: `w_${Date.now()}`,
+        name: 'New Weapon',
         type: 'New Weapon',
         damage: '1d10',
         range: 9,
@@ -1261,19 +1269,27 @@ export default {
 }
 
 .weapon-card {
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: #000000;
+  border: 1px solid rgba(0, 128, 128, 0.6);
   border-radius: 6px;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .weapon-main-row {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.weapon-title-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: aquamarine;
+  -webkit-text-fill-color: aquamarine;
+  white-space: nowrap;
 }
 
 .weapon-details-row {
@@ -1297,31 +1313,51 @@ export default {
 
 .item-name-input {
   flex: 1;
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
   padding: 4px 8px;
   border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.item-name-input:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .item-dmg-input {
   width: 65px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
   padding: 4px 6px;
   border-radius: 4px;
   text-align: center;
 }
+.item-dmg-input:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
 
 .item-num-input {
   width: 40px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
   padding: 4px 4px;
   border-radius: 4px;
   text-align: center;
+}
+.item-num-input:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .status-select,
@@ -1334,21 +1370,30 @@ export default {
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  border: 1px solid #30363d;
-  background: #000000;
-  color: #f0f6fc;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  background-color: #000000 !important;
+  color: #00ffff;
+  cursor: pointer;
+}
+.status-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 .status-select.online {
-  color: #3fb950;
-  border-color: #3fb95044;
+  color: #3fb950 !important;
+  -webkit-text-fill-color: #3fb950;
+  border-color: #3fb95088 !important;
 }
 .status-select.damaged {
-  color: #d29922;
-  border-color: #d2992244;
+  color: #d29922 !important;
+  -webkit-text-fill-color: #d29922;
+  border-color: #d2992288 !important;
 }
 .status-select.offline {
-  color: #f85149;
-  border-color: #f8514944;
+  color: #f85149 !important;
+  -webkit-text-fill-color: #f85149;
+  border-color: #f8514988 !important;
 }
 
 .btn-fire {
@@ -1379,23 +1424,36 @@ export default {
 
 .item-level-input {
   width: 45px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
   text-align: center;
   padding: 3px 4px;
   border-radius: 4px;
 }
+.item-level-input:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
 
 .btn-remove {
-  background: transparent;
-  border: none;
-  color: #8b949e;
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #8b949e !important;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all 0.15s ease-in-out;
 }
 .btn-remove:hover {
-  color: #f85149;
+  background-color: #340c0e !important;
+  border-color: #da3633 !important;
+  color: #f85149 !important;
+  -webkit-text-fill-color: #f85149;
+  box-shadow: 0 0 6px rgba(218, 54, 51, 0.4);
 }
 
 /* Buttons & Controls */
