@@ -39,10 +39,9 @@
         <!-- Header Info -->
         <header class="sheet-header">
           <div class="header-main">
-            <div class="portrait-box" @click="$refs.avatarInput.click()" title="Click to upload character portrait">
+            <div class="portrait-box" @click="openImageBrowser('char')" title="Click to select character portrait">
               <img v-if="selectedChar.avatar_url" :src="selectedChar.avatar_url" class="portrait-img" alt="Character Portrait" />
-              <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
-              <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
+              <div v-else class="portrait-placeholder">Click to select<br/>Token Image</div>
             </div>
             <input
               type="text"
@@ -417,6 +416,22 @@
             <input type="text" v-model="newCharForm.name" required placeholder="e.g. Wilf Tybo" />
           </div>
           <div class="form-group">
+            <label>Character Portrait / Avatar (Optional)</label>
+            <div class="modal-avatar-row">
+              <div v-if="newCharForm.avatar_url" class="modal-avatar-preview" @click="openImageBrowser('create')" title="Click to change image">
+                <img :src="newCharForm.avatar_url" alt="Character Avatar Preview" />
+                <button type="button" class="btn-remove-avatar" title="Remove image" @click.stop="newCharForm.avatar_url = ''">✕</button>
+              </div>
+              <button
+                type="button"
+                class="btn-browse-avatar"
+                @click="openImageBrowser('create')"
+              >
+                Browse Images...
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
             <label>Race</label>
             <select v-model="newCharForm.race" class="char-create-select">
               <option value="Human">Human (+5 XP bonus / adaptable)</option>
@@ -504,6 +519,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Image Browser Modal -->
+    <ImageBrowserModal
+      v-model="showImageBrowser"
+      :title="imageBrowserTitle"
+      :current-image="currentBrowserImage"
+      @select="onImageSelected"
+    />
   </div>
 </template>
 
@@ -518,9 +541,13 @@ import {
   calcUnencumberedMax,
   calcXPCost,
 } from '../constants/characterRules.js';
+import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 
 export default {
   name: 'CharacterSheetsView',
+  components: {
+    ImageBrowserModal,
+  },
   data() {
     return {
       characters: [],
@@ -528,6 +555,8 @@ export default {
       loading: true,
       creating: false,
       showCreateModal: false,
+      showImageBrowser: false,
+      imageBrowserTarget: 'char',
       racesData: RACES_DATA,
       officialSkills: OFFICIAL_SKILLS,
       equipmentList: [],
@@ -539,6 +568,7 @@ export default {
         name: '',
         race: 'Human',
         psa: 'Military',
+        avatar_url: '',
         str_sta: 50,
         dex_rs: 50,
         int_log: 50,
@@ -549,6 +579,15 @@ export default {
     };
   },
   computed: {
+    currentBrowserImage() {
+      if (this.imageBrowserTarget === 'char') {
+        return this.selectedChar ? (this.selectedChar.avatar_url || '') : '';
+      }
+      return this.newCharForm ? (this.newCharForm.avatar_url || '') : '';
+    },
+    imageBrowserTitle() {
+      return this.imageBrowserTarget === 'char' ? 'Select Character Portrait' : 'Select Character Avatar';
+    },
     filteredEquipmentList() {
       if (!this.equipmentSearchQuery) return this.equipmentList;
       const q = this.equipmentSearchQuery.toLowerCase().trim();
@@ -688,6 +727,7 @@ export default {
         name: '',
         race: 'Human',
         psa: 'Military',
+        avatar_url: '',
         str_sta: 50,
         dex_rs: 50,
         int_log: 50,
@@ -697,12 +737,27 @@ export default {
       };
       this.showCreateModal = true;
     },
+    openImageBrowser(target = 'char') {
+      this.imageBrowserTarget = target;
+      this.showImageBrowser = true;
+    },
+    onImageSelected(url) {
+      if (this.imageBrowserTarget === 'char') {
+        if (this.selectedChar) {
+          this.selectedChar.avatar_url = url;
+          this.updateCharacter();
+        }
+      } else if (this.imageBrowserTarget === 'create') {
+        this.newCharForm.avatar_url = url;
+      }
+    },
     async createCharacter() {
       if (!this.newCharForm.name.trim()) return;
       this.creating = true;
       try {
         const payload = {
           ...this.newCharForm,
+          avatar_url: this.newCharForm.avatar_url || '',
           str: this.newCharForm.str_sta,
           sta: this.newCharForm.max_stamina ?? this.newCharForm.str_sta,
           current_sta: this.newCharForm.current_stamina ?? this.newCharForm.str_sta,
@@ -1981,5 +2036,75 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.modal-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-avatar-preview {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #30363d;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.modal-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-remove-avatar {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #000000;
+  border: 1px solid teal;
+  color: aqua;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-remove-avatar:hover {
+  border-color: aqua;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+}
+
+.btn-browse-avatar {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius, 4px);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-browse-avatar:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 </style>

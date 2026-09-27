@@ -36,12 +36,10 @@
       </div>
 
       <div v-else class="sheet-container">
-        <!-- Header Info -->
         <header class="sheet-header card">
-          <div class="portrait-box" @click="$refs.avatarInput.click()" title="Click to upload ship token image">
+          <div class="portrait-box" @click="openImageBrowser('sheet')" title="Click to select ship token image">
             <img v-if="selectedShip.avatar_url" :src="selectedShip.avatar_url" class="portrait-img" alt="Ship Token Image" />
-            <div v-else class="portrait-placeholder">Click to add<br/>Token Image</div>
-            <input type="file" ref="avatarInput" style="display:none" accept="image/*" @change="uploadAvatar" />
+            <div v-else class="portrait-placeholder">Click to select<br/>Token Image</div>
           </div>
           <div class="header-main">
             <input
@@ -341,11 +339,17 @@
           <div class="form-group">
             <label>Token Image / Avatar (Optional)</label>
             <div class="modal-avatar-row">
-              <div v-if="newShipForm.avatar_url" class="modal-avatar-preview">
+              <div v-if="newShipForm.avatar_url" class="modal-avatar-preview" @click="openImageBrowser('create')" title="Click to change image">
                 <img :src="newShipForm.avatar_url" alt="Ship Token Preview" />
-                <button type="button" class="btn-remove-avatar" title="Remove image" @click="newShipForm.avatar_url = ''">✕</button>
+                <button type="button" class="btn-remove-avatar" title="Remove image" @click.stop="newShipForm.avatar_url = ''">✕</button>
               </div>
-              <input type="file" ref="createAvatarInput" accept="image/*" @change="uploadCreateAvatar" class="avatar-file-input" />
+              <button
+                type="button"
+                class="btn-browse-avatar"
+                @click="openImageBrowser('create')"
+              >
+                Browse Images...
+              </button>
             </div>
           </div>
           <div class="form-group">
@@ -379,15 +383,27 @@
         </form>
       </div>
     </div>
+
+    <!-- Image Browser Modal -->
+    <ImageBrowserModal
+      v-model="showImageBrowser"
+      :title="imageBrowserTitle"
+      :current-image="currentBrowserImage"
+      @select="onImageSelected"
+    />
   </div>
 </template>
 
 <script>
 import { socket } from '../services/socket.js';
 import { SHIP_PRESETS } from '../constants/shipPresets.js';
+import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 
 export default {
   name: 'ShipSheetsView',
+  components: {
+    ImageBrowserModal,
+  },
   data() {
     return {
       presets: SHIP_PRESETS,
@@ -397,6 +413,8 @@ export default {
       loading: true,
       creating: false,
       showCreateModal: false,
+      showImageBrowser: false,
+      imageBrowserTarget: 'sheet',
       newShipForm: {
         name: '',
         type: 'Assault Scout',
@@ -412,6 +430,15 @@ export default {
     };
   },
   computed: {
+    currentBrowserImage() {
+      if (this.imageBrowserTarget === 'sheet') {
+        return this.selectedShip ? (this.selectedShip.avatar_url || '') : '';
+      }
+      return this.newShipForm ? (this.newShipForm.avatar_url || '') : '';
+    },
+    imageBrowserTitle() {
+      return this.imageBrowserTarget === 'sheet' ? 'Select Ship Token Image' : 'Select Ship Avatar';
+    },
     hullPercentage() {
       if (!this.selectedShip || !this.selectedShip.max_hull_points) return 0;
       const pct = (this.selectedShip.current_hull_points / this.selectedShip.max_hull_points) * 100;
@@ -514,10 +541,21 @@ export default {
       this.applyPresetToCreateForm();
       this.newShipForm.name = '';
       this.newShipForm.avatar_url = '';
-      if (this.$refs.createAvatarInput) {
-        this.$refs.createAvatarInput.value = '';
-      }
       this.showCreateModal = true;
+    },
+    openImageBrowser(target = 'sheet') {
+      this.imageBrowserTarget = target;
+      this.showImageBrowser = true;
+    },
+    onImageSelected(url) {
+      if (this.imageBrowserTarget === 'sheet') {
+        if (this.selectedShip) {
+          this.selectedShip.avatar_url = url;
+          this.updateShip();
+        }
+      } else if (this.imageBrowserTarget === 'create') {
+        this.newShipForm.avatar_url = url;
+      }
     },
     onEditPresetChange(newType) {
       const preset = this.presets.find((p) => p.type === newType);
@@ -1682,6 +1720,7 @@ export default {
   overflow: hidden;
   border: 1px solid #30363d;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .modal-avatar-preview img {
@@ -1713,6 +1752,28 @@ export default {
 .btn-remove-avatar:hover {
   border-color: aqua;
   box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+}
+
+.btn-browse-avatar {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius, 4px);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-browse-avatar:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 
 .avatar-file-input {

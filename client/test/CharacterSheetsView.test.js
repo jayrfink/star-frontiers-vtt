@@ -144,4 +144,71 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(costOutOfPSA).toBe(16); // 2 * (4 * 2)
     });
   });
+
+  describe('ImageBrowserModal Integration', () => {
+    it('opens image browser modal with given target', () => {
+      const vm = {
+        showImageBrowser: false,
+        imageBrowserTarget: 'char',
+      };
+
+      CharacterSheetsView.methods.openImageBrowser.call(vm, 'char');
+      expect(vm.showImageBrowser).toBe(true);
+      expect(vm.imageBrowserTarget).toBe('char');
+
+      CharacterSheetsView.methods.openImageBrowser.call(vm, 'create');
+      expect(vm.showImageBrowser).toBe(true);
+      expect(vm.imageBrowserTarget).toBe('create');
+    });
+
+    it('handles image selection for sheet portrait and triggers update', () => {
+      let updated = false;
+      const vm = {
+        imageBrowserTarget: 'char',
+        selectedChar: {
+          id: 'c1',
+          name: 'Wilf',
+          avatar_url: '',
+        },
+        updateCharacter() {
+          updated = true;
+        },
+      };
+
+      CharacterSheetsView.methods.onImageSelected.call(vm, '/uploads/portraits/wilf.png');
+      expect(vm.selectedChar.avatar_url).toBe('/uploads/portraits/wilf.png');
+      expect(updated).toBe(true);
+    });
+
+    it('handles image selection for create character form', () => {
+      const vm = {
+        imageBrowserTarget: 'create',
+        newCharForm: {
+          name: '',
+          avatar_url: '',
+        },
+      };
+
+      CharacterSheetsView.methods.onImageSelected.call(vm, '/uploads/portraits/new_hero.png');
+      expect(vm.newCharForm.avatar_url).toBe('/uploads/portraits/new_hero.png');
+    });
+
+    it('computes currentBrowserImage and imageBrowserTitle correctly', () => {
+      const vmChar = {
+        imageBrowserTarget: 'char',
+        selectedChar: { avatar_url: '/uploads/char1.png' },
+        newCharForm: { avatar_url: '/uploads/char2.png' },
+      };
+      expect(CharacterSheetsView.computed.currentBrowserImage.call(vmChar)).toBe('/uploads/char1.png');
+      expect(CharacterSheetsView.computed.imageBrowserTitle.call(vmChar)).toBe('Select Character Portrait');
+
+      const vmCreate = {
+        imageBrowserTarget: 'create',
+        selectedChar: { avatar_url: '/uploads/char1.png' },
+        newCharForm: { avatar_url: '/uploads/char2.png' },
+      };
+      expect(CharacterSheetsView.computed.currentBrowserImage.call(vmCreate)).toBe('/uploads/char2.png');
+      expect(CharacterSheetsView.computed.imageBrowserTitle.call(vmCreate)).toBe('Select Character Avatar');
+    });
+  });
 });

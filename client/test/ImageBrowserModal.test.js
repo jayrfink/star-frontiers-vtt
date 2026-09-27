@@ -286,4 +286,33 @@ describe('ImageBrowserModal.vue', () => {
       expect(event.target.value).toBe('');
     });
   });
+
+  describe('Mounted & watch lifecycle', () => {
+    it('fetches files on mounted if modelValue is true', () => {
+      const fetchFilesMock = vi.fn();
+      const vmOpen = { modelValue: true, fetchFiles: fetchFilesMock };
+      ImageBrowserModal.mounted.call(vmOpen);
+      expect(fetchFilesMock).toHaveBeenCalledTimes(1);
+
+      const vmClosed = { modelValue: false, fetchFiles: fetchFilesMock };
+      ImageBrowserModal.mounted.call(vmClosed);
+      expect(fetchFilesMock).toHaveBeenCalledTimes(1); // not called again
+    });
+
+    it('has immediate watcher on modelValue', () => {
+      expect(ImageBrowserModal.watch.modelValue.immediate).toBe(true);
+      const fetchFilesMock = vi.fn();
+      const vm = {
+        modelValue: true,
+        currentImage: '/uploads/ship.png',
+        selectedUrl: '',
+        searchQuery: 'something',
+        fetchFiles: fetchFilesMock,
+      };
+      ImageBrowserModal.watch.modelValue.handler.call(vm, true);
+      expect(vm.selectedUrl).toBe('/uploads/ship.png');
+      expect(vm.searchQuery).toBe('');
+      expect(fetchFilesMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });

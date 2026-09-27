@@ -167,18 +167,26 @@ export default {
     };
   },
   watch: {
-    modelValue(newVal) {
-      if (newVal) {
-        this.selectedUrl = this.currentImage || '';
-        this.searchQuery = '';
-        this.fetchFiles();
-      }
+    modelValue: {
+      immediate: true,
+      handler(newVal) {
+        if (newVal) {
+          this.selectedUrl = this.currentImage || '';
+          this.searchQuery = '';
+          this.fetchFiles();
+        }
+      },
     },
     currentImage(newVal) {
       if (newVal) {
         this.selectedUrl = newVal;
       }
     },
+  },
+  mounted() {
+    if (this.modelValue) {
+      this.fetchFiles();
+    }
   },
   computed: {
     breadcrumbs() {
