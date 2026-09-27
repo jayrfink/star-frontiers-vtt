@@ -205,6 +205,31 @@ select option:hover {
   color: aquamarine;
 }
 
+/* Color Input Controls */
+input[type="color"] {
+  height: 38px;
+  padding: 3px 4px;
+  cursor: pointer;
+  background-color: #000000;
+  border: 1px solid rgba(0, 128, 128, 0.6);
+  border-radius: var(--radius);
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 4px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
 /* File Upload Controls */
 input[type="file"] {
   border: none;

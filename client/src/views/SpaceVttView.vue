@@ -398,7 +398,7 @@
                 type="color"
                 v-model="selectedTokenForm.color"
                 @input="onColorInput"
-                @change="updateSelectedToken"
+                @change="onColorChange"
               />
             </div>
 
@@ -1102,13 +1102,30 @@ async function submitAddToken() {
   }
 }
 
+let colorDebounceTimer = null;
+
 async function onTokenMoved({ id, x, y }) {
+  if (colorDebounceTimer) {
+    clearTimeout(colorDebounceTimer);
+    colorDebounceTimer = null;
+  }
+  const currentToken = tokens.value.find((t) => t.id === id);
+  const color = (selectedToken.value && selectedToken.value.id === id)
+    ? selectedTokenForm.color
+    : (currentToken?.color || '#666666');
+
+  if (currentToken) {
+    currentToken.x = x;
+    currentToken.y = y;
+    currentToken.color = color;
+  }
+
   try {
     const res = await fetch(`/api/tokens/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ x, y }),
+      body: JSON.stringify({ x, y, color }),
     });
     if (res.ok) {
       const updated = await res.json();
@@ -1121,6 +1138,11 @@ async function onTokenMoved({ id, x, y }) {
 }
 
 function onTokenSelected(token) {
+  if (colorDebounceTimer) {
+    clearTimeout(colorDebounceTimer);
+    colorDebounceTimer = null;
+    updateSelectedToken();
+  }
   selectedTokenId.value = token ? token.id : null;
 }
 
@@ -1128,18 +1150,37 @@ function onColorInput() {
   if (selectedToken.value) {
     selectedToken.value.color = selectedTokenForm.color;
   }
+  if (colorDebounceTimer) {
+    clearTimeout(colorDebounceTimer);
+  }
+  colorDebounceTimer = setTimeout(() => {
+    colorDebounceTimer = null;
+    updateSelectedToken();
+  }, 250);
+}
+
+function onColorChange() {
+  if (colorDebounceTimer) {
+    clearTimeout(colorDebounceTimer);
+    colorDebounceTimer = null;
+  }
+  updateSelectedToken();
 }
 
 async function updateSelectedToken() {
-  if (!selectedToken.value) return;
-  selectedToken.value.color = selectedTokenForm.color;
+  const token = selectedToken.value;
+  if (!token) return;
+  const tokenId = token.id;
+  const newColor = selectedTokenForm.color;
+  token.color = newColor;
+
   try {
-    const res = await fetch(`/api/tokens/${selectedToken.value.id}`, {
+    const res = await fetch(`/api/tokens/${tokenId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        color: selectedTokenForm.color,
+        color: newColor,
         size: selectedTokenForm.size,
         status_effects: selectedTokenForm.status_effects,
         current_speed: selectedTokenForm.current_speed,
@@ -1301,6 +1342,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (colorDebounceTimer) {
+    clearTimeout(colorDebounceTimer);
+    colorDebounceTimer = null;
+    updateSelectedToken();
+  }
   cleanupSocketListeners();
   window.removeEventListener('keydown', onKeyDown);
   document.removeEventListener('click', onDocClick);
