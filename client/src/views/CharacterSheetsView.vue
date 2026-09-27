@@ -420,7 +420,7 @@
           </div>
           <div class="form-group">
             <label>Race</label>
-            <select v-model="newCharForm.race">
+            <select v-model="newCharForm.race" class="char-create-select">
               <option value="Human">Human (+5 XP bonus / adaptable)</option>
               <option value="Dralasite">Dralasite (Lie Detection & Elasticity)</option>
               <option value="Vrusk">Vrusk (Ambidexterity & Comprehensive)</option>
@@ -429,7 +429,7 @@
           </div>
           <div class="form-group">
             <label>Primary System Area (PSA)</label>
-            <select v-model="newCharForm.psa">
+            <select v-model="newCharForm.psa" class="char-create-select">
               <option value="Military">Military</option>
               <option value="Technological">Technological</option>
               <option value="Biosocial">Biosocial</option>
@@ -456,8 +456,8 @@
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="creating">Create</button>
+            <button type="button" class="btn-modal-cancel" @click="showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn-modal-create" :disabled="creating">Create Character</button>
           </div>
         </form>
       </div>
@@ -1531,29 +1531,30 @@ export default {
 
 /* Buttons & Controls */
 .btn-new-character {
-  background: #082d33 !important;
-  border: 1px solid #007fff !important;
-  color: #00ffff !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
   padding: 6px 14px;
   border-radius: 4px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
   letter-spacing: 0.3px;
   transition: all 0.15s ease-in-out;
 }
 .btn-new-character:hover {
-  background: #0d3b44 !important;
-  border-color: #3399ff !important;
-  color: #00ffff !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
+  background-color: #04272d !important;
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
 }
 .btn-new-character:active {
   transform: translateY(1px);
-  box-shadow: none !important;
-  text-shadow: none !important;
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
 }
 
 .btn-primary {
@@ -1650,11 +1651,47 @@ export default {
 
 .form-group input,
 .form-group select {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
+  background: #000000;
+  border: 1px solid rgba(0, 128, 128, 0.6);
+  color: #00ffff;
   padding: 8px;
   border-radius: 4px;
+}
+
+.char-create-select,
+.char-create-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
+.char-create-select {
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border-radius: var(--radius, 4px);
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.char-create-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.modal-card input[type="text"],
+.modal-card input[type="number"] {
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+}
+
+.modal-card input[type="text"]:focus,
+.modal-card input[type="number"]:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .form-row {
@@ -1666,8 +1703,65 @@ export default {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
   margin-top: 20px;
+}
+
+.modal-card .btn-modal-cancel {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  padding: 6px 14px;
+  border-radius: var(--radius, 4px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.modal-card .btn-modal-cancel:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.modal-card .btn-modal-create {
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
+  padding: 6px 16px;
+  border-radius: var(--radius, 4px);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
+}
+
+.modal-card .btn-modal-create:hover:not(:disabled) {
+  background-color: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
+
+.modal-card .btn-modal-create:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
+}
+
+.modal-card .btn-modal-create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .list-header-actions {

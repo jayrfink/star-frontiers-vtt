@@ -379,8 +379,8 @@
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="creating">Create</button>
+            <button type="button" class="btn-modal-cancel" @click="showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn-modal-create" :disabled="creating">Create Ship</button>
           </div>
         </form>
       </div>
@@ -1370,8 +1370,7 @@ export default {
 }
 
 /* Buttons & Controls */
-.btn-primary,
-.btn-new-ship {
+.btn-primary {
   background: #082d33;
   color: #2dd4bf;
   border: 1px solid #14b8a6;
@@ -1383,16 +1382,41 @@ export default {
   letter-spacing: 0.3px;
   transition: all 0.15s ease-in-out;
 }
-.btn-primary:hover,
-.btn-new-ship:hover {
+.btn-primary:hover {
   background: #0c3e47;
   border-color: #2dd4bf;
   color: #5eead4;
   box-shadow: 0 0 16px rgba(45, 212, 191, 0.6);
 }
-.btn-primary:active,
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-new-ship {
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
+}
+.btn-new-ship:hover {
+  background-color: #04272d !important;
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
 .btn-new-ship:active {
   transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
 }
 .btn-primary:disabled {
   background: #161b22;
@@ -1457,13 +1481,48 @@ export default {
 }
 
 .form-group input,
-.form-group select,
-.preset-select {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
+.form-group select {
+  background: #000000;
+  border: 1px solid rgba(0, 128, 128, 0.6);
+  color: #00ffff;
   padding: 8px;
   border-radius: 4px;
+}
+
+.preset-select,
+.preset-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
+.preset-select {
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border-radius: var(--radius, 4px);
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.preset-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.modal-card input[type="text"],
+.modal-card input[type="number"] {
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+}
+
+.modal-card input[type="text"]:focus,
+.modal-card input[type="number"]:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .form-row {
@@ -1475,8 +1534,65 @@ export default {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
   margin-top: 20px;
+}
+
+.btn-modal-cancel {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  padding: 6px 14px;
+  border-radius: var(--radius, 4px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-modal-cancel:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-modal-create {
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
+  padding: 6px 16px;
+  border-radius: var(--radius, 4px);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-modal-create:hover:not(:disabled) {
+  background-color: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
+
+.btn-modal-create:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
+}
+
+.btn-modal-create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .modal-avatar-row {
@@ -1505,23 +1621,52 @@ export default {
   position: absolute;
   top: 2px;
   right: 2px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #ff6b6b;
-  border: none;
+  background: #000000;
+  border: 1px solid teal;
+  color: aqua;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  font-size: 10px;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-remove-avatar:hover {
+  border-color: aqua;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
 }
 
 .avatar-file-input {
   font-size: 0.85rem;
   color: #8b949e;
+}
+
+.avatar-file-input::file-selector-button,
+.avatar-file-input::-webkit-file-upload-button {
+  background-color: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius, 4px);
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: all 0.15s ease-in-out;
+}
+
+.avatar-file-input::file-selector-button:hover,
+.avatar-file-input::-webkit-file-upload-button:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 </style>

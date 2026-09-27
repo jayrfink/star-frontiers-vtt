@@ -593,7 +593,7 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="showAddTokenModal = false">Cancel</button>
+            <button type="button" class="btn-modal-cancel" @click="showAddTokenModal = false">Cancel</button>
             <button type="submit" class="btn-add-token-submit">Add Token</button>
           </div>
         </form>
@@ -1379,19 +1379,30 @@ onBeforeUnmount(() => {
 }
 
 .btn-add-token {
-  background: #082d33 !important;
-  border: 1px solid #14b8a6 !important;
-  color: #2dd4bf !important;
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
   font-weight: 700;
-  box-shadow: none;
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  letter-spacing: 0.3px;
   text-shadow: none;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-add-token:hover {
-  background: #0d3b44 !important;
-  border-color: #2dd4bf !important;
-  color: #5eead4 !important;
+  background-color: #04272d !important;
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
+
+.btn-add-token:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
 }
 
 /* Main Body Layout */
@@ -2241,18 +2252,23 @@ onBeforeUnmount(() => {
 }
 
 .btn-clear-avatar {
-  background: transparent;
-  border: 1px solid rgba(248, 81, 73, 0.4);
-  color: #f85149;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
   font-size: 11px;
   padding: 4px 8px;
   border-radius: var(--radius);
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 
 .btn-clear-avatar:hover {
-  background: rgba(248, 81, 73, 0.1);
-  border-color: #f85149;
+  background: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
 }
 
 .uploading-spinner {
@@ -2298,6 +2314,43 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 12px;
+}
+
+.btn-modal-cancel {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-modal-cancel:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.modal-card input[type="text"],
+.modal-card input[type="number"] {
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+}
+
+.modal-card input[type="text"]:focus,
+.modal-card input[type="number"]:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .full-width {

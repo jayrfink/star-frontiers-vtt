@@ -463,7 +463,7 @@
         <form @submit.prevent="submitAddToken">
           <div class="form-group">
             <label>Link to Character Sheet (Optional)</label>
-            <select v-model="selectedCharacterId" @change="onCharacterSelected">
+            <select v-model="selectedCharacterId" @change="onCharacterSelected" class="character-sheet-select">
               <option :value="null">-- None (Custom Token) --</option>
               <option v-for="c in characters" :key="c.id" :value="c.id">
                 {{ c.name }} ({{ c.race || 'Character' }})
@@ -483,7 +483,7 @@
             </div>
             <div class="form-group">
               <label>Size (Cells)</label>
-              <select v-model.number="newTokenForm.size" class="size-select">
+              <select v-model.number="newTokenForm.size" class="character-sheet-select">
                 <option :value="1">1x1 (Medium)</option>
                 <option :value="2">2x2 (Large)</option>
                 <option :value="3">3x3 (Huge)</option>
@@ -504,13 +504,13 @@
 
           <div class="form-group">
             <label>Avatar Image (Optional)</label>
-            <input type="text" v-model="newTokenForm.avatar_url" placeholder="https://... or upload file" />
-            <input type="file" accept="image/*" @change="uploadImage" />
+            <input type="text" v-model="newTokenForm.avatar_url" placeholder="https://... or upload file" style="margin-bottom: 8px;" />
+            <input type="file" accept="image/*" @change="uploadImage" class="token-file-input" />
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="showAddTokenModal = false">Cancel</button>
-            <button type="submit" class="primary">Add Token</button>
+            <button type="button" class="btn-modal-cancel" @click="showAddTokenModal = false">Cancel</button>
+            <button type="submit" class="btn-add-token-submit">Add Token</button>
           </div>
         </form>
       </div>
@@ -1183,19 +1183,30 @@ onBeforeUnmount(() => {
 }
 
 .btn-add-token {
-  background: #082d33 !important;
-  border: 1px solid #14b8a6 !important;
-  color: #2dd4bf !important;
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
   font-weight: 700;
-  box-shadow: none;
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  letter-spacing: 0.3px;
   text-shadow: none;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-add-token:hover {
-  background: #0d3b44 !important;
-  border-color: #2dd4bf !important;
-  color: #5eead4 !important;
+  background-color: #04272d !important;
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
+
+.btn-add-token:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
 }
 
 /* Main Body Layout */
@@ -1833,6 +1844,122 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 12px;
+}
+
+.character-sheet-select,
+.character-sheet-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
+.character-sheet-select {
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.character-sheet-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.modal-card input[type="text"],
+.modal-card input[type="number"] {
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+}
+
+.modal-card input[type="text"]:focus,
+.modal-card input[type="number"]:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.token-file-input {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  width: auto;
+}
+
+.token-file-input::file-selector-button,
+.token-file-input::-webkit-file-upload-button {
+  background-color: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: all 0.15s ease-in-out;
+}
+
+.token-file-input::file-selector-button:hover,
+.token-file-input::-webkit-file-upload-button:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-modal-cancel {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-modal-cancel:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-add-token-submit {
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-add-token-submit:hover:not(:disabled) {
+  background-color: #04272d !important;
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
+
+.btn-add-token-submit:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
 }
 
 .full-width {
