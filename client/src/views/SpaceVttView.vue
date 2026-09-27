@@ -512,23 +512,6 @@
         <h3>Add Token to Space Map</h3>
         <form @submit.prevent="submitAddToken">
 
-          <!-- Counter Presets -->
-          <div class="form-group">
-            <label>Knight Hawks Counter Presets:</label>
-            <div class="preset-counters">
-              <button
-                type="button"
-                class="counter-btn"
-                v-for="preset in counterPresets"
-                :key="preset.name"
-                @click="applyCounterPreset(preset)"
-              >
-                <img :src="preset.avatar_url" :alt="preset.name" class="preset-thumb" />
-                <span>{{ preset.name }}</span>
-              </button>
-            </div>
-          </div>
-
           <!-- Link to Ship Sheet -->
           <div class="form-group" v-if="ships.length > 0">
             <label>Link to Ship Sheet (Optional)</label>
@@ -707,31 +690,6 @@ const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
 const selectedShipId = ref(null);
 
-// Counter Presets
-const counterPresets = [
-  {
-    name: 'UPF Assault Scout',
-    avatar_url: '/tokens/space/upf_assault_scout.png',
-    color: '#84d1d1',
-  },
-  {
-    name: 'Sathar Destroyer',
-    avatar_url: '/tokens/space/sathar_destroyer.png',
-    color: '#ef4444',
-  },
-  {
-    name: 'Planet Volturnus',
-    avatar_url: '/tokens/space/planet_volturnus.png',
-    color: '#10b981',
-  },
-];
-
-function applyCounterPreset(preset) {
-  newTokenForm.name = preset.name;
-  newTokenForm.avatar_url = preset.avatar_url;
-  newTokenForm.color = preset.color;
-}
-
 // Forms
 const activeMapForm = reactive({
   grid_size: 40,
@@ -757,7 +715,7 @@ const newMapForm = reactive({
 const newTokenForm = reactive({
   name: '',
   color: '#84d1d1',
-  avatar_url: '/tokens/space/upf_assault_scout.png',
+  avatar_url: '',
   x: 0,
   y: 0,
   size: 1,
@@ -1033,9 +991,9 @@ async function deleteMap(mapId) {
 // Token Actions
 function openAddTokenModal() {
   selectedShipId.value = null;
-  newTokenForm.name = 'UPF Assault Scout';
+  newTokenForm.name = '';
   newTokenForm.color = '#84d1d1';
-  newTokenForm.avatar_url = '/tokens/space/upf_assault_scout.png';
+  newTokenForm.avatar_url = '';
   newTokenForm.x = 0;
   newTokenForm.y = 0;
   newTokenForm.size = 1;
@@ -1072,11 +1030,7 @@ function onShipSelected() {
   const ship = ships.value.find((s) => s.id === selectedShipId.value);
   if (ship) {
     newTokenForm.name = ship.name;
-    if (ship.ship_type?.toLowerCase().includes('scout')) {
-      newTokenForm.avatar_url = '/tokens/space/upf_assault_scout.png';
-    } else if (ship.ship_type?.toLowerCase().includes('destroyer')) {
-      newTokenForm.avatar_url = '/tokens/space/sathar_destroyer.png';
-    }
+    newTokenForm.avatar_url = '';
   }
 }
 
@@ -2312,40 +2266,5 @@ onBeforeUnmount(() => {
   color: var(--success);
   font-weight: 600;
   padding: 4px 8px;
-}
-
-.preset-counters {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.counter-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 4px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  text-align: center;
-}
-
-.counter-btn:hover {
-  border-color: var(--accent);
-  background: rgba(58, 133, 156, 0.05);
-}
-
-.preset-thumb {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-}
-
-.counter-btn span {
-  font-size: 11px;
-  color: var(--text-primary);
 }
 </style>
