@@ -1135,13 +1135,27 @@ export default {
 }
 
 .select-race,
+.select-psa,
+.select-race option,
+.select-psa option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
+.select-race,
 .select-psa {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #3a859c;
-  padding: 8px 12px;
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
+  padding: 8px 12px;
   font-size: 1rem;
+}
+
+.select-race:focus,
+.select-psa:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
 .race-ability-banner {
@@ -1356,9 +1370,9 @@ export default {
 }
 
 .btn-shift {
-  background: linear-gradient(180deg, #16222f 0%, #0e1722 100%);
-  border: 1px solid rgba(6, 182, 212, 0.35);
-  color: #06b6d4;
+  background: #000000;
+  border: 1px solid teal;
+  color: aqua;
   font-size: 0.65rem;
   padding: 2px 5px;
   border-radius: 3px;
@@ -1366,10 +1380,10 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 .btn-shift:hover {
-  background: #162a3a;
-  border-color: #06b6d4;
-  color: #ffffff;
-  box-shadow: var(--sci-glow-cyan);
+  background: #051414;
+  border-color: #00a8a8;
+  color: #00a8a8;
+  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
 }
 .btn-shift:active {
   transform: translateY(1px);
@@ -1434,14 +1448,25 @@ export default {
   gap: 6px;
 }
 
+.select-official-skill,
+.select-official-skill option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
 .select-official-skill {
   flex: 1;
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #f0f6fc;
-  padding: 6px 8px;
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
+  padding: 6px 8px;
   font-size: 0.85rem;
+}
+
+.select-official-skill:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
 }
 
 .skill-chance-badge {
@@ -1586,9 +1611,11 @@ export default {
 }
 
 .btn-secondary {
-  background: linear-gradient(180deg, #16222f 0%, #0e1722 100%);
-  color: #e6edf3;
-  border: 1px solid rgba(6, 182, 212, 0.35);
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border: 1px solid teal !important;
   padding: 5px 12px;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -1597,15 +1624,16 @@ export default {
   letter-spacing: 0.3px;
   transition: all 0.15s ease-in-out;
 }
-.btn-secondary:hover {
-  background: linear-gradient(180deg, #1a2938 0%, #121d2b 100%);
-  border-color: #06b6d4;
-  color: #ffffff;
-  box-shadow: var(--sci-glow-cyan);
+.btn-secondary:hover:not(:disabled) {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
-.btn-secondary:active {
+.btn-secondary:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 6px rgba(0, 128, 128, 0.6);
 }
 
 /* Modal */
@@ -1812,9 +1840,9 @@ export default {
 .modal-search {
   margin-bottom: 14px;
   padding: 8px 12px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
+  color: #00ffff !important;
   border-radius: 4px;
   font-size: 14px;
   width: 100%;
@@ -1823,7 +1851,8 @@ export default {
 
 .modal-search:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .equipment-list {

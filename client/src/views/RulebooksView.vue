@@ -547,8 +547,11 @@ onMounted(() => {
 }
 
 .mode-btn.active {
-  background: var(--accent);
-  color: #fff;
+  background-color: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
+  box-shadow: 0 0 8px rgba(127, 255, 212, 0.3);
 }
 
 .view-status {
@@ -613,10 +616,15 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.sidebar-select,
+.sidebar-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
 .sidebar-select {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: var(--radius);
   padding: 5px 8px;
   font-size: 12px;
@@ -628,7 +636,8 @@ onMounted(() => {
 .page-input:focus,
 .pdf-select:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .search-box {
@@ -639,9 +648,9 @@ onMounted(() => {
 
 .search-input {
   width: 100%;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  background-color: #000000 !important;
+  color: #00ffff !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
   border-radius: var(--radius);
   padding: 7px 28px 7px 10px;
   font-size: 13px;
@@ -874,10 +883,15 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.pdf-select,
+.pdf-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
 .pdf-select {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: var(--radius);
   padding: 6px 10px;
   font-size: 13px;
@@ -890,19 +904,25 @@ onMounted(() => {
 }
 
 .page-btn {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
   padding: 6px 12px;
   border-radius: var(--radius);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .page-btn:hover:not(:disabled) {
-  background: var(--bg-tertiary);
-  border-color: var(--accent);
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 
 .page-btn:disabled {
@@ -919,9 +939,9 @@ onMounted(() => {
 .page-input {
   width: 65px;
   text-align: center;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  background-color: #000000 !important;
+  color: #00ffff !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
   border-radius: var(--radius);
   padding: 6px 8px;
   font-size: 13px;

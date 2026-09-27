@@ -234,7 +234,7 @@
               </div>
               <div class="form-group">
                 <label>Background Preset:</label>
-                <select v-model="activeMapForm.preset_bg" @change="updateActiveMapSettings">
+                <select v-model="activeMapForm.preset_bg" @change="updateActiveMapSettings" class="space-map-select">
                   <option value="starfield">Starfield (Space)</option>
                   <option value="grid_only">Grid Only</option>
                   <option value="volturnus_desert">Volturnus Desert</option>
@@ -249,7 +249,7 @@
                   placeholder="Image URL or upload file"
                   @change="updateActiveMapSettings"
                 />
-                <input type="file" accept="image/*" @change="onActiveMapUpload" />
+                <input type="file" accept="image/*" @change="onActiveMapUpload" class="map-file-input" />
               </div>
             </div>
 
@@ -471,7 +471,7 @@
 
           <div class="form-group">
             <label>Background Preset</label>
-            <select v-model="newMapForm.preset_bg">
+            <select v-model="newMapForm.preset_bg" class="space-map-select">
               <option value="starfield">Starfield (Space)</option>
               <option value="grid_only">Grid Only</option>
               <option value="volturnus_desert">Volturnus Desert</option>
@@ -482,7 +482,7 @@
           <div class="form-group">
             <label>Custom Image URL (Optional)</label>
             <input type="text" v-model="newMapForm.background_url" placeholder="Image URL or upload file" />
-            <input type="file" accept="image/*" @change="e => uploadMapImage(e, newMapForm)" />
+            <input type="file" accept="image/*" @change="e => uploadMapImage(e, newMapForm)" class="map-file-input" />
           </div>
 
           <div class="form-group checkbox-group">
@@ -500,8 +500,8 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="showCreateMapModal = false">Cancel</button>
-            <button type="submit" class="primary">Create Map</button>
+            <button type="button" class="btn-modal-cancel" @click="showCreateMapModal = false">Cancel</button>
+            <button type="submit" class="btn-add-token-submit">Create Map</button>
           </div>
         </form>
       </div>
@@ -2052,9 +2052,22 @@ onBeforeUnmount(() => {
 }
 
 .btn-group-sm button {
+  background: #000000;
+  border: 1px solid teal;
+  color: #00ffff;
   padding: 4px 8px;
   font-size: 12px;
   white-space: nowrap;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-group-sm button:hover:not(:disabled) {
+  background: #051414;
+  border-color: #00a8a8;
+  color: #00a8a8;
+  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
 }
 
 .label-with-hint {
@@ -2142,13 +2155,17 @@ onBeforeUnmount(() => {
 }
 
 .ship-sheet-select,
-.ship-sheet-select option {
+.ship-sheet-select option,
+.space-map-select,
+.space-map-select option {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
 }
 
-.ship-sheet-select {
+.ship-sheet-select,
+.space-map-select {
+  background-color: #000000;
   border: 1px solid rgba(0, 255, 255, 0.4);
   border-radius: var(--radius);
   padding: 8px 12px;
@@ -2156,7 +2173,8 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-.ship-sheet-select:focus {
+.ship-sheet-select:focus,
+.space-map-select:focus {
   outline: none;
   border-color: aqua;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
@@ -2211,7 +2229,8 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-.token-file-input {
+.token-file-input,
+.map-file-input {
   padding: 0;
   border: none;
   background: transparent;
@@ -2219,7 +2238,8 @@ onBeforeUnmount(() => {
   width: auto;
 }
 
-.token-file-input::file-selector-button {
+.token-file-input::file-selector-button,
+.map-file-input::file-selector-button {
   background-color: #000000 !important;
   border: 1px solid teal !important;
   color: teal !important;
@@ -2232,7 +2252,8 @@ onBeforeUnmount(() => {
   transition: all 0.15s ease-in-out;
 }
 
-.token-file-input::-webkit-file-upload-button {
+.token-file-input::-webkit-file-upload-button,
+.map-file-input::-webkit-file-upload-button {
   background-color: #000000 !important;
   border: 1px solid teal !important;
   color: teal !important;
@@ -2245,7 +2266,8 @@ onBeforeUnmount(() => {
   transition: all 0.15s ease-in-out;
 }
 
-.token-file-input::file-selector-button:hover {
+.token-file-input::file-selector-button:hover,
+.map-file-input::file-selector-button:hover {
   background-color: #051414 !important;
   border-color: #00a8a8 !important;
   color: #00a8a8 !important;
@@ -2253,7 +2275,8 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 
-.token-file-input::-webkit-file-upload-button:hover {
+.token-file-input::-webkit-file-upload-button:hover,
+.map-file-input::-webkit-file-upload-button:hover {
   background-color: #051414 !important;
   border-color: #00a8a8 !important;
   color: #00a8a8 !important;

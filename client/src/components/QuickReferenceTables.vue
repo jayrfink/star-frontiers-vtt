@@ -558,11 +558,12 @@ const noResults = computed(() => {
 }
 
 .tab-button.active {
-  background: rgba(88, 166, 255, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
+  background-color: #021a1e !important;
+  border-color: aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
   font-weight: 600;
-  box-shadow: 0 0 8px rgba(88, 166, 255, 0.25);
+  box-shadow: 0 0 8px rgba(127, 255, 212, 0.3);
 }
 
 .tab-icon {
@@ -589,16 +590,16 @@ const noResults = computed(() => {
 .search-input {
   width: 100%;
   padding: 8px 32px 8px 32px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
+  background-color: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.6) !important;
   border-radius: var(--radius);
-  color: var(--text-primary);
+  color: #00ffff !important;
   font-size: 13px;
 }
 
 .search-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
   outline: none;
 }
 
@@ -925,14 +926,22 @@ const noResults = computed(() => {
   margin-top: 8px;
   padding: 6px 14px;
   font-size: 12px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  color: var(--accent);
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  font-weight: 600;
   border-radius: var(--radius);
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 
 .clear-filter-btn:hover {
-  background: var(--border);
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 </style>

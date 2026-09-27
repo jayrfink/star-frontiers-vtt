@@ -366,20 +366,25 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.role-select,
+.role-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
 .role-select {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: var(--radius);
   padding: 8px 12px;
   font-size: 14px;
-  color: var(--text-primary);
   height: 38px;
 }
 
 .role-select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3);
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
 .form-actions {
@@ -474,25 +479,39 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border: 1px solid teal !important;
+  font-weight: 600;
+  transition: all 0.15s ease-in-out;
 }
 
-.btn-secondary:hover {
-  background: var(--border);
+.btn-secondary:hover:not(:disabled) {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 
 .btn-danger {
-  background: rgba(248, 81, 73, 0.15);
-  color: var(--danger);
-  border: 1px solid rgba(248, 81, 73, 0.4);
+  background-color: #340c0e !important;
+  color: #f85149 !important;
+  -webkit-text-fill-color: #f85149;
+  border: 1px solid #da3633 !important;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: 0 0 6px rgba(218, 54, 51, 0.25);
+  transition: all 0.15s ease-in-out;
 }
 
-.btn-danger:hover {
-  background: rgba(248, 81, 73, 0.3);
+.btn-danger:hover:not(:disabled) {
+  background-color: #4a1316 !important;
+  border-color: #ff6b6b !important;
+  color: #ff8585 !important;
+  -webkit-text-fill-color: #ff8585;
+  box-shadow: 0 0 10px rgba(248, 81, 73, 0.45);
 }
 </style>

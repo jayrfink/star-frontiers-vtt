@@ -155,5 +155,19 @@ async function handleLogout() {
 .logout-btn {
   padding: 4px 12px;
   font-size: 12px;
+  background-color: #000000;
+  border: 1px solid teal;
+  color: teal;
+  font-weight: 600;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.logout-btn:hover {
+  background-color: #051414;
+  border-color: #00a8a8;
+  color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 </style>

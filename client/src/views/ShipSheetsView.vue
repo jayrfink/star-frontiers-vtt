@@ -977,13 +977,24 @@ export default {
   font-weight: 600;
 }
 
+.input-type-select,
+.input-type-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+}
+
 .input-type-select {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #3a859c;
-  padding: 8px 12px;
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
+  padding: 8px 12px;
   font-size: 1rem;
+}
+
+.input-type-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
 /* Hull Section */
@@ -1300,13 +1311,18 @@ export default {
   text-align: center;
 }
 
+.status-select,
+.status-select option {
+  background-color: #000000 !important;
+}
+
 .status-select {
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
   border: 1px solid #30363d;
-  background: #161b22;
+  background: #000000;
   color: #f0f6fc;
 }
 .status-select.online {
@@ -1427,16 +1443,24 @@ export default {
 }
 
 .btn-secondary {
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border: 1px solid teal !important;
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 .btn-secondary:hover {
-  background: #30363d;
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 
 /* Modal */
