@@ -556,7 +556,7 @@
             </div>
             <div class="form-group">
               <label>Initial Rotation (°)</label>
-              <select v-model.number="newTokenForm.rotation">
+              <select v-model.number="newTokenForm.rotation" class="ship-sheet-select">
                 <option :value="0">0° (East)</option>
                 <option :value="60">60°</option>
                 <option :value="120">120°</option>
@@ -582,12 +582,12 @@
           <div class="form-group">
             <label>Token Image / Avatar (Optional)</label>
             <input type="text" v-model="newTokenForm.avatar_url" placeholder="Image URL or upload file" />
-            <input type="file" accept="image/*" @change="uploadImage" />
+            <input type="file" accept="image/*" @change="uploadImage" class="token-file-input" />
           </div>
 
           <div class="modal-actions">
             <button type="button" @click="showAddTokenModal = false">Cancel</button>
-            <button type="submit" class="primary">Add Token</button>
+            <button type="submit" class="btn-add-token-submit">Add Token</button>
           </div>
         </form>
       </div>
@@ -2150,6 +2150,64 @@ onBeforeUnmount(() => {
   outline: none;
   border-color: aqua;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.token-file-input {
+  margin-top: 6px;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.token-file-input::file-selector-button,
+.token-file-input::-webkit-file-upload-button {
+  background-color: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: all 0.15s ease-in-out;
+}
+
+.token-file-input::file-selector-button:hover,
+.token-file-input::-webkit-file-upload-button:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-add-token-submit {
+  background-color: #021a1e !important;
+  background: #021a1e !important;
+  border: 1px solid aquamarine !important;
+  color: aquamarine !important;
+  -webkit-text-fill-color: aquamarine;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-add-token-submit:hover:not(:disabled) {
+  background-color: #04272d !important;
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+}
+
+.btn-add-token-submit:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
 }
 
 .modal-actions {
