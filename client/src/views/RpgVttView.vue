@@ -503,10 +503,35 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Avatar Image (Optional)</label>
-            <input type="text" v-model="newTokenForm.avatar_url" placeholder="https://... or upload file" style="margin-bottom: 8px;" />
-            <input type="file" accept="image/*" @change="uploadImage" class="token-file-input" />
+          <div class="form-group avatar-upload-section">
+            <label>Token Image / Avatar (Optional)</label>
+            <div class="avatar-upload-box">
+              <div class="avatar-preview-wrapper" :style="{ borderColor: newTokenForm.color || '#666666' }" title="Token Image Preview">
+                <img v-if="newTokenForm.avatar_url" :src="newTokenForm.avatar_url" alt="Token Preview" class="token-avatar-preview" />
+                <span v-else class="avatar-empty-placeholder">No Image</span>
+              </div>
+              <div class="avatar-controls">
+                <div class="file-btn-wrapper">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="uploadImage"
+                    class="token-file-input"
+                    ref="tokenFileInput"
+                    :disabled="uploadingAvatar"
+                  />
+                  <span v-if="uploadingAvatar" class="uploading-spinner">Uploading...</span>
+                  <button type="button" class="btn-browse-avatar" @click="showImageBrowser = true">Browse Uploads</button>
+                  <button v-if="newTokenForm.avatar_url" type="button" class="btn-clear-avatar" @click="clearAvatar">Remove</button>
+                </div>
+                <input
+                  type="text"
+                  v-model="newTokenForm.avatar_url"
+                  placeholder="Or enter image URL (https://...)"
+                  class="avatar-url-input"
+                />
+              </div>
+            </div>
           </div>
 
           <div class="modal-actions">
@@ -516,12 +541,21 @@
         </form>
       </div>
     </div>
+
+    <!-- Image Browser Modal -->
+    <ImageBrowserModal
+      v-model="showImageBrowser"
+      title="Select Token Image"
+      :current-image="newTokenForm.avatar_url"
+      @select="onImageSelected"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import VttCanvas from '../components/VttCanvas.vue';
+import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
@@ -629,6 +663,9 @@ const showGmDrawer = ref(false);
 const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
+const showImageBrowser = ref(false);
+const tokenFileInput = ref(null);
+const uploadingAvatar = ref(false);
 
 // Forms
 const activeMapForm = reactive({
@@ -856,12 +893,14 @@ function openAddTokenModal() {
   newTokenForm.x = 0;
   newTokenForm.y = 0;
   newTokenForm.size = 1;
+  if (tokenFileInput.value) tokenFileInput.value.value = '';
   showAddTokenModal.value = true;
 }
 
 async function uploadImage(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
+  uploadingAvatar.value = true;
   const formData = new FormData();
   formData.append('file', file);
   try {
@@ -878,7 +917,18 @@ async function uploadImage(event) {
     }
   } catch (err) {
     console.error('Failed to upload image:', err);
+  } finally {
+    uploadingAvatar.value = false;
   }
+}
+
+function clearAvatar() {
+  newTokenForm.avatar_url = '';
+  if (tokenFileInput.value) tokenFileInput.value.value = '';
+}
+
+function onImageSelected(url) {
+  newTokenForm.avatar_url = url;
 }
 
 function onCharacterSelected() {
@@ -1976,6 +2026,108 @@ onBeforeUnmount(() => {
   color: #00a8a8 !important;
   -webkit-text-fill-color: #00a8a8;
   box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.avatar-upload-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.avatar-preview-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #666666;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.token-avatar-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-empty-placeholder {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.1;
+}
+
+.avatar-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-btn-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-browse-avatar {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-browse-avatar:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-clear-avatar {
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-clear-avatar:hover {
+  background: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
+}
+
+.uploading-spinner {
+  font-size: 12px;
+  color: #00a8a8;
+  font-style: italic;
+}
+
+.avatar-url-input {
+  font-size: 12px;
+  padding: 6px 10px;
 }
 
 .btn-modal-cancel {

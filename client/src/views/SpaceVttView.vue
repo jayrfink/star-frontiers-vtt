@@ -581,7 +581,8 @@
                     :disabled="uploadingAvatar"
                   />
                   <span v-if="uploadingAvatar" class="uploading-spinner">Uploading...</span>
-                  <button v-else-if="newTokenForm.avatar_url" type="button" class="btn-clear-avatar" @click="clearAvatar">Remove</button>
+                  <button type="button" class="btn-browse-avatar" @click="showImageBrowser = true">Browse Uploads</button>
+                  <button v-if="newTokenForm.avatar_url" type="button" class="btn-clear-avatar" @click="clearAvatar">Remove</button>
                 </div>
                 <input
                   type="text"
@@ -600,12 +601,21 @@
         </form>
       </div>
     </div>
+
+    <!-- Image Browser Modal -->
+    <ImageBrowserModal
+      v-model="showImageBrowser"
+      title="Select Token Image"
+      :current-image="newTokenForm.avatar_url"
+      @select="onImageSelected"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import SpaceVttCanvas from '../components/SpaceVttCanvas.vue';
+import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
@@ -713,6 +723,7 @@ const showGmDrawer = ref(false);
 const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
+const showImageBrowser = ref(false);
 const selectedShipId = ref(null);
 const tokenFileInput = ref(null);
 const uploadingAvatar = ref(false);
@@ -1058,6 +1069,10 @@ async function uploadImage(event) {
 function clearAvatar() {
   newTokenForm.avatar_url = '';
   if (tokenFileInput.value) tokenFileInput.value.value = '';
+}
+
+function onImageSelected(url) {
+  newTokenForm.avatar_url = url;
 }
 
 
@@ -2323,6 +2338,28 @@ onBeforeUnmount(() => {
 
 .token-file-input::-webkit-file-upload-button:hover,
 .map-file-input::-webkit-file-upload-button:hover {
+  background-color: #051414 !important;
+  border-color: #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.btn-browse-avatar {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  border: 1px solid teal !important;
+  color: teal !important;
+  -webkit-text-fill-color: teal;
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-browse-avatar:hover {
   background-color: #051414 !important;
   border-color: #00a8a8 !important;
   color: #00a8a8 !important;
