@@ -1027,13 +1027,65 @@ async function deleteMap(mapId) {
 }
 
 // Token Actions
+function getEmptyCenterCoords() {
+  const mapW = activeMap.value?.width || 20;
+  const mapH = activeMap.value?.height || 20;
+  const cx = Math.floor(mapW / 2);
+  const cy = Math.floor(mapH / 2);
+
+  const occupied = new Set(tokens.value.map((t) => `${t.x},${t.y}`));
+
+  const initialRadius = 2;
+  const initialCandidates = [];
+  for (let dx = -initialRadius; dx <= initialRadius; dx++) {
+    for (let dy = -initialRadius; dy <= initialRadius; dy++) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (x >= 0 && x < mapW && y >= 0 && y < mapH) {
+        if (!occupied.has(`${x},${y}`)) {
+          initialCandidates.push({ x, y });
+        }
+      }
+    }
+  }
+
+  if (initialCandidates.length > 0) {
+    const idx = Math.floor(Math.random() * initialCandidates.length);
+    return initialCandidates[idx];
+  }
+
+  const maxRadius = Math.max(mapW, mapH);
+  for (let r = initialRadius + 1; r <= maxRadius; r++) {
+    const ringCandidates = [];
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dy = -r; dy <= r; dy++) {
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x >= 0 && x < mapW && y >= 0 && y < mapH) {
+          if (!occupied.has(`${x},${y}`)) {
+            ringCandidates.push({ x, y });
+          }
+        }
+      }
+    }
+    if (ringCandidates.length > 0) {
+      const idx = Math.floor(Math.random() * ringCandidates.length);
+      return ringCandidates[idx];
+    }
+  }
+
+  return { x: cx, y: cy };
+}
+
 function openAddTokenModal() {
   selectedShipId.value = null;
   newTokenForm.name = '';
   newTokenForm.color = '#666666';
   newTokenForm.avatar_url = '';
-  newTokenForm.x = 0;
-  newTokenForm.y = 0;
+  const spawn = getEmptyCenterCoords();
+  newTokenForm.x = spawn.x;
+  newTokenForm.y = spawn.y;
   newTokenForm.size = 1;
   newTokenForm.current_speed = 0;
   newTokenForm.rotation = 0;
