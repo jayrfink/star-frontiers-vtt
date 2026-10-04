@@ -891,7 +891,7 @@ function getEmptyCenterCoords() {
   const cx = Math.floor(mapW / 2);
   const cy = Math.floor(mapH / 2);
 
-  const occupied = new Set(tokens.value.map((t) => `${t.x},${t.y}`));
+  const occupied = new Set((tokens.value || []).map((t) => `${t.x},${t.y}`));
 
   const initialRadius = 2;
   const initialCandidates = [];
