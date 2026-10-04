@@ -19,11 +19,11 @@ describe('VTT Views - ImageBrowserModal Template & Script Integration', () => {
 
     it('includes Browse Uploads button in Add Token modal', () => {
       expect(spaceContent).toContain('Browse Uploads');
-      expect(spaceContent).toMatch(/@click=["']showImageBrowser\s*=\s*true["']/);
+      expect(spaceContent).toMatch(/@click=["'](?:openTokenImageBrowser|showImageBrowser\s*=\s*true)["']/);
     });
 
     it('embeds ImageBrowserModal component with correct props and handlers', () => {
-      expect(spaceContent).toMatch(/<ImageBrowserModal[\s\S]*?v-model="showImageBrowser"[\s\S]*?title="Select Token Image"[\s\S]*?:current-image="newTokenForm\.avatar_url"[\s\S]*?@select="onImageSelected"/);
+      expect(spaceContent).toMatch(/<ImageBrowserModal[\s\S]*?v-model="showImageBrowser"[\s\S]*?:?title="(?:imageBrowserTitle|Select Token Image)"[\s\S]*?:current-image="(?:currentBrowserImage|newTokenForm\.avatar_url)"[\s\S]*?@select="onImageSelected"/);
     });
 
     it('defines onImageSelected handler setting newTokenForm.avatar_url', () => {

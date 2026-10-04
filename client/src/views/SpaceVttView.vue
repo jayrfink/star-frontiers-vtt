@@ -249,7 +249,10 @@
                   placeholder="Image URL or upload file"
                   @change="updateActiveMapSettings"
                 />
-                <input type="file" accept="image/*" @change="onActiveMapUpload" class="map-file-input" />
+                <div class="map-bg-btn-row">
+                  <input type="file" accept="image/*" @change="onActiveMapUpload" class="map-file-input" />
+                  <button type="button" class="btn-browse-avatar" @click="openMapImageBrowser('active_map')">Browse Uploads</button>
+                </div>
               </div>
             </div>
 
@@ -437,7 +440,7 @@
       </aside>
     </div>
 
-    <!-- Modal: Create Space Map -->
+    <!-- Modal: Create New Map -->
     <div v-if="showCreateMapModal" class="modal-backdrop" @click.self="showCreateMapModal = false">
       <div class="modal-card">
         <h3>Create New Tactical Space Map</h3>
@@ -482,7 +485,10 @@
           <div class="form-group">
             <label>Custom Image URL (Optional)</label>
             <input type="text" v-model="newMapForm.background_url" placeholder="Image URL or upload file" />
-            <input type="file" accept="image/*" @change="e => uploadMapImage(e, newMapForm)" class="map-file-input" />
+            <div class="map-bg-btn-row">
+              <input type="file" accept="image/*" @change="e => uploadMapImage(e, newMapForm)" class="map-file-input" />
+              <button type="button" class="btn-browse-avatar" @click="openMapImageBrowser('new_map')">Browse Uploads</button>
+            </div>
           </div>
 
           <div class="form-group checkbox-group">
@@ -581,7 +587,7 @@
                     :disabled="uploadingAvatar"
                   />
                   <span v-if="uploadingAvatar" class="uploading-spinner">Uploading...</span>
-                  <button type="button" class="btn-browse-avatar" @click="showImageBrowser = true">Browse Uploads</button>
+                  <button type="button" class="btn-browse-avatar" @click="openTokenImageBrowser">Browse Uploads</button>
                   <button v-if="newTokenForm.avatar_url" type="button" class="btn-clear-avatar" @click="clearAvatar">Remove</button>
                 </div>
                 <input
@@ -605,8 +611,8 @@
     <!-- Image Browser Modal -->
     <ImageBrowserModal
       v-model="showImageBrowser"
-      title="Select Token Image"
-      :current-image="newTokenForm.avatar_url"
+      :title="imageBrowserTitle"
+      :current-image="currentBrowserImage"
       @select="onImageSelected"
     />
   </div>
@@ -724,6 +730,7 @@ const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
 const showImageBrowser = ref(false);
+const imageBrowserTarget = ref('token');
 const selectedShipId = ref(null);
 const tokenFileInput = ref(null);
 const uploadingAvatar = ref(false);
@@ -768,6 +775,29 @@ const selectedTokenForm = reactive({
   current_speed: 0,
   rotation: 0,
 });
+
+const imageBrowserTitle = computed(() => {
+  if (imageBrowserTarget.value === 'active_map' || imageBrowserTarget.value === 'new_map') {
+    return 'Select Map Background Image';
+  }
+  return 'Select Token Image';
+});
+
+const currentBrowserImage = computed(() => {
+  if (imageBrowserTarget.value === 'active_map') return activeMapForm.background_url;
+  if (imageBrowserTarget.value === 'new_map') return newMapForm.background_url;
+  return newTokenForm.avatar_url;
+});
+
+function openTokenImageBrowser() {
+  imageBrowserTarget.value = 'token';
+  showImageBrowser.value = true;
+}
+
+function openMapImageBrowser(target) {
+  imageBrowserTarget.value = target;
+  showImageBrowser.value = true;
+}
 
 const selectedToken = computed(() => {
   if (!selectedTokenId.value) return null;
@@ -1124,7 +1154,14 @@ function clearAvatar() {
 }
 
 function onImageSelected(url) {
-  newTokenForm.avatar_url = url;
+  if (imageBrowserTarget.value === 'active_map') {
+    activeMapForm.background_url = url;
+    updateActiveMapSettings();
+  } else if (imageBrowserTarget.value === 'new_map') {
+    newMapForm.background_url = url;
+  } else {
+    newTokenForm.avatar_url = url;
+  }
 }
 
 
@@ -2221,8 +2258,10 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 24px;
-  width: 460px;
-  max-width: 90vw;
+  width: 500px;
+  max-width: 95vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -2293,6 +2332,14 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
 
+.map-bg-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 .avatar-upload-box {
   display: flex;
   align-items: center;
@@ -2301,6 +2348,8 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .avatar-preview-wrapper {
@@ -2331,15 +2380,25 @@ onBeforeUnmount(() => {
 
 .avatar-controls {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-sizing: border-box;
 }
 
 .file-btn-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.token-file-input {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .token-file-input,
@@ -2446,6 +2505,8 @@ onBeforeUnmount(() => {
 }
 
 .avatar-url-input {
+  width: 100%;
+  box-sizing: border-box;
   font-size: 12px;
   padding: 6px 10px;
 }
