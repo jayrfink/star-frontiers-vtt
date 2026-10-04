@@ -129,6 +129,45 @@
       <!-- Canvas Area -->
       <div class="vtt-canvas-wrapper" style="position: relative;">
 
+        <!-- Collapsible Die Roll Log HUD -->
+        <div class="roll-log-hud">
+          <button
+            v-if="!isRollLogOpen"
+            type="button"
+            class="btn-roll-log-pill"
+            @click="isRollLogOpen = true"
+            title="Open Die Roll Log"
+          >
+            🎲 Log ({{ rollLog.length }}) ▲
+          </button>
+          <div v-else class="roll-log-card">
+            <div class="roll-log-header">
+              <div class="roll-log-title">🎲 Roll Log ({{ rollLog.length }}/20)</div>
+              <div class="roll-log-actions">
+                <button type="button" class="btn-roll-log-clear" @click="clearRollLog" :disabled="rollLog.length === 0" title="Clear log">Clear</button>
+                <button type="button" class="btn-roll-log-toggle" @click="isRollLogOpen = false" title="Minimize log">▼</button>
+              </div>
+            </div>
+            <div class="roll-log-body">
+              <div v-if="rollLog.length === 0" class="roll-log-empty">
+                No rolls recorded yet.
+              </div>
+              <ul v-else class="roll-log-list">
+                <li v-for="item in rollLog" :key="item.id" class="roll-log-item" :class="item.type">
+                  <div class="roll-item-meta">
+                    <span class="roll-item-time">{{ item.timestamp }}</span>
+                    <span class="roll-item-badge">{{ item.label }}</span>
+                  </div>
+                  <div class="roll-item-result">
+                    <span class="roll-item-total">{{ item.total }}</span>
+                    <span class="roll-item-breakdown">{{ item.breakdown }}</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <!-- Floating Damage HUD Banner -->
         <transition name="hud-pop">
           <div
@@ -645,6 +684,49 @@ const lastPercentileRoll = ref(null);
 const showPercentileHud = ref(false);
 let percentileHudTimeout = null;
 
+const SPACE_ROLL_LOG_KEY = 'sf_vtt_space_roll_log';
+const rollLog = ref([]);
+const isRollLogOpen = ref(false);
+
+function loadRollLog() {
+  try {
+    const raw = localStorage.getItem(SPACE_ROLL_LOG_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        rollLog.value = parsed.slice(0, 20);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load Space roll log:', err);
+  }
+}
+
+function saveRollLog() {
+  try {
+    localStorage.setItem(SPACE_ROLL_LOG_KEY, JSON.stringify(rollLog.value.slice(0, 20)));
+  } catch (err) {
+    console.error('Failed to save Space roll log:', err);
+  }
+}
+
+function addRollToLog(entry) {
+  rollLog.value.unshift(entry);
+  if (rollLog.value.length > 20) {
+    rollLog.value = rollLog.value.slice(0, 20);
+  }
+  saveRollLog();
+}
+
+function clearRollLog() {
+  rollLog.value = [];
+  try {
+    localStorage.removeItem(SPACE_ROLL_LOG_KEY);
+  } catch (err) {
+    console.error('Failed to clear Space roll log:', err);
+  }
+}
+
 function adjustDamageCount(delta) {
   damageDiceCount.value = Math.max(1, Math.min(20, damageDiceCount.value + delta));
 }
@@ -668,6 +750,16 @@ async function rollPercentile() {
       if (rollSummary.valid) {
         lastPercentileRoll.value = rollSummary;
         showPercentileHud.value = true;
+        const now = new Date();
+        const timeStr = now.toTimeString().split(' ')[0];
+        addRollToLog({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: timeStr,
+          type: 'percentile',
+          label: 'd%',
+          total: rollSummary.total,
+          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`
+        });
         percentileHudTimeout = setTimeout(() => {
           showPercentileHud.value = false;
         }, 8000);
@@ -693,6 +785,16 @@ async function rollDamage() {
       if (rollSummary.count > 0) {
         lastDamageRoll.value = rollSummary;
         showDamageHud.value = true;
+        const now = new Date();
+        const timeStr = now.toTimeString().split(' ')[0];
+        addRollToLog({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: timeStr,
+          type: 'damage',
+          label: `${rollSummary.count}d10`,
+          total: rollSummary.total,
+          breakdown: `[${rollSummary.dice.join(', ')}]`
+        });
         damageHudTimeout = setTimeout(() => {
           showDamageHud.value = false;
         }, 8000);
@@ -1422,6 +1524,7 @@ function cleanupSocketListeners() {
 }
 
 onMounted(() => {
+  loadRollLog();
   fetchActiveMap();
   fetchShips();
   if (isGm.value) {
@@ -2677,5 +2780,184 @@ onBeforeUnmount(() => {
   color: var(--success);
   font-weight: 600;
   padding: 4px 8px;
+}
+
+/* Bottom-Corner Die Roll Log HUD */
+.roll-log-hud {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 105;
+  pointer-events: auto;
+}
+
+.btn-roll-log-pill {
+  background: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.7) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-roll-log-pill:hover {
+  background: #051414 !important;
+  border-color: aqua !important;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+.roll-log-card {
+  width: 290px;
+  max-height: 290px;
+  background: #000000;
+  border: 1px solid rgba(0, 128, 128, 0.8);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.roll-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #051414;
+  border-bottom: 1px solid rgba(0, 128, 128, 0.5);
+}
+
+.roll-log-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #00ffff;
+  letter-spacing: 0.5px;
+}
+
+.roll-log-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-roll-log-clear {
+  background: transparent !important;
+  border: 1px solid rgba(0, 128, 128, 0.5) !important;
+  color: #8b949e !important;
+  -webkit-text-fill-color: #8b949e;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.btn-roll-log-clear:hover:not(:disabled) {
+  border-color: #f85149 !important;
+  color: #f85149 !important;
+  -webkit-text-fill-color: #f85149;
+}
+
+.btn-roll-log-toggle {
+  background: transparent !important;
+  border: none !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.roll-log-body {
+  padding: 6px 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.roll-log-empty {
+  font-size: 11px;
+  color: #8b949e;
+  text-align: center;
+  padding: 12px 0;
+  font-style: italic;
+}
+
+.roll-log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roll-log-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(10, 25, 25, 0.5);
+  border: 1px solid rgba(0, 128, 128, 0.25);
+  border-radius: 4px;
+}
+
+.roll-log-item.percentile {
+  border-left: 3px solid #00ffff;
+}
+
+.roll-log-item.damage {
+  border-left: 3px solid #f29249;
+}
+
+.roll-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roll-item-time {
+  font-size: 10px;
+  color: #8b949e;
+  font-family: monospace;
+}
+
+.roll-item-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #021a1e;
+  color: #a8ffea;
+  border: 1px solid rgba(0, 128, 128, 0.5);
+}
+
+.roll-log-item.damage .roll-item-badge {
+  background: #140409;
+  color: #f29249;
+  border-color: rgba(242, 146, 73, 0.5);
+}
+
+.roll-item-result {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.roll-item-total {
+  font-size: 14px;
+  font-weight: 800;
+  color: #00ffff;
+}
+
+.roll-log-item.damage .roll-item-total {
+  color: #f29249;
+}
+
+.roll-item-breakdown {
+  font-size: 10px;
+  color: #a0a0a0;
+  font-family: monospace;
 }
 </style>
