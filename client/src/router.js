@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import { useAuthStore } from './stores/auth.js';
 import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
@@ -11,25 +11,25 @@ import AdminView from './views/AdminView.vue';
 
 const routes = [
   { path: '/', redirect: '/login' },
-  { path: '/login', name: 'Login', component: LoginView, meta: { guest: true } },
+  { path: '/login', name: 'Login', component: LoginView, meta: { guest: true, title: 'Login' } },
   {
     path: '/dashboard',
     component: DashboardView,
     meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/dashboard/rpg-vtt' },
-      { path: 'rpg-vtt', name: 'RpgVtt', component: RpgVttView },
-      { path: 'space-vtt', name: 'SpaceVtt', component: SpaceVttView },
-      { path: 'character-sheets', name: 'CharacterSheets', component: CharacterSheetsView },
-      { path: 'ship-sheets', name: 'ShipSheets', component: ShipSheetsView },
-      { path: 'rulebooks', name: 'Rulebooks', component: RulebooksView },
-      { path: 'admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true, requiresGm: true } },
+      { path: 'rpg-vtt', name: 'RpgVtt', component: RpgVttView, meta: { title: 'RPG VTT' } },
+      { path: 'space-vtt', name: 'SpaceVtt', component: SpaceVttView, meta: { title: 'Space VTT' } },
+      { path: 'character-sheets', name: 'CharacterSheets', component: CharacterSheetsView, meta: { title: 'Character Sheets' } },
+      { path: 'ship-sheets', name: 'ShipSheets', component: ShipSheetsView, meta: { title: 'Ship Sheets' } },
+      { path: 'rulebooks', name: 'Rulebooks', component: RulebooksView, meta: { title: 'Rulebooks' } },
+      { path: 'admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true, requiresGm: true, title: 'Admin' } },
     ],
   },
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: typeof window !== 'undefined' ? createWebHistory() : createMemoryHistory(),
   routes,
 });
 
@@ -50,6 +50,11 @@ router.beforeEach(async (to, from, next) => {
   } else {
     next();
   }
+});
+
+router.afterEach((to) => {
+  const tabTitle = to.meta?.title;
+  document.title = tabTitle ? `SFVTT: ${tabTitle}` : 'Star Frontiers VTT';
 });
 
 export default router;
