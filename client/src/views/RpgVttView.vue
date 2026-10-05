@@ -487,13 +487,6 @@
             </div>
           </div>
 
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" v-model="newMapForm.is_active" />
-              Set as Active Map immediately
-            </label>
-          </div>
-
           <div class="modal-actions">
             <button type="button" class="btn-modal-cancel" @click="showCreateMapModal = false">Cancel</button>
             <button type="submit" class="btn-add-token-submit">Create Map</button>
@@ -793,7 +786,6 @@ const newMapForm = reactive({
   grid_color: '#333333',
   preset_bg: 'grid_only',
   background_url: '',
-  is_active: true,
 });
 
 const selectedCharacterId = ref(null);
@@ -973,7 +965,6 @@ function openCreateMapModal() {
   newMapForm.grid_color = '#333333';
   newMapForm.preset_bg = 'grid_only';
   newMapForm.background_url = '';
-  newMapForm.is_active = true;
   showCreateMapModal.value = true;
 }
 
@@ -986,12 +977,8 @@ async function submitCreateMap() {
       body: JSON.stringify(newMapForm),
     });
     if (res.ok) {
-      const created = await res.json();
       showCreateMapModal.value = false;
       fetchMapList();
-      if (newMapForm.is_active) {
-        activateMap(created.id);
-      }
     }
   } catch (err) {
     console.error('Failed to create map:', err);
