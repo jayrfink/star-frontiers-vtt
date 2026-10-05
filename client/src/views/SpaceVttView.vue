@@ -530,20 +530,6 @@
             </div>
           </div>
 
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" v-model="newMapForm.is_active" />
-              Set as Active Map immediately
-            </label>
-          </div>
-
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" v-model="newMapForm.fog_enabled" />
-              Enable Fog of War
-            </label>
-          </div>
-
           <div class="modal-actions">
             <button type="button" class="btn-modal-cancel" @click="showCreateMapModal = false">Cancel</button>
             <button type="submit" class="btn-add-token-submit">Create Map</button>
@@ -855,7 +841,6 @@ const newMapForm = reactive({
   grid_color: '#334155',
   preset_bg: 'starfield',
   background_url: '',
-  is_active: true,
   fog_enabled: false,
 });
 
@@ -1114,7 +1099,6 @@ function openCreateMapModal() {
   newMapForm.grid_color = '#334155';
   newMapForm.preset_bg = 'starfield';
   newMapForm.background_url = '';
-  newMapForm.is_active = true;
   newMapForm.fog_enabled = false;
   showCreateMapModal.value = true;
 }
@@ -1128,12 +1112,8 @@ async function submitCreateMap() {
       body: JSON.stringify(newMapForm),
     });
     if (res.ok) {
-      const created = await res.json();
       showCreateMapModal.value = false;
       fetchMapList();
-      if (newMapForm.is_active) {
-        activateMap(created.id);
-      }
     }
   } catch (err) {
     console.error('Failed to create map:', err);
