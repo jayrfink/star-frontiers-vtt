@@ -44,8 +44,8 @@ describe('RpgVttView Map Background Browser & Modal Layout', () => {
     expect(openFnSection).not.toMatch(/newMapForm\.is_active/);
   });
 
-  it('does not auto-activate newly created map in submitCreateMap', () => {
+  it('auto-activates newly created map in submitCreateMap', () => {
     const submitMapSection = content.slice(content.indexOf('async function submitCreateMap()'), content.indexOf('function openAddTokenModal()'));
-    expect(submitMapSection).not.toMatch(/activateMap\(created\.id\)/);
+    expect(submitMapSection).toMatch(/activateMap\(created\.id\)/);
   });
 });

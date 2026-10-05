@@ -1109,11 +1109,13 @@ async function submitCreateMap() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(newMapForm),
+      body: JSON.stringify({ ...newMapForm, is_active: 1 }),
     });
     if (res.ok) {
+      const created = await res.json();
       showCreateMapModal.value = false;
       fetchMapList();
+      activateMap(created.id);
     }
   } catch (err) {
     console.error('Failed to create map:', err);
