@@ -41,6 +41,7 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toMatch(/Defenses &(amp;)? Countermeasures/);
       expect(html).toContain('Reflective Hull');
       expect(html).toContain('Masking Screen');
+      expect(html).toContain('Stasis Screen');
       expect(html).toContain('ICM (Interceptors)');
 
       // Critical Hits

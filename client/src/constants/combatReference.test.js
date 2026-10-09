@@ -49,6 +49,7 @@ describe('combatReference', () => {
       expect(defenseNames).toContain('Reflective Hull');
       expect(defenseNames).toContain('Masking Screen');
       expect(defenseNames).toContain('Inertia Screen');
+      expect(defenseNames).toContain('Stasis Screen');
       expect(defenseNames.some((n) => n.includes('ICM'))).toBe(true);
 
       SHIP_COMBAT_REF.defenses.forEach((d) => {

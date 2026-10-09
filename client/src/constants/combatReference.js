@@ -136,6 +136,12 @@ export const SHIP_COMBAT_REF = {
       limitations: 'Ineffective against beam weapons; limited charges'
     },
     {
+      name: 'Stasis Screen',
+      type: 'Energy Screen',
+      effect: 'Moderately deflects all electrical beam weapons (Proton Beams, Electron Beams, Disruptor Cannons; base 40% hit chance)',
+      limitations: 'Electrical pulse attracts kinetic ordinance (+25% to-hit for Torpedoes); only one screen active at a time'
+    },
+    {
       name: 'ICM (Interceptors)',
       type: 'Countermeasure',
       effect: 'Intercepts incoming rockets and torpedoes (interception % roll)',
