@@ -176,4 +176,47 @@ describe('CharacterSheetsView - Custom Race', () => {
     wrapper.vm.selectedRaceCategory = 'Dralasite';
     expect(wrapper.vm.selectedChar.race).toBe('Dralasite');
   });
+
+  it('preserves Custom category when race is empty string mid-editing', () => {
+    const wrapper = shallowMount(CharacterSheetsView);
+    wrapper.vm.selectedChar = {
+      id: 50,
+      name: 'Hero',
+      race: '',
+    };
+    expect(wrapper.vm.selectedRaceCategory).toBe('Custom');
+    expect(wrapper.find('.input-custom-race').exists()).toBe(true);
+  });
+
+  it('sets race to Custom when selectedRaceCategory is set to Custom on empty race', () => {
+    const wrapper = shallowMount(CharacterSheetsView);
+    wrapper.vm.updateCharacter = vi.fn();
+    wrapper.vm.selectedChar = {
+      id: 50,
+      name: 'Hero',
+      race: '',
+    };
+    wrapper.vm.selectedRaceCategory = 'Custom';
+    expect(wrapper.vm.selectedChar.race).toBe('Custom');
+    expect(wrapper.vm.updateCharacter).toHaveBeenCalled();
+  });
+
+  it('onCustomRaceChange defaults empty or whitespace race to Custom and trims valid names', () => {
+    const wrapper = shallowMount(CharacterSheetsView);
+    wrapper.vm.updateCharacter = vi.fn();
+    wrapper.vm.selectedChar = {
+      id: 50,
+      name: 'Hero',
+      race: '   ',
+    };
+
+    wrapper.vm.onCustomRaceChange();
+    expect(wrapper.vm.selectedChar.race).toBe('Custom');
+    expect(wrapper.vm.updateCharacter).toHaveBeenCalledTimes(1);
+
+    wrapper.vm.selectedChar.race = '  Saurian  ';
+    wrapper.vm.onCustomRaceChange();
+    expect(wrapper.vm.selectedChar.race).toBe('Saurian');
+    expect(wrapper.vm.updateCharacter).toHaveBeenCalledTimes(2);
+  });
 });

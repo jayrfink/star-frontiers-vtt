@@ -63,7 +63,7 @@
                 v-if="selectedRaceCategory === 'Custom'"
                 type="text"
                 v-model="selectedChar.race"
-                @change="updateCharacter"
+                @change="onCustomRaceChange"
                 class="input-custom-race"
                 placeholder="Custom Race Name"
               />
@@ -677,13 +677,14 @@ export default {
     },
     selectedRaceCategory: {
       get() {
-        if (!this.selectedChar || !this.selectedChar.race) return 'Human';
+        if (!this.selectedChar) return 'Human';
+        if (!this.selectedChar.race) return 'Custom';
         return this.isCustomRace(this.selectedChar.race) ? 'Custom' : this.selectedChar.race;
       },
       set(val) {
         if (!this.selectedChar) return;
         if (val === 'Custom') {
-          if (!this.isCustomRace(this.selectedChar.race)) {
+          if (!this.isCustomRace(this.selectedChar.race) || !this.selectedChar.race?.trim()) {
             this.selectedChar.race = 'Custom';
             this.updateCharacter();
           }
@@ -762,6 +763,15 @@ export default {
     },
     isCustomRace(race) {
       return !['Human', 'Dralasite', 'Vrusk', 'Yazirian'].includes(race);
+    },
+    onCustomRaceChange() {
+      if (!this.selectedChar) return;
+      if (!this.selectedChar.race?.trim()) {
+        this.selectedChar.race = 'Custom';
+      } else {
+        this.selectedChar.race = this.selectedChar.race.trim();
+      }
+      this.updateCharacter();
     },
     selectCharacter(char) {
       this.selectedChar = JSON.parse(JSON.stringify(this.normalizeCharacterData(char)));
