@@ -52,12 +52,21 @@
             />
             <div class="race-select-wrap">
               <label>Race:</label>
-              <select v-model="selectedChar.race" @change="updateCharacter" class="select-race">
+              <select v-model="selectedRaceCategory" class="select-race">
                 <option value="Human">Human</option>
                 <option value="Dralasite">Dralasite</option>
                 <option value="Vrusk">Vrusk</option>
                 <option value="Yazirian">Yazirian</option>
+                <option value="Custom">Custom</option>
               </select>
+              <input
+                v-if="selectedRaceCategory === 'Custom'"
+                type="text"
+                v-model="selectedChar.race"
+                @change="updateCharacter"
+                class="input-custom-race"
+                placeholder="Custom Race Name"
+              />
             </div>
             <div class="psa-select-wrap">
               <label>PSA:</label>
@@ -69,7 +78,7 @@
             </div>
           </div>
           <div class="race-ability-banner">
-            <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'None' }}
+            <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'Custom species without default racial abilities.' }}
           </div>
         </header>
 
@@ -288,6 +297,9 @@
             <p><strong>Gliding:</strong> Can glide using skin membranes (Glide movement: 4 m/s).</p>
             <p><strong>Battle Rage:</strong> <strong>{{ battleRageChance }}%</strong> base chance. When enraged, gains +20 bonus to hit in melee.</p>
           </div>
+          <div v-else class="racial-details">
+            <p><strong>Custom Species:</strong> Custom race without standard Star Frontiers racial traits.</p>
+          </div>
         </section>
 
         <!-- Lists: Skills & Inventory -->
@@ -438,7 +450,17 @@
               <option value="Dralasite">Dralasite (Lie Detection & Elasticity)</option>
               <option value="Vrusk">Vrusk (Ambidexterity & Comprehensive)</option>
               <option value="Yazirian">Yazirian (Battle Rage & Gliding)</option>
+              <option value="Custom">Custom</option>
             </select>
+          </div>
+          <div v-if="newCharForm.race === 'Custom'" class="form-group custom-race-input-group">
+            <label>Custom Race Name</label>
+            <input
+              type="text"
+              v-model="newCharForm.customRaceName"
+              class="char-create-input"
+              placeholder="Enter custom race name..."
+            />
           </div>
           <div class="form-group">
             <label>Primary System Area (PSA)</label>
@@ -567,6 +589,7 @@ export default {
       newCharForm: {
         name: '',
         race: 'Human',
+        customRaceName: '',
         psa: 'Military',
         avatar_url: '',
         str_sta: 50,
@@ -652,6 +675,24 @@ export default {
     isOverloaded() {
       return this.totalInventoryWeight > this.maxCarryWeight;
     },
+    selectedRaceCategory: {
+      get() {
+        if (!this.selectedChar || !this.selectedChar.race) return 'Human';
+        return this.isCustomRace(this.selectedChar.race) ? 'Custom' : this.selectedChar.race;
+      },
+      set(val) {
+        if (!this.selectedChar) return;
+        if (val === 'Custom') {
+          if (!this.isCustomRace(this.selectedChar.race)) {
+            this.selectedChar.race = 'Custom';
+            this.updateCharacter();
+          }
+        } else {
+          this.selectedChar.race = val;
+          this.updateCharacter();
+        }
+      },
+    },
     movementRates() {
       if (!this.selectedChar || !RACES_DATA[this.selectedChar.race]) {
         return { walk: 2, run: 6, glide: 0 };
@@ -719,6 +760,9 @@ export default {
         this.loading = false;
       }
     },
+    isCustomRace(race) {
+      return !['Human', 'Dralasite', 'Vrusk', 'Yazirian'].includes(race);
+    },
     selectCharacter(char) {
       this.selectedChar = JSON.parse(JSON.stringify(this.normalizeCharacterData(char)));
     },
@@ -726,6 +770,7 @@ export default {
       this.newCharForm = {
         name: '',
         race: 'Human',
+        customRaceName: '',
         psa: 'Military',
         avatar_url: '',
         str_sta: 50,
@@ -755,8 +800,12 @@ export default {
       if (!this.newCharForm.name.trim()) return;
       this.creating = true;
       try {
+        const effectiveRace = this.newCharForm.race === 'Custom'
+          ? (this.newCharForm.customRaceName?.trim() || 'Custom')
+          : this.newCharForm.race;
         const payload = {
           ...this.newCharForm,
+          race: effectiveRace,
           avatar_url: this.newCharForm.avatar_url || '',
           str: this.newCharForm.str_sta,
           sta: this.newCharForm.max_stamina ?? this.newCharForm.str_sta,
@@ -1222,6 +1271,25 @@ export default {
   outline: none;
   border-color: aqua !important;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.input-custom-race {
+  background: var(--bg-surface-2, #1f293d);
+  color: #fff;
+  border: 1px solid var(--border-color, #2b3954);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  margin-left: 6px;
+  min-width: 140px;
+  box-sizing: border-box;
+}
+.input-custom-race:focus {
+  border-color: var(--accent-cyan, #00d2ff);
+  outline: none;
+}
+.custom-race-input-group {
+  margin-top: 8px;
 }
 
 .race-ability-banner {
