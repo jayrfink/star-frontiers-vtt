@@ -953,6 +953,7 @@ export default {
       let baseVal = 50;
       if (offSk) {
         if (offSk.baseChance === 'Dexterity') baseVal = this.selectedChar.dex || 50;
+        else if (offSk.baseChance === 'Reaction Speed') baseVal = this.selectedChar.rs || 50;
         else if (offSk.baseChance === 'Logic') baseVal = this.selectedChar.log || 50;
         else if (offSk.baseChance === 'Intuition') baseVal = this.selectedChar.int || 50;
         else if (offSk.baseChance === 'Personality') baseVal = this.selectedChar.per || 50;
