@@ -37,8 +37,20 @@ export const OFFICIAL_SKILLS = [
   // Biosocial
   { name: 'Environmental', psa: 'Biosocial', baseChance: 'Intuition' },
   { name: 'Medical', psa: 'Biosocial', baseChance: 'Logic' },
-  { name: 'Psycho-Social', psa: 'Biosocial', baseChance: 'Personality' }
+  { name: 'Psycho-Social', psa: 'Biosocial', baseChance: 'Personality' },
+  // Spaceship (Knight Hawks Expansion Rules)
+  { name: 'Piloting', psa: 'Spaceship', baseChance: 'Reaction Speed' },
+  { name: 'Astrogation', psa: 'Spaceship', baseChance: 'Logic' },
+  { name: 'Engineering', psa: 'Spaceship', baseChance: 'Logic' },
+  { name: 'Gunnery', psa: 'Spaceship', baseChance: 'Dexterity' }
 ];
+
+export const SPACESHIP_SKILL_COSTS = {
+  Piloting: [10, 20, 40, 70, 100, 150],
+  Astrogation: [8, 16, 36, 60, 80, 120],
+  Engineering: [8, 16, 36, 60, 80, 120],
+  Gunnery: [6, 12, 20, 30, 50, 75]
+};
 
 export function calcIM(rs) {
   return Math.ceil((rs || 50) / 10);
@@ -66,6 +78,12 @@ export function calcUnencumberedMax(str) {
 }
 
 export function calcXPCost(skillName, nextLevel, charPSA) {
+  if (SPACESHIP_SKILL_COSTS[skillName]) {
+    if (nextLevel >= 1 && nextLevel <= 6) {
+      return SPACESHIP_SKILL_COSTS[skillName][nextLevel - 1];
+    }
+    return 0;
+  }
   const sk = OFFICIAL_SKILLS.find(s => s.name === skillName);
   if (!sk) return nextLevel * 3;
   let baseMult = 3;
