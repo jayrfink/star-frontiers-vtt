@@ -61,9 +61,9 @@ export function createCharacterRouter(db, io) {
 
   router.post('/', (req, res) => {
     try {
+      let { race } = req.body;
       const {
         name,
-        race,
         psa = 'Military',
         gender = null,
         height = null,
@@ -86,6 +86,8 @@ export function createCharacterRouter(db, io) {
       if (!name || !race || typeof race !== 'string' || !race.trim()) {
         return res.status(400).json({ error: 'Name and race are required' });
       }
+
+      race = race.trim();
 
       console.log('Incoming PUT character body:', req.body);
 
@@ -135,9 +137,9 @@ export function createCharacterRouter(db, io) {
         return res.status(404).json({ error: 'Character sheet not found' });
       }
 
+      let race = req.body.race !== undefined ? req.body.race : existing.race;
       const {
         name = existing.name,
-        race = existing.race,
         psa = existing.psa || 'Military',
         gender = existing.gender,
         height = existing.height,
@@ -161,6 +163,8 @@ export function createCharacterRouter(db, io) {
       if (!race || typeof race !== 'string' || !race.trim()) {
         return res.status(400).json({ error: 'Valid race is required' });
       }
+
+      race = race.trim();
 
       const validPsas = ['Military', 'Technological', 'Biosocial'];
       const characterPsa = validPsas.includes(psa) ? psa : (existing.psa || 'Military');

@@ -223,6 +223,26 @@ describe('Sheets API & Socket.io', () => {
       expect(res.status).toBe(400);
     });
 
+    it('trims leading and trailing whitespace from race on create and update', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const createRes = await agent.post('/api/characters').send({
+        name: 'Trimmy',
+        race: '   Custom Alien   ',
+        psa: 'Military',
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.race).toBe('Custom Alien');
+
+      const updateRes = await agent.put(`/api/characters/${createRes.body.id}`).send({
+        race: '   Cyber Human   ',
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.race).toBe('Cyber Human');
+    });
+
     it('validates invalid race or missing fields', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });

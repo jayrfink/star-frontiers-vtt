@@ -115,6 +115,14 @@ if (!mapCols.includes('map_type')) {
   }
 
   
+  const charCols = db.prepare("PRAGMA table_info(character_sheets)").all().map(c => c.name);
+  if (!charCols.includes('avatar_url')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');
+  }
+  if (!charCols.includes('psa')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN psa TEXT NOT NULL DEFAULT "Military"');
+  }
+
   const charTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='character_sheets'").get();
   if (charTableInfo && charTableInfo.sql && charTableInfo.sql.includes("CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian'))")) {
     db.exec(`
@@ -160,14 +168,6 @@ if (!mapCols.includes('map_type')) {
       ALTER TABLE character_sheets_dg_tmp RENAME TO character_sheets;
       PRAGMA foreign_keys = ON;
     `);
-  }
-
-  const charCols = db.prepare("PRAGMA table_info(character_sheets)").all().map(c => c.name);
-  if (!charCols.includes('avatar_url')) {
-    db.exec('ALTER TABLE character_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');
-  }
-  if (!charCols.includes('psa')) {
-    db.exec('ALTER TABLE character_sheets ADD COLUMN psa TEXT NOT NULL DEFAULT "Military"');
   }
 
   const shipCols = db.prepare("PRAGMA table_info(ship_sheets)").all().map(c => c.name);
