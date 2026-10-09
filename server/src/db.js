@@ -21,7 +21,7 @@ function migrate(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      race TEXT NOT NULL CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian')),
+      race TEXT NOT NULL CHECK(length(trim(race)) > 0),
       psa TEXT NOT NULL DEFAULT 'Military' CHECK(psa IN ('Military', 'Technological', 'Biosocial')),
       gender TEXT,
       height TEXT,
@@ -115,6 +115,53 @@ if (!mapCols.includes('map_type')) {
   }
 
   
+  const charTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='character_sheets'").get();
+  if (charTableInfo && charTableInfo.sql && charTableInfo.sql.includes("CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian'))")) {
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE character_sheets_dg_tmp (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        race TEXT NOT NULL CHECK(length(trim(race)) > 0),
+        psa TEXT NOT NULL DEFAULT 'Military' CHECK(psa IN ('Military', 'Technological', 'Biosocial')),
+        gender TEXT,
+        height TEXT,
+        weight TEXT,
+        str INTEGER NOT NULL DEFAULT 50,
+        sta INTEGER NOT NULL DEFAULT 50,
+        current_sta INTEGER NOT NULL DEFAULT 50,
+        dex INTEGER NOT NULL DEFAULT 50,
+        rs INTEGER NOT NULL DEFAULT 50,
+        int_stat INTEGER NOT NULL DEFAULT 50,
+        log_stat INTEGER NOT NULL DEFAULT 50,
+        per INTEGER NOT NULL DEFAULT 50,
+        ldr INTEGER NOT NULL DEFAULT 50,
+        racial_abilities TEXT DEFAULT '{}',
+        skills TEXT DEFAULT '[]',
+        inventory TEXT DEFAULT '[]',
+        notes TEXT DEFAULT '',
+        avatar_url TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      INSERT INTO character_sheets_dg_tmp (
+        id, user_id, name, race, psa, gender, height, weight,
+        str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+        racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
+      )
+      SELECT
+        id, user_id, name, race, psa, gender, height, weight,
+        str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+        racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
+      FROM character_sheets;
+      DROP TABLE character_sheets;
+      ALTER TABLE character_sheets_dg_tmp RENAME TO character_sheets;
+      PRAGMA foreign_keys = ON;
+    `);
+  }
+
   const charCols = db.prepare("PRAGMA table_info(character_sheets)").all().map(c => c.name);
   if (!charCols.includes('avatar_url')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');

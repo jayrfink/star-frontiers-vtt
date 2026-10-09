@@ -83,15 +83,11 @@ export function createCharacterRouter(db, io) {
         notes = '',
       } = req.body;
 
-      if (!name || !race) {
+      if (!name || !race || typeof race !== 'string' || !race.trim()) {
         return res.status(400).json({ error: 'Name and race are required' });
       }
 
       console.log('Incoming PUT character body:', req.body);
-      const validRaces = ['Human', 'Dralasite', 'Vrusk', 'Yazirian'];
-      if (!validRaces.includes(race)) {
-        return res.status(400).json({ error: 'Invalid race' });
-      }
 
       const validPsas = ['Military', 'Technological', 'Biosocial'];
       const characterPsa = validPsas.includes(psa) ? psa : 'Military';
@@ -162,9 +158,8 @@ export function createCharacterRouter(db, io) {
       } = req.body;
 
       console.log('Incoming PUT character body:', req.body);
-      const validRaces = ['Human', 'Dralasite', 'Vrusk', 'Yazirian'];
-      if (!validRaces.includes(race)) {
-        return res.status(400).json({ error: 'Invalid race' });
+      if (!race || typeof race !== 'string' || !race.trim()) {
+        return res.status(400).json({ error: 'Valid race is required' });
       }
 
       const validPsas = ['Military', 'Technological', 'Biosocial'];

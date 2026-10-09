@@ -165,21 +165,79 @@ describe('Sheets API & Socket.io', () => {
       expect(getRes.status).toBe(404);
     });
 
+    it('allows creating a character sheet with a custom race', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await agent.post('/api/characters').send({
+        name: 'Gronk',
+        race: 'Saurian',
+        psa: 'Military',
+        str: 60,
+        sta: 60,
+        dex: 40,
+        rs: 40,
+        int_stat: 45,
+        log_stat: 45,
+        per: 50,
+        ldr: 50,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.name).toBe('Gronk');
+      expect(res.body.race).toBe('Saurian');
+    });
+
+    it('allows updating a character sheet to a custom race', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const createRes = await agent.post('/api/characters').send({
+        name: 'Torg',
+        race: 'Human',
+        psa: 'Military',
+        str: 50, sta: 50, dex: 50, rs: 50, int_stat: 50, log_stat: 50, per: 50, ldr: 50,
+      });
+
+      const updateRes = await agent.put(`/api/characters/${createRes.body.id}`).send({
+        race: 'Cyborg-Alpha',
+      });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.race).toBe('Cyborg-Alpha');
+    });
+
+    it('rejects empty or whitespace-only race', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await agent.post('/api/characters').send({
+        name: 'Blanko',
+        race: '   ',
+        psa: 'Military',
+      });
+
+      expect(res.status).toBe(400);
+    });
+
     it('validates invalid race or missing fields', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
       await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
 
-      const invalidRace = await agent.post('/api/characters').send({
-        name: 'Alien',
-        race: 'Klingon',
+      const invalidRaceRes = await agent.post('/api/characters').send({
+        name: 'Invalid',
+        race: '   ',
       });
-      expect(invalidRace.status).toBe(400);
+      expect(invalidRaceRes.status).toBe(400);
 
-      const missingName = await agent.post('/api/characters').send({
+      const missingNameRes = await agent.post('/api/characters').send({
         race: 'Human',
       });
-      expect(missingName.status).toBe(400);
+      expect(missingNameRes.status).toBe(400);
     });
   });
 
