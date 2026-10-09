@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
-import { OFFICIAL_SKILLS } from '../src/constants/characterRules.js';
 
 describe('CharacterSheetsView - Spaceship Skills Integration', () => {
   it('exposes spaceship skills in officialSkills data', () => {
