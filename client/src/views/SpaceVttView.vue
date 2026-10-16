@@ -205,7 +205,7 @@
         </transition>
 
         <!-- Dice Box Overlay -->
-        <div id="dice-box" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;"></div>
+        <div id="dice-box" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200;"></div>
 
         <SpaceVttCanvas
           :map="activeMap"
@@ -1911,7 +1911,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   padding: 10px 18px;
   color: #f29249;
-  z-index: 120;
+  z-index: 250;
   box-shadow: 0 0 20px rgba(242, 146, 73, 0.45), 0 8px 32px rgba(0, 0, 0, 0.8);
   display: flex;
   flex-direction: column;
@@ -1979,7 +1979,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   padding: 10px 18px;
   color: #77d19e;
-  z-index: 120;
+  z-index: 250;
   box-shadow: 0 0 20px rgba(119, 209, 158, 0.45), 0 8px 32px rgba(0, 0, 0, 0.8);
   display: flex;
   flex-direction: column;
