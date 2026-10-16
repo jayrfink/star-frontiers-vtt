@@ -20,7 +20,7 @@
         >
           <div class="char-item-info">
             <span class="char-name">{{ char.name || 'Unnamed' }}</span>
-            <span class="char-sub">{{ char.race || 'Unknown Race' }} • STA {{ char.current_stamina }}/{{ char.max_stamina }}</span>
+            <span class="char-sub">{{ char.race || 'Unknown Species' }} • STA {{ char.current_stamina }}/{{ char.max_stamina }}</span>
           </div>
           <button class="btn-delete-small" title="Delete Character" @click.stop="deleteCharacter(char.id)">✕</button>
         </li>
@@ -51,7 +51,7 @@
               placeholder="Character Name"
             />
             <div class="race-select-wrap">
-              <label>Race:</label>
+              <label>Species:</label>
               <select v-model="selectedRaceCategory" class="select-race">
                 <option value="Human">Human</option>
                 <option value="Dralasite">Dralasite</option>
@@ -65,7 +65,7 @@
                 v-model="selectedChar.race"
                 @change="onCustomRaceChange"
                 class="input-custom-race"
-                placeholder="Custom Race Name"
+                placeholder="Custom Species Name"
               />
             </div>
             <div class="psa-select-wrap">
@@ -78,7 +78,7 @@
             </div>
           </div>
           <div class="race-ability-banner">
-            <strong>Racial Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'Custom species without default racial abilities.' }}
+            <strong>Species Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'Custom species without default species abilities.' }}
           </div>
         </header>
 
@@ -279,9 +279,9 @@
           </div>
         </section>
 
-        <!-- Detailed Racial Abilities Panel -->
+        <!-- Detailed Species Abilities Panel -->
         <section class="card racial-panel">
-          <h4>Racial Traits & Abilities</h4>
+          <h4>Species Traits & Abilities</h4>
           <div v-if="selectedChar.race === 'Human'" class="racial-details">
             <p><strong>Human Adaptability:</strong> Versatile species. Receives a +5 bonus to any single ability score during creation.</p>
           </div>
@@ -298,7 +298,7 @@
             <p><strong>Battle Rage:</strong> <strong>{{ battleRageChance }}%</strong> base chance. When enraged, gains +20 bonus to hit in melee.</p>
           </div>
           <div v-else class="racial-details">
-            <p><strong>Custom Species:</strong> Custom race without standard Star Frontiers racial traits.</p>
+            <p><strong>Custom Species:</strong> Custom species without standard Star Frontiers species traits.</p>
           </div>
         </section>
 
@@ -458,7 +458,7 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Race</label>
+            <label>Species</label>
             <select v-model="newCharForm.race" class="char-create-select">
               <option value="Human">Human (+5 XP bonus / adaptable)</option>
               <option value="Dralasite">Dralasite (Lie Detection & Elasticity)</option>
@@ -468,12 +468,12 @@
             </select>
           </div>
           <div v-if="newCharForm.race === 'Custom'" class="form-group custom-race-input-group">
-            <label>Custom Race Name</label>
+            <label>Custom Species Name</label>
             <input
               type="text"
               v-model="newCharForm.customRaceName"
               class="char-create-input"
-              placeholder="Enter custom race name..."
+              placeholder="Enter custom species name..."
             />
           </div>
           <div class="form-group">
@@ -1619,7 +1619,7 @@ export default {
   transform: translateY(1px);
 }
 
-/* Racial Traits Panel */
+/* Species Traits Panel */
 .racial-panel h4 {
   margin: 0 0 10px 0;
   color: #3a859c;

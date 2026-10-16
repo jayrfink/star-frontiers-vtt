@@ -2,7 +2,7 @@ export const RACES_DATA = {
   Human: {
     modifiers: { str: 0, sta: 0, dex: 0, rs: 0, int: 0, log: 0, per: 0, ldr: 0 },
     movement: { walk: 2, run: 6, glide: 0 },
-    abilitiesDescription: 'Versatile race. Receives a +5 bonus to any single ability score during creation.'
+    abilitiesDescription: 'Versatile species. Receives a +5 bonus to any single ability score during creation.'
   },
   Dralasite: {
     modifiers: { str: 5, sta: 5, dex: -5, rs: -5, int: 0, log: 0, per: 0, ldr: 0 },
