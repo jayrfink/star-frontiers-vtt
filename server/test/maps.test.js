@@ -35,6 +35,25 @@ describe('Maps & Tokens API & Socket.io', () => {
       expect(Array.isArray(res.body)).toBe(true);
     });
 
+    it('defaults, updates, and clamps grid_line_width', async () => {
+      const gm = request.agent(app);
+      await gm.post('/api/auth/register').send({ username: 'gm_lw', password: 'password123' });
+      await gm.post('/api/auth/login').send({ username: 'gm_lw', password: 'password123' });
+
+      const created = await gm.post('/api/maps').send({ name: 'Thin Lines' });
+      expect(created.status).toBe(201);
+      expect(created.body.grid_line_width).toBe(1);
+
+      const thin = await gm.put(`/api/maps/${created.body.id}`).send({ grid_line_width: 0.25 });
+      expect(thin.body.grid_line_width).toBe(0.25);
+
+      const tooBig = await gm.put(`/api/maps/${created.body.id}`).send({ grid_line_width: 99 });
+      expect(tooBig.body.grid_line_width).toBe(10);
+
+      const invalid = await gm.put(`/api/maps/${created.body.id}`).send({ grid_line_width: -3 });
+      expect(invalid.body.grid_line_width).toBe(10); // invalid input keeps existing value
+    });
+
     it('creates map (GM only) and emits map:created', async () => {
       const gmAgent = request.agent(app);
       // First user registered becomes GameMaster

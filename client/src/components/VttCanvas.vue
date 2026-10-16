@@ -288,7 +288,8 @@ function drawGrid(ctx, mapW, mapH) {
   const color = props.map.grid_color || '#333333';
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, 1 / props.zoomLevel);
+  const lineThickness = Number(props.map.grid_line_width) > 0 ? Number(props.map.grid_line_width) : 1;
+  ctx.lineWidth = Math.max(lineThickness, lineThickness / props.zoomLevel);
 
   ctx.beginPath();
   for (let c = 0; c <= mapCols.value; c++) {

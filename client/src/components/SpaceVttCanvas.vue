@@ -259,7 +259,7 @@ function drawGrid(ctx, mapW, mapH) {
   const hexSize = props.map.grid_size || 40;
 
   ctx.strokeStyle = props.map.grid_color || '#334155';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = Number(props.map.grid_line_width) > 0 ? Number(props.map.grid_line_width) : 1;
 
   ctx.beginPath();
   for (let r = 0; r < mapRows.value; r++) {

@@ -309,6 +309,22 @@
                 </div>
               </div>
               <div class="form-group">
+                <label>Grid Line Thickness (px):</label>
+                <input
+                  type="number"
+                  list="rpg-grid-line-width-options"
+                  class="grid-line-width-input"
+                  v-model.number="activeMapForm.grid_line_width"
+                  min="0.1"
+                  max="10"
+                  step="0.1"
+                  @change="updateActiveMapSettings"
+                />
+                <datalist id="rpg-grid-line-width-options">
+                  <option v-for="n in gridLineWidthOptions" :key="n" :value="n"></option>
+                </datalist>
+              </div>
+              <div class="form-group">
                 <label>Grid Color:</label>
                 <input
                   type="color"
@@ -887,11 +903,13 @@ const tokenFileInput = ref(null);
 const uploadingAvatar = ref(false);
 
 // Forms
+const gridLineWidthOptions = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
 const gridDimensionOptions = [10, 15, 20, 25, 30, 40, 50, 60, 80, 100];
 
 const activeMapForm = reactive({
   width: 20,
   height: 20,
+  grid_line_width: 1,
   grid_size: 40,
   grid_color: '#333333',
   preset_bg: 'grid_only',
@@ -967,6 +985,7 @@ watch(activeMap, (map) => {
   if (map) {
     activeMapForm.width = map.width || 20;
     activeMapForm.height = map.height || 20;
+    activeMapForm.grid_line_width = map.grid_line_width || 1;
     activeMapForm.grid_size = map.grid_size || 40;
     activeMapForm.grid_color = map.grid_color || '#333333';
     activeMapForm.preset_bg = map.preset_bg || 'grid_only';
@@ -1028,6 +1047,12 @@ async function activateMap(mapId) {
   }
 }
 
+function clampGridLineWidth(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 1;
+  return Math.min(10, Math.max(0.1, n));
+}
+
 function clampGridDimension(value, fallback) {
   const n = Math.round(Number(value));
   if (!Number.isFinite(n) || n <= 0) return fallback || 20;
@@ -1046,6 +1071,7 @@ async function updateActiveMapSettings() {
         width: clampGridDimension(activeMapForm.width, activeMap.value.width),
         height: clampGridDimension(activeMapForm.height, activeMap.value.height),
         grid_size: activeMapForm.grid_size,
+        grid_line_width: clampGridLineWidth(activeMapForm.grid_line_width),
         grid_color: activeMapForm.grid_color,
         preset_bg: activeMapForm.preset_bg,
       }),
