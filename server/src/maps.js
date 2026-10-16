@@ -21,6 +21,7 @@ function formatMap(row) {
   return {
     ...row,
     fog_enabled: Boolean(row.fog_enabled),
+    grid_visible: row.grid_visible === undefined ? true : Boolean(row.grid_visible),
     fog_data: safeJsonParse(row.fog_data, []),
   };
 }
@@ -106,6 +107,7 @@ export function createMapRouter(db, io) {
         grid_size = 40,
         grid_color = '#333333',
         grid_line_width = 1,
+        grid_visible = true,
         is_active = 0,
         fog_data = [],
       } = req.body;
@@ -123,15 +125,15 @@ export function createMapRouter(db, io) {
       const stmt = db.prepare(`
         INSERT INTO maps (
           user_id, name, map_type, background_url, preset_bg, width, height,
-          grid_size, grid_color, grid_line_width, is_active, fog_enabled, fog_data
+          grid_size, grid_color, grid_line_width, grid_visible, is_active, fog_enabled, fog_data
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         req.session.userId, name, map_type, background_url, preset_bg, width, height,
-        grid_size, grid_color, clampLineWidth(grid_line_width), is_active ? 1 : 0, fog_enabled ? 1 : 0, fogDataStr
+        grid_size, grid_color, clampLineWidth(grid_line_width), grid_visible ? 1 : 0, is_active ? 1 : 0, fog_enabled ? 1 : 0, fogDataStr
       );
 
       const created = db.prepare('SELECT * FROM maps WHERE id = ?').get(result.lastInsertRowid);
@@ -199,6 +201,7 @@ export function createMapRouter(db, io) {
         grid_size = existing.grid_size,
         grid_color = existing.grid_color,
         grid_line_width = existing.grid_line_width,
+        grid_visible = existing.grid_visible,
         fog_enabled = existing.fog_enabled,
         is_active = existing.is_active,
         fog_data = safeJsonParse(existing.fog_data, []),
@@ -209,14 +212,14 @@ export function createMapRouter(db, io) {
       const stmt = db.prepare(`
         UPDATE maps SET
           name = ?, background_url = ?, preset_bg = ?, width = ?, height = ?,
-          grid_size = ?, grid_color = ?, grid_line_width = ?, is_active = ?, fog_enabled = ?, fog_data = ?,
+          grid_size = ?, grid_color = ?, grid_line_width = ?, grid_visible = ?, is_active = ?, fog_enabled = ?, fog_data = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         name, background_url, preset_bg, width, height,
-        grid_size, grid_color, clampLineWidth(grid_line_width, existing.grid_line_width ?? 1), is_active ? 1 : 0, fog_enabled ? 1 : 0, fogDataStr,
+        grid_size, grid_color, clampLineWidth(grid_line_width, existing.grid_line_width ?? 1), grid_visible ? 1 : 0, is_active ? 1 : 0, fog_enabled ? 1 : 0, fogDataStr,
         req.params.id
       );
 

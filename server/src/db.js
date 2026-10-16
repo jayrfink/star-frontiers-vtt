@@ -76,6 +76,7 @@ function migrate(db) {
       grid_size INTEGER NOT NULL DEFAULT 40,
       grid_color TEXT DEFAULT '#333333',
       grid_line_width REAL NOT NULL DEFAULT 1,
+      grid_visible INTEGER NOT NULL DEFAULT 1,
       is_active INTEGER NOT NULL DEFAULT 0,
       fog_enabled INTEGER NOT NULL DEFAULT 0,
       fog_data TEXT DEFAULT '[]',
@@ -128,6 +129,9 @@ function migrate(db) {
   }
 if (!mapCols.includes('grid_line_width')) {
     db.exec('ALTER TABLE maps ADD COLUMN grid_line_width REAL NOT NULL DEFAULT 1');
+  }
+if (!mapCols.includes('grid_visible')) {
+    db.exec('ALTER TABLE maps ADD COLUMN grid_visible INTEGER NOT NULL DEFAULT 1');
   }
 if (!mapCols.includes('map_type')) {
     db.exec('ALTER TABLE maps ADD COLUMN map_type TEXT DEFAULT "rpg"');

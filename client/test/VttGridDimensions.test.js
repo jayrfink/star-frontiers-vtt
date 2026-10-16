@@ -41,3 +41,20 @@ describe.each(['VttCanvas', 'SpaceVttCanvas'])('%s - grid line thickness renderi
     expect(src).toContain('grid_line_width');
   });
 });
+
+describe.each(views)('$name - Grid visibility toggle in Map Manager', ({ name }) => {
+  const src = fs.readFileSync(path.resolve(__dirname, `../src/views/${name}.vue`), 'utf-8');
+
+  it('renders a show-grid checkbox and sends grid_visible on update', () => {
+    expect(src).toContain('v-model="activeMapForm.grid_visible"');
+    expect(src).toContain('grid_visible: Boolean(activeMapForm.grid_visible)');
+    expect(src).toContain('activeMapForm.grid_visible = map.grid_visible !== false');
+  });
+});
+
+describe.each(['VttCanvas', 'SpaceVttCanvas'])('%s - hidden grid rendering', (comp) => {
+  it('skips drawing grid lines when grid_visible is false', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, `../src/components/${comp}.vue`), 'utf-8');
+    expect(src).toContain('props.map.grid_visible === false');
+  });
+});

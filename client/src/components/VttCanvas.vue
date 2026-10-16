@@ -284,6 +284,8 @@ function drawBackground(ctx, mapW, mapH) {
 
 function drawGrid(ctx, mapW, mapH) {
   if (!props.map) return;
+  // Grid lines can be hidden per map; token snapping uses cell coordinates and is unaffected.
+  if (props.map.grid_visible === false || props.map.grid_visible === 0) return;
   const gSize = gridPx.value;
   const color = props.map.grid_color || '#333333';
 

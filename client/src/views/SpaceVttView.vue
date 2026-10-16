@@ -307,6 +307,17 @@
                   </datalist>
                 </div>
               </div>
+              <div class="form-group grid-visible-group">
+                <label class="grid-visible-label">
+                  <input
+                    type="checkbox"
+                    class="grid-visible-checkbox"
+                    v-model="activeMapForm.grid_visible"
+                    @change="updateActiveMapSettings"
+                  />
+                  Show Grid Lines (tokens still snap to grid)
+                </label>
+              </div>
               <div class="form-group">
                 <label>Grid Line Thickness (px):</label>
                 <input
@@ -964,6 +975,7 @@ const activeMapForm = reactive({
   width: 20,
   height: 20,
   grid_line_width: 1,
+  grid_visible: true,
   grid_size: 40,
   grid_color: '#334155',
   preset_bg: 'starfield',
@@ -1047,6 +1059,7 @@ watch(activeMap, (map) => {
     activeMapForm.width = map.width || 20;
     activeMapForm.height = map.height || 20;
     activeMapForm.grid_line_width = map.grid_line_width || 1;
+    activeMapForm.grid_visible = map.grid_visible !== false && map.grid_visible !== 0;
     activeMapForm.grid_size = map.grid_size || 40;
     activeMapForm.grid_color = map.grid_color || '#334155';
     activeMapForm.preset_bg = map.preset_bg || 'starfield';
@@ -1204,6 +1217,7 @@ async function updateActiveMapSettings() {
         height: clampGridDimension(activeMapForm.height, activeMap.value.height),
         grid_size: activeMapForm.grid_size,
         grid_line_width: clampGridLineWidth(activeMapForm.grid_line_width),
+        grid_visible: Boolean(activeMapForm.grid_visible),
         grid_color: activeMapForm.grid_color,
         preset_bg: activeMapForm.preset_bg,
         fog_enabled: activeMapForm.fog_enabled,

@@ -54,6 +54,24 @@ describe('Maps & Tokens API & Socket.io', () => {
       expect(invalid.body.grid_line_width).toBe(10); // invalid input keeps existing value
     });
 
+    it('defaults grid_visible to true and allows toggling it', async () => {
+      const gm = request.agent(app);
+      await gm.post('/api/auth/register').send({ username: 'gm_gv', password: 'password123' });
+      await gm.post('/api/auth/login').send({ username: 'gm_gv', password: 'password123' });
+
+      const created = await gm.post('/api/maps').send({ name: 'Hidden Grid' });
+      expect(created.body.grid_visible).toBe(true);
+
+      const hidden = await gm.put(`/api/maps/${created.body.id}`).send({ grid_visible: false });
+      expect(hidden.body.grid_visible).toBe(false);
+
+      const untouched = await gm.put(`/api/maps/${created.body.id}`).send({ grid_color: '#ffffff' });
+      expect(untouched.body.grid_visible).toBe(false);
+
+      const shown = await gm.put(`/api/maps/${created.body.id}`).send({ grid_visible: true });
+      expect(shown.body.grid_visible).toBe(true);
+    });
+
     it('creates map (GM only) and emits map:created', async () => {
       const gmAgent = request.agent(app);
       // First user registered becomes GameMaster

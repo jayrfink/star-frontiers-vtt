@@ -256,6 +256,8 @@ function drawBackground(ctx, mapW, mapH) {
 
 function drawGrid(ctx, mapW, mapH) {
   if (!props.map) return;
+  // Grid lines can be hidden per map; token snapping uses cell coordinates and is unaffected.
+  if (props.map.grid_visible === false || props.map.grid_visible === 0) return;
   const hexSize = props.map.grid_size || 40;
 
   ctx.strokeStyle = props.map.grid_color || '#334155';
