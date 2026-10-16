@@ -1,105 +1,59 @@
-# Star Frontiers VTT - Release v0.2.0 Summary
+# Star Frontiers VTT - Release v0.3.0 Summary
 
-**Release Tag:** `v0.2.0`  
-**Date:** October 4, 2026  
+**Release Tag:** `v0.3.0`  
+**Date:** October 16, 2026  
 **Status:** Stable / Production Ready
 
 ---
 
 ## 1. Overview
 
-Release `v0.2.0` is a major feature release for the Star Frontiers Virtual Tabletop (VTT). It introduces a comprehensive Image Browser & Uploads Explorer across sheets and map managers, decoupled 20-roll Die Roll Log HUDs for both tabletops, intelligent center-map token placement with collision avoidance, dynamic browser tab titles, simplified tactical map creation with automatic activation, and layout fixes across forms and modals.
+Release `v0.3.0` is a minor feature release. Dice rolls and the roll log are now shared in real time between all connected users, every user's tab and view state is remembered, character sheets gain the Knight Hawks spaceship skills, and both tabletops get richer per-map grid controls.
 
 ---
 
-## 2. Included Features & Capabilities in v0.2.0
+## 2. Included Features & Capabilities in v0.3.0
 
-### Image Browser & Uploads Explorer
-- **Server Uploads API:** Added `GET /api/upload/files` recursively scanning the `data/uploads/` directory with path traversal protection. Supported subfolder uploads via `folder` parameter in `POST /api/upload`.
-- **Reusable `ImageBrowserModal` Component:** 
-  - Dynamic breadcrumb navigation (`Uploads > subfolder > ...`) and Back button.
-  - Live search filtering for images.
-  - Interactive folder navigation and image grid cards with selection highlight and double-click selection.
-  - Direct file upload into the currently viewed subfolder.
-- **Full Application Integration:**
-  - **Character Sheets:** Header portrait click and Create Character modal avatar selection.
-  - **Ship Sheets:** Header starship image click and Create Ship modal avatar selection.
-  - **RPG VTT & Space VTT Tokens:** "Browse Uploads" button alongside file input in Add Token modals.
-  - **Map Managers (RPG & Space):** Browse existing uploads or upload new backgrounds for Active Map settings and Create New Map modals.
+### Shared Dice Rolls & Roll Log
+- New `roll_logs` table and `GET/POST/DELETE /api/rolls` endpoints, with `roll:created` / `roll:cleared` Socket.io broadcasts.
+- Percentile and damage rolls appear on every connected user's HUD banner and Roll Log, attributed to the roller (name and GM/Player badge). 3D dice physics still roll only on the roller's own screen.
+- RPG VTT and Space VTT keep separate logs; only the GameMaster can clear a log.
+- 3D dice canvas and HUD banners now render above page widgets.
 
-### Decoupled Die Roll Log HUDs
-- **Bottom-Corner Canvas HUD:** Collapsible floating panel docked at `bottom: 16px; left: 16px;` (`z-index: 105`) inside the VTT canvas wrapper.
-- **Collapsed Pill State:** Unobtrusive pill button displaying live roll count (`🎲 Log (N) ▲`).
-- **Expanded Card State:** Dark sci-fi card displaying capacity counter (`🎲 Roll Log (N/20)`), clear history button, minimize button, and scrollable chronological history (newest first).
-- **Roll Details:** Displays formatted timestamps, colored badges (`d%` cyan, `Nd10` orange), total result, and individual dice breakdown.
-- **Strict Decoupling & 20-Roll FIFO Cap:**
-  - RPG VTT uses dedicated state and `sf_vtt_rpg_roll_log` localStorage key.
-  - Space VTT uses dedicated state and `sf_vtt_space_roll_log` localStorage key.
-  - Automatically evicts the oldest roll when roll 21 arrives; guarded by defensive `try/catch` error handling.
+### Per-User Tab & View State Persistence
+- Each user's last dashboard tab is restored on login/reload.
+- RPG VTT and Space VTT restore pan, zoom, active tool, selected token and roll-log open state.
+- Character Sheets and Ship Sheets restore the selected sheet and scroll positions; Rulebooks restores view mode, PDF book/page, filters and search.
+- State is stored per user ID; high-frequency writes (panning, scrolling) are debounced.
 
-### Center Token Placement & Collision Avoidance
-- **Map Center Placement:** Newly placed tokens on RPG and Space maps are pseudo-randomly assigned an unoccupied cell/hex within the 5x5 zone around the map center instead of stacking at `(0, 0)`.
-- **Concentric Ring Expansion:** If the central 5x5 zone is fully saturated, an outward ring-by-ring search finds the nearest available unoccupied coordinate.
-- **Strict Boundary Clamping:** All chosen coordinates are clamped within the active map width and height.
+### Character & Ship Sheets
+- **Knight Hawks spaceship skills:** Piloting, Astrogation, Engineering and Gunnery with official flat XP costs and Reaction Speed base chance support.
+- **Notes:** a free-form "Notes" box on both character and ship sheets.
+- **Species:** user-facing "Race" labels renamed to "Species".
+- **Custom species** option for character sheets.
+- Stasis Screen added to the ship defenses combat reference.
 
-### Dynamic Browser Tab Titles
-- Dynamic page title updates using Vue Router `meta.title` and navigation hooks.
-- Automatically sets browser title to `SFVTT: <Tab Name>` on route transitions (e.g. `SFVTT: RPG VTT`, `SFVTT: Space VTT`, `SFVTT: Character Sheets`, `SFVTT: Ship Sheets`, `SFVTT: Rulebooks`, `SFVTT: Admin`, `SFVTT: Login`).
-
-### Tactical Map Creation Simplification & Auto-Activation
-- **Fog of War Removal in Space VTT:** Removed Fog of War checkbox and controls from the Create Tactical Space Map modal (space maps permanently default to fog disabled).
-- **Modal Streamlining:** Removed the redundant "Set as Active Map immediately" checkbox from both RPG VTT and Space VTT Create Map modals.
-- **Automatic Map Activation:** Creating a new tactical map automatically activates and switches the tabletop view to the newly created map immediately.
-
-### Form Layout & Bounds Refinements
-- Resolved form field right-boundary overflow in Add Token modals by expanding modal card width to 500px, constraining max-width to 95vw, and enabling responsive wrapping on file button containers.
+### Map Manager Grid Controls (RPG VTT & Space VTT, per map)
+- **Grid Dimensions:** editable Width and Height dropdowns (preset values or manual entry, 5-100).
+- **Grid Line Thickness:** 0.1-10 px, so lines can be made thinner on small maps.
+- **Show Grid Lines:** hide the grid while tokens still snap to it.
+- Supported by new `grid_line_width` and `grid_visible` map columns, migrated automatically.
 
 ---
 
 ## 3. Verification & Test Evidence
 
-All tests and production builds were verified in a clean containerized environment prior to release tagging:
+All tests and the production build were run in the `sf-vtt-dev` container before tagging:
 
-### Server Test Suite
-- **Passed:** 75 / 75 tests across 6 test files
-  - `auth.test.js` (33 tests): Auth, registration, session management, user deletion, password update
-  - `maps.test.js` (13 tests): Map CRUD, independent RPG/Space types, token synchronization
-  - `sheets.test.js` (12 tests): Character and ship sheet CRUD, validation, and PSA management
-  - `upload.test.js` (8 tests): File upload, directory scanning, subfolder upload, traversal protection
-  - `db.test.js` (5 tests): SQLite initialization, tables, migrations
-  - `rulebooks.test.js` (4 tests): Rulebook metadata and PDF streaming
-- **Exit Code:** `0`
-
-### Client Test Suite
-- **Passed:** 134 / 134 tests across 16 test files
-  - `ImageBrowserModal.test.js` (21 tests): Breadcrumbs, search filter, folder navigation, select event
-  - `diceUtils.test.js` (13 tests): Dice parsing, rolling algorithms, bounds
-  - `CharacterSheetsView.test.js` (10 tests): Attribute calculations, inventory catalog, portrait browsing
-  - `VttImageBrowserIntegration.test.js` (10 tests): ImageBrowserModal integration in Space & RPG VTTs
-  - `RulebooksView.test.js` (9 tests): Tabs, Lunr search, snippet highlighting, page clamping
-  - `RpgVttMapBrowser.test.js` (9 tests): Map browser drawer, modal bounds, auto-activation
-  - `SpaceVttMapBrowser.test.js` (9 tests): Space map browser, modal bounds, auto-activation
-  - `combatReference.test.js` (8 tests): Tactical reference tables and formulas
-  - `RpgVttRollLog.test.js` (7 tests): Roll log HUD state, 20-entry FIFO eviction, persistence
-  - `SpaceVttRollLog.test.js` (7 tests): Space roll log HUD state, decoupling, 20-entry FIFO eviction
-  - `QuickReferenceTables.test.js` (6 tests): Tab switching, category filtering, search input
-  - `RpgVttCenterPlacement.test.js` (6 tests): Center 5x5 placement, collision avoidance, ring expansion
-  - `SpaceVttCenterPlacement.test.js` (6 tests): Hex center placement, collision avoidance, ring expansion
-  - `NavBar.test.js` (5 tests): Compact header, role-based admin navigation, logout action
-  - `ShipSheetsView.test.js` (5 tests): Tactical ship sheets, weapons, defense systems
-  - `router.test.js` (3 tests): Dynamic `SFVTT: <Tab Name>` document titles
-- **Exit Code:** `0`
-
-### Client Production Build
-- **Status:** Succeeded (`vite build` -> `dist/`)
-- **Modules Transformed:** 101 modules
-- **Build Time:** 2.64s
-- **Exit Code:** `0`
+- **Server test suite:** 88 / 88 tests across 7 test files passed.
+- **Client test suite:** 194 / 194 tests across 23 test files passed.
+- **Client production build:** succeeded (`vite build`).
 
 ---
 
 ## 4. Release History
 
+- **v0.3.0 (October 16, 2026):** Minor feature release: shared dice rolls & roll log, per-user tab/view state persistence, Knight Hawks spaceship skills, sheet Notes, "Species" terminology, and Map Manager grid controls (dimensions, line thickness, visibility).
 - **v0.2.0 (October 4, 2026):** Major feature release: Image Browser & Uploads Explorer, Decoupled Die Roll Log HUDs, Center Token Placement with Collision Avoidance, Map Background Browsing, Dynamic Tab Titles, and Modal Form Simplification.
 - **v0.1.1 (September 27, 2026):** Sub-release snapshot: Damage dice totals HUD, single source of truth HP refactor, fog removal, token ring color persistence, character portrait layout, ship token linking, and UI theme alignment.
 - **v0.1.0 (September 22, 2026):** Initial stable release: RPG and Space VTTs, 3D physics dice box, character and starship sheets, searchable rulebooks, role-based user management, and sci-fi terminal design.
@@ -110,8 +64,8 @@ All tests and production builds were verified in a clean containerized environme
 
 ```bash
 # Check out the tagged release in a detached HEAD state:
-git checkout v0.2.0
+git checkout v0.3.0
 
 # Or create a new branch from this release point:
-git checkout -b release-v0.2.0 v0.2.0
+git checkout -b release-v0.3.0 v0.3.0
 ```
