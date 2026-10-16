@@ -101,5 +101,121 @@ describe('Per-User Tab and View State Persistence', () => {
       expect(spaceContent).toContain("saveUserState(");
     });
   });
+
+  describe('Task 3: CharacterSheetsView, ShipSheetsView, and RulebooksView state persistence', () => {
+    it('CharacterSheetsView restores saved selectedCharId per user instead of resetting to first character', async () => {
+      const CharacterSheetsView = (await import('../src/views/CharacterSheetsView.vue')).default;
+      const auth = useAuthStore();
+      auth.user = { id: 303, username: 'charPlayer', role: 'Player' };
+
+      // Save character ID 22 as the user's selected character
+      saveUserState(303, 'characterSheets', { selectedCharId: 22 });
+
+      const mockChars = [
+        { id: 11, name: 'Alpha First', race: 'Human', psa: 'Military' },
+        { id: 22, name: 'Beta Second', race: 'Vrusk', psa: 'Technological' },
+        { id: 33, name: 'Gamma Third', race: 'Yazirian', psa: 'Biosocial' },
+      ];
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => mockChars,
+      });
+
+      try {
+        const vm = {
+          characters: [],
+          selectedChar: null,
+          loading: false,
+          normalizeCharacterData: CharacterSheetsView.methods.normalizeCharacterData,
+          getCurrentUserId: CharacterSheetsView.methods.getCurrentUserId,
+          selectCharacter: CharacterSheetsView.methods.selectCharacter,
+          restoreScrollPositions: () => {},
+        };
+
+        await CharacterSheetsView.methods.fetchCharacters.call(vm);
+        expect(vm.selectedChar).not.toBeNull();
+        expect(vm.selectedChar.id).toBe(22);
+        expect(vm.selectedChar.name).toBe('Beta Second');
+
+        // Selecting character 33 updates saved state for user 303
+        CharacterSheetsView.methods.selectCharacter.call(vm, mockChars[2]);
+        expect(getUserState(303, 'characterSheets', {}).selectedCharId).toBe(33);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('ShipSheetsView restores saved selectedShipId per user instead of resetting to first ship', async () => {
+      const ShipSheetsView = (await import('../src/views/ShipSheetsView.vue')).default;
+      const auth = useAuthStore();
+      auth.user = { id: 404, username: 'shipCaptain', role: 'GameMaster' };
+
+      saveUserState(404, 'shipSheets', { selectedShipId: 99 });
+
+      const mockShips = [
+        { id: 88, name: 'UPF Vanguard', ship_type: 'Frigate', hull_points: 60 },
+        { id: 99, name: 'Star Talon', ship_type: 'Assault Scout', hull_points: 15 },
+      ];
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => mockShips,
+      });
+
+      try {
+        const vm = {
+          ships: [],
+          selectedShip: null,
+          loading: false,
+          normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+          normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
+          normalizeShip: ShipSheetsView.methods.normalizeShip,
+          getCurrentUserId: ShipSheetsView.methods.getCurrentUserId,
+          selectShip: ShipSheetsView.methods.selectShip,
+          restoreScrollPositions: () => {},
+        };
+
+        await ShipSheetsView.methods.fetchShips.call(vm);
+        expect(vm.selectedShip).not.toBeNull();
+        expect(vm.selectedShip.id).toBe(99);
+        expect(vm.selectedShip.name).toBe('Star Talon');
+
+        // Selecting ship 88 updates saved state for user 404
+        ShipSheetsView.methods.selectShip.call(vm, vm.ships[0]);
+        expect(getUserState(404, 'shipSheets', {}).selectedShipId).toBe(88);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('RulebooksView and QuickReferenceTables restore saved mode, PDF book/page, and category per user', async () => {
+      const { createSSRApp } = await import('vue');
+      const { renderToString } = await import('vue/server-renderer');
+      const RulebooksView = (await import('../src/views/RulebooksView.vue')).default;
+      const QuickReferenceTables = (await import('../src/components/QuickReferenceTables.vue')).default;
+
+      const auth = useAuthStore();
+      auth.user = { id: 505, username: 'loremaster', role: 'Player' };
+
+      saveUserState(505, 'rulebooks', {
+        viewMode: 'pdf',
+        pdfBookId: 'kh-expansion',
+        pdfPage: 25,
+        quickRefCategory: 'melee',
+      });
+
+      const rbApp = createSSRApp(RulebooksView);
+      const rbHtml = await renderToString(rbApp);
+      expect(rbHtml).toContain('src="/api/rulebooks/pdf/kh-expansion#page=25"');
+
+      const qrApp = createSSRApp(QuickReferenceTables);
+      const qrHtml = await renderToString(qrApp);
+      expect(qrHtml).toContain('Unarmed Combat');
+    });
+  });
 });
+
 

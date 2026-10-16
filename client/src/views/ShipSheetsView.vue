@@ -11,7 +11,7 @@
       <div v-else-if="ships.length === 0" class="sidebar-empty">
         No ships found. Create one to get started!
       </div>
-      <ul v-else class="ship-list">
+      <ul v-else ref="sidebarList" class="ship-list sheet-list" @scroll="saveScrollPositions">
         <li
           v-for="ship in ships"
           :key="ship.id"
@@ -28,7 +28,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="sheet-main">
+    <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="saveScrollPositions">
       <div v-if="!selectedShip" class="no-selection">
         <div class="stub-icon">🛸</div>
         <h2>Select or Create a Knight Hawks Ship</h2>
@@ -398,6 +398,7 @@
 import { socket } from '../services/socket.js';
 import { SHIP_PRESETS } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
+import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 
 export default {
   name: 'ShipSheetsView',
@@ -455,9 +456,45 @@ export default {
     this.setupSocketListeners();
   },
   beforeUnmount() {
+    this.saveScrollPositions();
     this.removeSocketListeners();
   },
   methods: {
+    getCurrentUserId() {
+      return getSafeUserId();
+    },
+    saveScrollPositions() {
+      const sidebarEl = this.$refs?.sidebarList || this.$el?.querySelector?.('.sheet-list, .ship-list');
+      const mainEl = this.$refs?.mainScroll || this.$el?.querySelector?.('.sheet-detail, .sheet-main');
+      const updates = {};
+      if (sidebarEl && typeof sidebarEl.scrollTop === 'number') {
+        updates.sidebarScrollTop = sidebarEl.scrollTop;
+      }
+      if (mainEl && typeof mainEl.scrollTop === 'number') {
+        updates.mainScrollTop = mainEl.scrollTop;
+      }
+      if (Object.keys(updates).length > 0) {
+        const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+        saveUserState(uid, 'shipSheets', updates);
+      }
+    },
+    restoreScrollPositions(saved) {
+      const apply = () => {
+        const sidebarEl = this.$refs?.sidebarList || this.$el?.querySelector?.('.sheet-list, .ship-list');
+        const mainEl = this.$refs?.mainScroll || this.$el?.querySelector?.('.sheet-detail, .sheet-main');
+        if (sidebarEl && typeof saved?.sidebarScrollTop === 'number') {
+          sidebarEl.scrollTop = saved.sidebarScrollTop;
+        }
+        if (mainEl && typeof saved?.mainScrollTop === 'number') {
+          mainEl.scrollTop = saved.mainScrollTop;
+        }
+      };
+      if (typeof this.$nextTick === 'function') {
+        this.$nextTick(apply);
+      } else {
+        apply();
+      }
+    },
     normalizeDefenses(defenses) {
       const def = defenses || {};
       return {
@@ -508,8 +545,20 @@ export default {
         if (res.ok) {
           const raw = await res.json();
           this.ships = (raw || []).map((s) => this.normalizeShip(s));
+          const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+          const saved = getUserState(uid, 'shipSheets', {
+            selectedShipId: null,
+            sidebarScrollTop: 0,
+            mainScrollTop: 0,
+          });
           if (this.ships.length > 0 && !this.selectedShip) {
-            this.selectShip(this.ships[0]);
+            const match = saved.selectedShipId != null
+              ? this.ships.find((s) => String(s.id) === String(saved.selectedShipId))
+              : null;
+            this.selectShip(match || this.ships[0]);
+            if (this.restoreScrollPositions) {
+              this.restoreScrollPositions(saved);
+            }
           }
         }
       } catch (err) {
@@ -524,6 +573,10 @@ export default {
         return;
       }
       this.selectedShip = this.normalizeShip(ship);
+      if (this.selectedShip && this.selectedShip.id !== undefined) {
+        const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+        saveUserState(uid, 'shipSheets', { selectedShipId: this.selectedShip.id });
+      }
     },
     applyPresetToCreateForm() {
       const preset = this.presets.find((p) => p.type === this.selectedPresetType) || this.presets[0];

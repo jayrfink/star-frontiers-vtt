@@ -205,19 +205,20 @@
 import { ref, shallowRef, computed, watch, onMounted } from 'vue';
 import lunr from 'lunr';
 import QuickReferenceTables from '../components/QuickReferenceTables.vue';
+import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 
 const props = defineProps({
   initialViewMode: {
     type: String,
-    default: 'quickref',
+    default: undefined,
   },
   initialPdfBook: {
     type: String,
-    default: 'ad-basic',
+    default: undefined,
   },
   initialPdfPage: {
     type: Number,
-    default: 1,
+    default: undefined,
   },
   initialDocs: {
     type: Array,
@@ -225,21 +226,30 @@ const props = defineProps({
   },
   initialSearch: {
     type: String,
-    default: '',
+    default: undefined,
   },
   initialSystem: {
     type: String,
-    default: 'All',
+    default: undefined,
   },
   initialBook: {
     type: String,
-    default: 'All',
+    default: undefined,
   },
 });
 
-const viewMode = ref(props.initialViewMode);
-const pdfBookId = ref(props.initialPdfBook);
-const pdfPage = ref(props.initialPdfPage);
+const savedRulebooks = getUserState(getSafeUserId(), 'rulebooks', {
+  viewMode: 'quickref',
+  pdfBookId: 'ad-basic',
+  pdfPage: 1,
+  searchQuery: '',
+  selectedSystem: 'All',
+  selectedBook: 'All',
+});
+
+const viewMode = ref(props.initialViewMode ?? savedRulebooks.viewMode ?? 'quickref');
+const pdfBookId = ref(props.initialPdfBook ?? savedRulebooks.pdfBookId ?? 'ad-basic');
+const pdfPage = ref(props.initialPdfPage ?? savedRulebooks.pdfPage ?? 1);
 
 const pdfBooksList = [
   { id: 'ad-basic', title: 'Alpha Dawn Basic Rules', system: 'Alpha Dawn' },
@@ -252,9 +262,20 @@ const pdfBooksList = [
 
 const docs = ref([...props.initialDocs]);
 const loading = ref(props.initialDocs.length === 0);
-const searchQuery = ref(props.initialSearch);
-const selectedSystem = ref(props.initialSystem);
-const selectedBook = ref(props.initialBook);
+const searchQuery = ref(props.initialSearch ?? savedRulebooks.searchQuery ?? '');
+const selectedSystem = ref(props.initialSystem ?? savedRulebooks.selectedSystem ?? 'All');
+const selectedBook = ref(props.initialBook ?? savedRulebooks.selectedBook ?? 'All');
+
+watch([viewMode, pdfBookId, pdfPage, searchQuery, selectedSystem, selectedBook], () => {
+  saveUserState(getSafeUserId(), 'rulebooks', {
+    viewMode: viewMode.value,
+    pdfBookId: pdfBookId.value,
+    pdfPage: pdfPage.value,
+    searchQuery: searchQuery.value,
+    selectedSystem: selectedSystem.value,
+    selectedBook: selectedBook.value,
+  });
+});
 
 const index = shallowRef(null);
 const docMap = new Map();

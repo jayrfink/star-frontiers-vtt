@@ -379,21 +379,22 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import {
   SHIP_COMBAT_REF,
   RANGED_COMBAT_REF,
   MELEE_COMBAT_REF
 } from '../constants/combatReference.js';
+import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 
 const props = defineProps({
   initialCategory: {
     type: String,
-    default: 'ship'
+    default: undefined
   },
   initialSearch: {
     type: String,
-    default: ''
+    default: undefined
   }
 });
 
@@ -403,8 +404,20 @@ const tabs = [
   { id: 'melee', label: 'Melee Combat', icon: '⚔️' }
 ];
 
-const activeCategory = ref(props.initialCategory);
-const searchQuery = ref(props.initialSearch);
+const savedQuickRef = getUserState(getSafeUserId(), 'rulebooks', {
+  quickRefCategory: 'ship',
+  quickRefSearch: '',
+});
+
+const activeCategory = ref(props.initialCategory ?? savedQuickRef.quickRefCategory ?? 'ship');
+const searchQuery = ref(props.initialSearch ?? savedQuickRef.quickRefSearch ?? '');
+
+watch([activeCategory, searchQuery], () => {
+  saveUserState(getSafeUserId(), 'rulebooks', {
+    quickRefCategory: activeCategory.value,
+    quickRefSearch: searchQuery.value,
+  });
+});
 
 const currentTabLabel = computed(() => {
   const current = tabs.find((t) => t.id === activeCategory.value);

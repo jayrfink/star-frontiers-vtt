@@ -11,7 +11,7 @@
       <div v-else-if="characters.length === 0" class="sidebar-empty">
         No characters found. Create one to get started!
       </div>
-      <ul v-else class="character-list">
+      <ul v-else ref="sidebarList" class="character-list sheet-list" @scroll="saveScrollPositions">
         <li
           v-for="char in characters"
           :key="char.id"
@@ -28,7 +28,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="sheet-main">
+    <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="saveScrollPositions">
       <div v-if="!selectedChar" class="no-selection">
         <div class="stub-icon">📋</div>
         <h2>Select or Create a Character</h2>
@@ -564,6 +564,7 @@ import {
   calcXPCost,
 } from '../constants/characterRules.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
+import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 
 export default {
   name: 'CharacterSheetsView',
@@ -720,9 +721,45 @@ export default {
     this.setupSocketListeners();
   },
   beforeUnmount() {
+    this.saveScrollPositions();
     this.removeSocketListeners();
   },
   methods: {
+    getCurrentUserId() {
+      return getSafeUserId();
+    },
+    saveScrollPositions() {
+      const sidebarEl = this.$refs?.sidebarList || this.$el?.querySelector?.('.sheet-list, .character-list');
+      const mainEl = this.$refs?.mainScroll || this.$el?.querySelector?.('.sheet-detail, .sheet-main');
+      const updates = {};
+      if (sidebarEl && typeof sidebarEl.scrollTop === 'number') {
+        updates.sidebarScrollTop = sidebarEl.scrollTop;
+      }
+      if (mainEl && typeof mainEl.scrollTop === 'number') {
+        updates.mainScrollTop = mainEl.scrollTop;
+      }
+      if (Object.keys(updates).length > 0) {
+        const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+        saveUserState(uid, 'characterSheets', updates);
+      }
+    },
+    restoreScrollPositions(saved) {
+      const apply = () => {
+        const sidebarEl = this.$refs?.sidebarList || this.$el?.querySelector?.('.sheet-list, .character-list');
+        const mainEl = this.$refs?.mainScroll || this.$el?.querySelector?.('.sheet-detail, .sheet-main');
+        if (sidebarEl && typeof saved?.sidebarScrollTop === 'number') {
+          sidebarEl.scrollTop = saved.sidebarScrollTop;
+        }
+        if (mainEl && typeof saved?.mainScrollTop === 'number') {
+          mainEl.scrollTop = saved.mainScrollTop;
+        }
+      };
+      if (typeof this.$nextTick === 'function') {
+        this.$nextTick(apply);
+      } else {
+        apply();
+      }
+    },
     normalizeCharacterData(char) {
       const c = { ...char };
       if (!c.psa) c.psa = 'Military';
@@ -751,8 +788,20 @@ export default {
         if (res.ok) {
           const data = await res.json();
           this.characters = data.map((c) => this.normalizeCharacterData(c));
+          const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+          const saved = getUserState(uid, 'characterSheets', {
+            selectedCharId: null,
+            sidebarScrollTop: 0,
+            mainScrollTop: 0,
+          });
           if (this.characters.length > 0 && !this.selectedChar) {
-            this.selectedChar = JSON.parse(JSON.stringify(this.characters[0]));
+            const match = saved.selectedCharId != null
+              ? this.characters.find((c) => String(c.id) === String(saved.selectedCharId))
+              : null;
+            this.selectedChar = JSON.parse(JSON.stringify(match || this.characters[0]));
+            if (this.restoreScrollPositions) {
+              this.restoreScrollPositions(saved);
+            }
           }
         }
       } catch (err) {
@@ -775,6 +824,10 @@ export default {
     },
     selectCharacter(char) {
       this.selectedChar = JSON.parse(JSON.stringify(this.normalizeCharacterData(char)));
+      if (this.selectedChar && this.selectedChar.id !== undefined) {
+        const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+        saveUserState(uid, 'characterSheets', { selectedCharId: this.selectedChar.id });
+      }
     },
     openCreateModal() {
       this.newCharForm = {
@@ -847,6 +900,10 @@ export default {
             this.characters.push(created);
           }
           this.selectedChar = JSON.parse(JSON.stringify(created));
+          if (this.selectedChar && this.selectedChar.id !== undefined) {
+            const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
+            saveUserState(uid, 'characterSheets', { selectedCharId: this.selectedChar.id });
+          }
         }
       } catch (err) {
         console.error('Error creating character:', err);
