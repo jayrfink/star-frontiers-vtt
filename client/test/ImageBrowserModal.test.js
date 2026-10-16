@@ -566,29 +566,45 @@ describe('ImageBrowserModal.vue', () => {
   });
 
   describe('Canvas Real-Time Asset Update (VttCanvas & SpaceVttCanvas)', () => {
-    it('VttCanvas.vue includes socket listeners for token:asset-renamed and token:asset-deleted', () => {
+    it('VttCanvas.vue includes socket listeners for token:asset-renamed, token:asset-deleted, map:asset-renamed, and map:asset-deleted', () => {
       const vttSrc = fs.readFileSync(path.resolve(__dirname, '../src/components/VttCanvas.vue'), 'utf-8');
       expect(vttSrc).toContain("token:asset-renamed");
       expect(vttSrc).toContain("token:asset-deleted");
+      expect(vttSrc).toContain("map:asset-renamed");
+      expect(vttSrc).toContain("map:asset-deleted");
       expect(vttSrc).toContain("socket.on('token:asset-renamed', handleAssetRenamed)");
       expect(vttSrc).toContain("socket.on('token:asset-deleted', handleAssetDeleted)");
+      expect(vttSrc).toContain("socket.on('map:asset-renamed', handleMapAssetRenamed)");
+      expect(vttSrc).toContain("socket.on('map:asset-deleted', handleMapAssetDeleted)");
       expect(vttSrc).toContain("socket.off('token:asset-renamed', handleAssetRenamed)");
       expect(vttSrc).toContain("socket.off('token:asset-deleted', handleAssetDeleted)");
+      expect(vttSrc).toContain("socket.off('map:asset-renamed', handleMapAssetRenamed)");
+      expect(vttSrc).toContain("socket.off('map:asset-deleted', handleMapAssetDeleted)");
       expect(vttSrc).toContain("t.avatar_url = newUrl");
       expect(vttSrc).toContain("t.avatar_url = ''");
+      expect(vttSrc).toContain("props.map.background_url = newUrl");
+      expect(vttSrc).toContain("props.map.background_url = ''");
       expect(vttSrc).toContain("drawCanvas()");
     });
 
-    it('SpaceVttCanvas.vue includes socket listeners for token:asset-renamed and token:asset-deleted', () => {
+    it('SpaceVttCanvas.vue includes socket listeners for token:asset-renamed, token:asset-deleted, map:asset-renamed, and map:asset-deleted', () => {
       const spaceSrc = fs.readFileSync(path.resolve(__dirname, '../src/components/SpaceVttCanvas.vue'), 'utf-8');
       expect(spaceSrc).toContain("token:asset-renamed");
       expect(spaceSrc).toContain("token:asset-deleted");
+      expect(spaceSrc).toContain("map:asset-renamed");
+      expect(spaceSrc).toContain("map:asset-deleted");
       expect(spaceSrc).toContain("socket.on('token:asset-renamed', handleAssetRenamed)");
       expect(spaceSrc).toContain("socket.on('token:asset-deleted', handleAssetDeleted)");
+      expect(spaceSrc).toContain("socket.on('map:asset-renamed', handleMapAssetRenamed)");
+      expect(spaceSrc).toContain("socket.on('map:asset-deleted', handleMapAssetDeleted)");
       expect(spaceSrc).toContain("socket.off('token:asset-renamed', handleAssetRenamed)");
       expect(spaceSrc).toContain("socket.off('token:asset-deleted', handleAssetDeleted)");
+      expect(spaceSrc).toContain("socket.off('map:asset-renamed', handleMapAssetRenamed)");
+      expect(spaceSrc).toContain("socket.off('map:asset-deleted', handleMapAssetDeleted)");
       expect(spaceSrc).toContain("t.avatar_url = newUrl");
       expect(spaceSrc).toContain("t.avatar_url = ''");
+      expect(spaceSrc).toContain("props.map.background_url = newUrl");
+      expect(spaceSrc).toContain("props.map.background_url = ''");
       expect(spaceSrc).toContain("drawCanvas()");
     });
   });

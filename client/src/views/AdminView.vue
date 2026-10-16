@@ -322,9 +322,9 @@
 
     <!-- Move File Modal -->
     <div v-if="moveModalOpen" class="modal-overlay" @click.self="closeMoveModal">
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="move-modal-title">
         <div class="modal-header">
-          <h4>Move File</h4>
+          <h4 id="move-modal-title">Move File</h4>
           <button class="modal-close" @click="closeMoveModal">✕</button>
         </div>
         <div class="modal-body">
@@ -342,8 +342,9 @@
                 v-for="folder in availableDestinationFolders"
                 :key="folder"
                 :value="folder"
+                :disabled="folder === (fileToMove?.folder || '')"
               >
-                {{ folder === '' ? 'Root (uploads/)' : folder }}
+                {{ folder === '' ? 'Root (uploads/)' : folder }}{{ folder === (fileToMove?.folder || '') ? ' (current)' : '' }}
               </option>
             </select>
           </div>
@@ -352,7 +353,11 @@
           <button class="btn-secondary btn-small" @click="closeMoveModal" :disabled="moving">
             Cancel
           </button>
-          <button class="primary btn-small" @click="confirmMove" :disabled="moving">
+          <button
+            class="primary btn-small"
+            @click="confirmMove"
+            :disabled="moving || (!destinationFolder && destinationFolder !== '') || destinationFolder === (fileToMove?.folder || '')"
+          >
             {{ moving ? 'Moving...' : 'Move File' }}
           </button>
         </div>
@@ -816,7 +821,9 @@ const deleteToken = deleteFile;
 
 function openMoveModal(file) {
   fileToMove.value = file;
-  destinationFolder.value = file.folder || '';
+  const current = file.folder || '';
+  const firstValid = availableDestinationFolders.value.find((f) => f !== current);
+  destinationFolder.value = firstValid !== undefined ? firstValid : '';
   moveModalOpen.value = true;
 }
 

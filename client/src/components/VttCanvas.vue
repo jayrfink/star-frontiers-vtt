@@ -139,6 +139,26 @@ function handleAssetDeleted({ url }) {
   drawCanvas();
 }
 
+function handleMapAssetRenamed({ oldUrl, newUrl }) {
+  if (props.map && props.map.background_url === oldUrl) {
+    props.map.background_url = newUrl;
+  }
+  if (imageCache.has(oldUrl)) {
+    const cached = imageCache.get(oldUrl);
+    imageCache.delete(oldUrl);
+    if (newUrl) imageCache.set(newUrl, cached);
+  }
+  drawCanvas();
+}
+
+function handleMapAssetDeleted({ url }) {
+  if (props.map && props.map.background_url === url) {
+    props.map.background_url = '';
+  }
+  imageCache.delete(url);
+  drawCanvas();
+}
+
 // Helpers
 const gridPx = computed(() => props.map?.grid_size || 40);
 const mapCols = computed(() => props.map?.width || 20);
@@ -642,12 +662,16 @@ onMounted(() => {
 
   socket.on('token:asset-renamed', handleAssetRenamed);
   socket.on('token:asset-deleted', handleAssetDeleted);
+  socket.on('map:asset-renamed', handleMapAssetRenamed);
+  socket.on('map:asset-deleted', handleMapAssetDeleted);
 });
 
 onBeforeUnmount(() => {
   stopRenderLoop();
   socket.off('token:asset-renamed', handleAssetRenamed);
   socket.off('token:asset-deleted', handleAssetDeleted);
+  socket.off('map:asset-renamed', handleMapAssetRenamed);
+  socket.off('map:asset-deleted', handleMapAssetDeleted);
   if (resizeObserver && containerRef.value) {
     resizeObserver.unobserve(containerRef.value);
   }

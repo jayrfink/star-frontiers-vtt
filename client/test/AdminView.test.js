@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import * as vue from 'vue';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';
@@ -309,7 +311,7 @@ describe('AdminView.vue - Uploads & Assets File Manager', () => {
       const instance = getSetupInstance();
       await instance.fetchFiles();
 
-      const fileToMove = instance.filteredFiles.value[0]; // other.png at root
+      const fileToMove = instance.filteredFiles.value[0]; // other.png at root (folder: '')
       expect(fileToMove.name).toBe('other.png');
 
       // Open move modal
@@ -318,14 +320,24 @@ describe('AdminView.vue - Uploads & Assets File Manager', () => {
 
       expect(instance.moveModalOpen.value).toBe(true);
       expect(instance.fileToMove.value).toEqual(fileToMove);
-      expect(instance.destinationFolder.value).toBe('');
+      // destinationFolder is initialized to an allowed destination that is not the file's current folder
+      expect(instance.destinationFolder.value).not.toBe(fileToMove.folder || '');
+      expect(instance.destinationFolder.value).toBe('empty-folder');
 
       // Check available destination folders list includes root, tokens, maps, empty-folder
       expect(instance.availableDestinationFolders.value).toContain('');
       expect(instance.availableDestinationFolders.value).toContain('tokens');
       expect(instance.availableDestinationFolders.value).toContain('maps');
+      expect(instance.availableDestinationFolders.value).toContain('empty-folder');
 
-      // Select 'tokens' as destination and confirm move
+      // If opened for a file inside 'tokens', destinationFolder defaults to root ''
+      const tokenFile = instance.files.value.find(f => f.folder === 'tokens');
+      instance.openMoveModal(tokenFile);
+      expect(instance.fileToMove.value).toEqual(tokenFile);
+      expect(instance.destinationFolder.value).toBe(''); // first destination != 'tokens' is ''
+
+      // Select 'tokens' as destination and confirm move for other.png
+      instance.openMoveModal(fileToMove);
       instance.destinationFolder.value = 'tokens';
       await instance.confirmMove();
 
@@ -347,6 +359,17 @@ describe('AdminView.vue - Uploads & Assets File Manager', () => {
       instance.closeMoveModal();
       expect(instance.moveModalOpen.value).toBe(false);
       expect(instance.fileToMove.value).toBeNull();
+    });
+
+    it('7b. move modal has proper accessibility attributes and disables current folder option', () => {
+      const src = fs.readFileSync(path.resolve(__dirname, '../src/views/AdminView.vue'), 'utf-8');
+      expect(src).toContain('role="dialog"');
+      expect(src).toContain('aria-modal="true"');
+      expect(src).toContain('aria-labelledby="move-modal-title"');
+      expect(src).toContain('id="move-modal-title"');
+      expect(src).toContain(':disabled="folder === (fileToMove?.folder || \'\')"');
+      expect(src).toContain('{{ folder === (fileToMove?.folder || \'\') ? \' (current)\' : \'\' }}');
+      expect(src).toContain('destinationFolder === (fileToMove?.folder || \'\')');
     });
 
     it('8. search filtering within current folder', async () => {
