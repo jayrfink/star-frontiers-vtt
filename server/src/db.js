@@ -101,9 +101,31 @@ function migrate(db) {
       layer TEXT NOT NULL DEFAULT 'character',
       rotation INTEGER DEFAULT 0,
       current_speed INTEGER DEFAULT 0,
+      template_id TEXT,
+      conditions TEXT DEFAULT '[]',
+      seu_current INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
+      FOREIGN KEY (template_id) REFERENCES adversary_templates(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS adversary_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL CHECK(category IN ('npc', 'creature')),
+      threat_tier INTEGER NOT NULL CHECK(threat_tier BETWEEN 1 AND 5),
+      token_image_path TEXT NOT NULL DEFAULT '',
+      token_size INTEGER NOT NULL DEFAULT 1,
+      hp_max INTEGER NOT NULL,
+      defense_summary TEXT NOT NULL DEFAULT '',
+      movement TEXT NOT NULL DEFAULT '12 m/s',
+      initiative_mod INTEGER NOT NULL DEFAULT 0,
+      actions TEXT NOT NULL DEFAULT '[]',
+      traits TEXT NOT NULL DEFAULT '[]',
+      system_data TEXT NOT NULL DEFAULT '{}',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS roll_logs (
@@ -204,6 +226,15 @@ if (!mapCols.includes('map_type')) {
   }
   if (!tokenCols.includes('current_speed')) {
     db.exec('ALTER TABLE tokens ADD COLUMN current_speed INTEGER DEFAULT 0');
+  }
+  if (!tokenCols.includes('template_id')) {
+    db.exec('ALTER TABLE tokens ADD COLUMN template_id TEXT REFERENCES adversary_templates(id)');
+  }
+  if (!tokenCols.includes('conditions')) {
+    db.exec('ALTER TABLE tokens ADD COLUMN conditions TEXT DEFAULT "[]"');
+  }
+  if (!tokenCols.includes('seu_current')) {
+    db.exec('ALTER TABLE tokens ADD COLUMN seu_current INTEGER');
   }
 }
 

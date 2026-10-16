@@ -24,6 +24,10 @@
         <button v-if="isGm" class="btn-gm" @click="showGmDrawer = !showGmDrawer">
           🗺️ GM Map Manager
         </button>
+        <!-- Stock Adversary Button -->
+        <button v-if="isGm" class="btn-gm btn-stock-encounter" @click="showStockAdversaryModal = true" title="Stock Adversaries on Active Map">
+          ⚔️ Stock Adversary
+        </button>
         <!-- Token Inspector Toggle -->
         <button class="btn-sidebar" @click="showTokenSidebar = !showTokenSidebar">
           🎯 Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
@@ -233,6 +237,16 @@
           @token-selected="onTokenSelected"
         />
 
+        <!-- Click-to-Open Adversary Token HUD -->
+        <AdversaryTokenHud
+          v-if="selectedToken && (selectedToken.template || selectedToken.template_id)"
+          :token="selectedToken"
+          @close="selectedTokenId = null"
+          @update:token="onAdversaryTokenUpdate"
+          @roll-attack="onAdversaryRollAttack"
+          @roll-damage="onAdversaryRollDamage"
+        />
+
         <!-- No Active Map Overlay -->
         <div v-if="!activeMap" class="no-map-overlay">
           <div class="no-map-card">
@@ -410,6 +424,7 @@
         <div class="sidebar-content">
           <!-- Token Creation Button -->
           <button class="primary full-width btn-add-token" @click="openAddTokenModal">+ Add New Token</button>
+          <button v-if="isGm" class="secondary full-width btn-stock-adversary-alt" @click="showStockAdversaryModal = true" style="margin-top: 8px;">⚔️ Stock Adversary Encounter</button>
 
           <!-- Selected Token Details -->
           <div v-if="selectedToken" class="section-box token-inspector">
@@ -651,6 +666,16 @@
       </div>
     </div>
 
+    <!-- Stock Adversary Modal -->
+    <StockAdversaryModal
+      v-model="showStockAdversaryModal"
+      :active-map="activeMap"
+      :is-gm="isGm"
+      :selected-image-url="adversaryImageSelectedUrl"
+      @browse-image="openAdversaryImageBrowser"
+      @spawned="onAdversariesSpawned"
+    />
+
     <!-- Image Browser Modal -->
     <ImageBrowserModal
       v-model="showImageBrowser"
@@ -665,6 +690,8 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import VttCanvas from '../components/VttCanvas.vue';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
+import AdversaryTokenHud from '../components/AdversaryTokenHud.vue';
+import StockAdversaryModal from '../components/StockAdversaryModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
@@ -908,6 +935,8 @@ const showGmDrawer = ref(false);
 const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
+const showStockAdversaryModal = ref(false);
+const adversaryImageSelectedUrl = ref('');
 const showImageBrowser = ref(false);
 const imageBrowserTarget = ref('token');
 const tokenFileInput = ref(null);
@@ -959,18 +988,37 @@ const imageBrowserTitle = computed(() => {
   if (imageBrowserTarget.value === 'active_map' || imageBrowserTarget.value === 'new_map') {
     return 'Select Map Background Image';
   }
+  if (imageBrowserTarget.value === 'adversary') {
+    return 'Select Adversary Portrait Image';
+  }
   return 'Select Token Image';
 });
 
 const currentBrowserImage = computed(() => {
   if (imageBrowserTarget.value === 'active_map') return activeMapForm.background_url;
   if (imageBrowserTarget.value === 'new_map') return newMapForm.background_url;
+  if (imageBrowserTarget.value === 'adversary') return adversaryImageSelectedUrl.value;
   return newTokenForm.avatar_url;
 });
 
 function openTokenImageBrowser() {
   imageBrowserTarget.value = 'token';
   showImageBrowser.value = true;
+}
+
+function openAdversaryImageBrowser() {
+  imageBrowserTarget.value = 'adversary';
+  showImageBrowser.value = true;
+}
+
+function onAdversariesSpawned(result) {
+  if (result?.tokens && Array.isArray(result.tokens)) {
+    for (const t of result.tokens) {
+      if (!tokens.value.some((existing) => existing.id === t.id)) {
+        tokens.value.push(t);
+      }
+    }
+  }
 }
 
 function openMapImageBrowser(target) {
@@ -1277,6 +1325,8 @@ function onImageSelected(url) {
     updateActiveMapSettings();
   } else if (imageBrowserTarget.value === 'new_map') {
     newMapForm.background_url = url;
+  } else if (imageBrowserTarget.value === 'adversary') {
+    adversaryImageSelectedUrl.value = url;
   } else {
     newTokenForm.avatar_url = url;
   }
@@ -1426,6 +1476,135 @@ function toggleStatus(statusKey) {
     selectedTokenForm.status_effects.splice(idx, 1);
   }
   updateSelectedToken();
+}
+
+async function onAdversaryTokenUpdate(updatedToken) {
+  if (!updatedToken || !updatedToken.id) return;
+  const idx = tokens.value.findIndex((t) => t.id === updatedToken.id);
+  if (idx !== -1) {
+    tokens.value[idx] = { ...tokens.value[idx], ...updatedToken };
+  }
+
+  try {
+    const res = await fetch(`/api/tokens/${updatedToken.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        current_hp: updatedToken.current_hp,
+        max_hp: updatedToken.max_hp,
+        seu_current: updatedToken.seu_current,
+        conditions: updatedToken.conditions,
+      }),
+    });
+    if (res.ok) {
+      const serverToken = await res.json();
+      if (idx !== -1) tokens.value[idx] = serverToken;
+    }
+  } catch (err) {
+    console.error('Failed to update adversary token:', err);
+  }
+}
+
+async function onAdversaryRollAttack({ action, token }) {
+  if (diceBoxInstance) {
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 },
+        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }
+      ]);
+      const rollSummary = calculatePercentileRoll(results);
+      if (rollSummary.valid) {
+        const isHit = rollSummary.total <= (action.target_pct || 50);
+        const hitLabel = isHit ? 'HIT!' : 'MISS';
+        lastPercentileRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
+        showPercentileHud.value = true;
+        sendRollToServer({
+          type: 'percentile',
+          label: `${token?.name || 'Adversary'}: ${action.name} (${action.target_pct}%) - ${hitLabel}`,
+          total: rollSummary.total,
+          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] target <= ${action.target_pct}%`,
+          rollSummary
+        });
+        percentileHudTimeout = setTimeout(() => {
+          showPercentileHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Adversary attack roll failed:', err);
+    }
+  } else {
+    const roll = Math.floor(Math.random() * 100) + 1;
+    const isHit = roll <= (action.target_pct || 50);
+    const hitLabel = isHit ? 'HIT!' : 'MISS';
+    sendRollToServer({
+      type: 'percentile',
+      label: `${token?.name || 'Adversary'}: ${action.name} (${action.target_pct}%) - ${hitLabel}`,
+      total: roll,
+      breakdown: `Roll: ${roll} vs target <= ${action.target_pct}%`,
+    });
+  }
+}
+
+async function onAdversaryRollDamage({ action, token }) {
+  const match = (action.damage || '1d10').match(/(\d+)d10(?:\+(\d+))?/i);
+  const diceCount = match ? parseInt(match[1], 10) : 1;
+  const flatBonus = match && match[2] ? parseInt(match[2], 10) : 0;
+
+  if (diceBoxInstance) {
+    showDamageHud.value = false;
+    showPercentileHud.value = false;
+    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: diceCount }
+      ]);
+      const rollSummary = calculateDamageRoll(results);
+      if (rollSummary.count > 0) {
+        const finalTotal = rollSummary.total + flatBonus;
+        lastDamageRoll.value = {
+          ...rollSummary,
+          total: finalTotal,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
+        showDamageHud.value = true;
+        sendRollToServer({
+          type: 'damage',
+          label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
+          total: finalTotal,
+          breakdown: flatBonus ? `[${rollSummary.dice.join(', ')}] + ${flatBonus}` : `[${rollSummary.dice.join(', ')}]`,
+          rollSummary: { ...rollSummary, total: finalTotal }
+        });
+        damageHudTimeout = setTimeout(() => {
+          showDamageHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Adversary damage roll failed:', err);
+    }
+  } else {
+    let rolls = [];
+    for (let i = 0; i < diceCount; i++) {
+      rolls.push(Math.floor(Math.random() * 10) + 1);
+    }
+    const total = rolls.reduce((a, b) => a + b, 0) + flatBonus;
+    sendRollToServer({
+      type: 'damage',
+      label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
+      total,
+      breakdown: flatBonus ? `[${rolls.join(', ')}] + ${flatBonus}` : `[${rolls.join(', ')}]`,
+    });
+  }
 }
 
 async function deleteSelectedToken() {

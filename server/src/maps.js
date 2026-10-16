@@ -26,13 +26,43 @@ function formatMap(row) {
   };
 }
 
-function formatToken(row) {
+export function formatToken(row, db = null) {
   if (!row) return null;
-  return {
+  const token = {
     ...row,
     color: row.color || '#666666',
     status_effects: safeJsonParse(row.status_effects, []),
+    conditions: safeJsonParse(row.conditions, []),
+    template_id: row.template_id || null,
+    seu_current: row.seu_current !== undefined ? row.seu_current : null,
   };
+
+  if (db && row.template_id) {
+    try {
+      const tRow = db.prepare('SELECT * FROM adversary_templates WHERE id = ?').get(row.template_id);
+      if (tRow) {
+        token.template = {
+          template_id: tRow.id,
+          name: tRow.name,
+          category: tRow.category,
+          threat_tier: tRow.threat_tier,
+          token_image_path: tRow.token_image_path,
+          token_size: tRow.token_size,
+          hp_max: tRow.hp_max,
+          defense_summary: tRow.defense_summary,
+          movement: tRow.movement,
+          initiative_mod: tRow.initiative_mod,
+          actions: safeJsonParse(tRow.actions, []),
+          traits: safeJsonParse(tRow.traits, []),
+          system_data: safeJsonParse(tRow.system_data, {}),
+        };
+      }
+    } catch {
+      // Table might not exist or error
+    }
+  }
+
+  return token;
 }
 
 
@@ -68,7 +98,7 @@ export function createMapRouter(db, io) {
       }
       const map = formatMap(mapRow);
       const tokenRows = db.prepare('SELECT * FROM tokens WHERE map_id = ? ORDER BY id ASC').all(map.id);
-      const tokens = tokenRows.map(formatToken);
+      const tokens = tokenRows.map(r => formatToken(r, db));
       res.json({ map, tokens });
     } catch (err) {
       console.error('Error fetching active map:', err);
@@ -85,7 +115,7 @@ export function createMapRouter(db, io) {
       }
       const map = formatMap(row);
       const tokenRows = db.prepare('SELECT * FROM tokens WHERE map_id = ? ORDER BY id ASC').all(map.id);
-      const tokens = tokenRows.map(formatToken);
+      const tokens = tokenRows.map(r => formatToken(r, db));
       res.json({ map, tokens });
     } catch (err) {
       console.error('Error fetching map:', err);
@@ -315,6 +345,9 @@ export function createTokenRouter(db, io) {
         current_hp = null,
         max_hp = null,
         status_effects = [],
+        conditions = [],
+        template_id = null,
+        seu_current = null,
         layer = 'character',
         rotation = 0,
         current_speed = 0,
@@ -330,27 +363,28 @@ export function createTokenRouter(db, io) {
       }
 
       const statusEffectsStr = typeof status_effects === 'string' ? status_effects : JSON.stringify(status_effects);
+      const conditionsStr = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
 
       const stmt = db.prepare(`
         INSERT INTO tokens (
-          map_id, character_id, name, color, avatar_url,
-          x, y, size, current_hp, max_hp, status_effects, layer,
+          map_id, character_id, template_id, name, color, avatar_url,
+          x, y, size, current_hp, max_hp, seu_current, conditions, status_effects, layer,
           rotation, current_speed
         ) VALUES (
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?
         )
       `);
 
       const result = stmt.run(
-        map_id, character_id, name, color, avatar_url,
-        x, y, size, current_hp, max_hp, statusEffectsStr, layer,
+        map_id, character_id, template_id, name, color, avatar_url,
+        x, y, size, current_hp, max_hp, seu_current, conditionsStr, statusEffectsStr, layer,
         rotation, current_speed
       );
 
       const created = db.prepare('SELECT * FROM tokens WHERE id = ?').get(result.lastInsertRowid);
-      const token = formatToken(created);
+      const token = formatToken(created, db);
 
       if (io) {
         io.emit('token:created', { token });
@@ -374,6 +408,7 @@ export function createTokenRouter(db, io) {
       const {
         map_id = existing.map_id,
         character_id = existing.character_id,
+        template_id = existing.template_id,
         name = existing.name,
         color = existing.color,
         avatar_url = existing.avatar_url,
@@ -382,7 +417,9 @@ export function createTokenRouter(db, io) {
         size = existing.size,
         current_hp = existing.current_hp,
         max_hp = existing.max_hp,
+        seu_current = existing.seu_current,
         status_effects = safeJsonParse(existing.status_effects, []),
+        conditions = safeJsonParse(existing.conditions, []),
         layer = existing.layer,
         rotation = existing.rotation ?? 0,
         current_speed = existing.current_speed ?? 0,
@@ -392,23 +429,24 @@ export function createTokenRouter(db, io) {
                               (req.body.y !== undefined && req.body.y !== existing.y);
 
       const statusEffectsStr = typeof status_effects === 'string' ? status_effects : JSON.stringify(status_effects);
+      const conditionsStr = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
 
       const stmt = db.prepare(`
         UPDATE tokens SET
-          map_id = ?, character_id = ?, name = ?, color = ?, avatar_url = ?,
-          x = ?, y = ?, size = ?, current_hp = ?, max_hp = ?, status_effects = ?,
+          map_id = ?, character_id = ?, template_id = ?, name = ?, color = ?, avatar_url = ?,
+          x = ?, y = ?, size = ?, current_hp = ?, max_hp = ?, seu_current = ?, conditions = ?, status_effects = ?,
           layer = ?, rotation = ?, current_speed = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
-        map_id, character_id, name, color, avatar_url,
-        x, y, size, current_hp, max_hp, statusEffectsStr,
+        map_id, character_id, template_id, name, color, avatar_url,
+        x, y, size, current_hp, max_hp, seu_current, conditionsStr, statusEffectsStr,
         layer, rotation, current_speed, req.params.id
       );
 
       const updated = db.prepare('SELECT * FROM tokens WHERE id = ?').get(req.params.id);
-      const token = formatToken(updated);
+      const token = formatToken(updated, db);
 
       if (io) {
         if (positionChanged) {
