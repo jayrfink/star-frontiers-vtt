@@ -256,8 +256,13 @@ export function createUploadRouter(customUploadDir, db, io) {
       const newUrl = `/uploads/${newRel}`;
 
       if (db) {
-        db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(newUrl, oldUrl);
-        db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(newUrl, oldUrl);
+        const cascadeRename = db.transaction((toUrl, fromUrl) => {
+          db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE character_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE ship_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+        });
+        cascadeRename(newUrl, oldUrl);
       }
 
       if (io) {
@@ -294,8 +299,13 @@ export function createUploadRouter(customUploadDir, db, io) {
       const targetUrl = `/uploads/${targetRel}`;
 
       if (db) {
-        db.prepare("UPDATE adversary_templates SET token_image_path = '' WHERE token_image_path = ?").run(targetUrl);
-        db.prepare("UPDATE tokens SET avatar_url = '' WHERE avatar_url = ?").run(targetUrl);
+        const cascadeDelete = db.transaction((toClear) => {
+          db.prepare("UPDATE adversary_templates SET token_image_path = '' WHERE token_image_path = ?").run(toClear);
+          db.prepare("UPDATE tokens SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
+          db.prepare("UPDATE character_sheets SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
+          db.prepare("UPDATE ship_sheets SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
+        });
+        cascadeDelete(targetUrl);
       }
 
       if (io) {
