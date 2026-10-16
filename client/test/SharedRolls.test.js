@@ -55,4 +55,47 @@ describe('Shared Rolls & Roll Log Integration', () => {
     expect(spaceContent).toContain('lastPercentileRoll.username');
     expect(spaceContent).toContain('lastDamageRoll.username');
   });
+
+  it('uses formatRollTime helper in Roll Log template for both views', () => {
+    expect(rpgContent).toContain('formatRollTime(item)');
+    expect(spaceContent).toContain('formatRollTime(item)');
+  });
+
+  it('uses lastDamageRoll.dice?.length for breakdown fallback in both views', () => {
+    expect(rpgContent).toContain("lastDamageRoll.dice?.length ? lastDamageRoll.dice.join(' + ') : lastDamageRoll.breakdown");
+    expect(spaceContent).toContain("lastDamageRoll.dice?.length ? lastDamageRoll.dice.join(' + ') : lastDamageRoll.breakdown");
+  });
+
+  it('uses consistent &times; HTML entity for HUD banner close buttons', () => {
+    const rpgMatches = rpgContent.match(/class="hud-close"[^>]*>&times;<\/button>/g);
+    expect(rpgMatches?.length).toBe(2);
+    const spaceMatches = spaceContent.match(/class="hud-close"[^>]*>&times;<\/button>/g);
+    expect(spaceMatches?.length).toBe(2);
+  });
+});
+
+describe('formatRollTime helper behavior', () => {
+  function formatRollTime(item) {
+    if (!item) return '';
+    const raw = item.createdAt || item.timestamp;
+    if (!raw) return '';
+    const dateStr = typeof raw === 'string' && raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') + 'Z' : raw;
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? String(raw) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  }
+
+  it('formats ISO 8601 UTC timestamp', () => {
+    const res = formatRollTime({ createdAt: '2026-10-16T14:30:15.000Z' });
+    expect(res).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+  });
+
+  it('formats SQLite UTC space-delimited timestamp', () => {
+    const res = formatRollTime({ createdAt: '2026-10-16 14:30:15' });
+    expect(res).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+  });
+
+  it('returns empty string for missing or null items', () => {
+    expect(formatRollTime(null)).toBe('');
+    expect(formatRollTime({})).toBe('');
+  });
 });

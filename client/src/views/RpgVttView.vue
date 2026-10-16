@@ -158,7 +158,7 @@
                     <span v-if="item.username" class="roll-user-badge" :class="item.role?.toLowerCase()">
                       {{ item.username }}
                     </span>
-                    <span class="roll-item-time">{{ item.timestamp || (item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '') }}</span>
+                    <span class="roll-item-time">{{ formatRollTime(item) }}</span>
                     <span class="roll-item-badge">{{ item.label }}</span>
                   </div>
                   <div class="roll-item-result">
@@ -185,11 +185,11 @@
                 </span>
                 💥 Damage Roll ({{ lastDamageRoll.count }}d10)
               </div>
-              <button class="hud-close" @click.stop="showDamageHud = false">×</button>
+              <button class="hud-close" @click.stop="showDamageHud = false">&times;</button>
             </div>
             <div class="hud-body">
               <span class="hud-total">{{ lastDamageRoll.total }}</span>
-              <span class="hud-dice">({{ lastDamageRoll.dice ? lastDamageRoll.dice.join(' + ') : lastDamageRoll.breakdown }})</span>
+              <span class="hud-dice">({{ lastDamageRoll.dice?.length ? lastDamageRoll.dice.join(' + ') : lastDamageRoll.breakdown }})</span>
             </div>
           </div>
         </transition>
@@ -208,7 +208,7 @@
                 </span>
                 🎲 Percentile Roll (d%)
               </div>
-              <button class="hud-close" @click.stop="showPercentileHud = false">×</button>
+              <button class="hud-close" @click.stop="showPercentileHud = false">&times;</button>
             </div>
             <div class="hud-body">
               <span class="hud-total">{{ lastPercentileRoll.total }}</span>
@@ -634,6 +634,15 @@ const RPG_ROLL_LOG_KEY = 'sf_vtt_rpg_roll_log';
 const rollLog = ref([]);
 const isRollLogOpen = ref(false);
 
+function formatRollTime(item) {
+  if (!item) return '';
+  const raw = item.createdAt || item.timestamp;
+  if (!raw) return '';
+  const dateStr = typeof raw === 'string' && raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') + 'Z' : raw;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? String(raw) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+
 async function fetchRollLog() {
   try {
     const res = await fetch('/api/rolls?mode=rpg', { credentials: 'include' });
@@ -728,7 +737,6 @@ async function rollPercentile() {
           breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`,
           rollSummary
         });
-        // addRollToLog({ id, timestamp, type, label, total, breakdown })
         percentileHudTimeout = setTimeout(() => {
           showPercentileHud.value = false;
         }, 8000);
@@ -765,7 +773,6 @@ async function rollDamage() {
           breakdown: `[${rollSummary.dice.join(', ')}]`,
           rollSummary
         });
-        // addRollToLog({ id, timestamp, type, label, total, breakdown })
         damageHudTimeout = setTimeout(() => {
           showDamageHud.value = false;
         }, 8000);

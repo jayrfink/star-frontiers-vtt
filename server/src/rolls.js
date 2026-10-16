@@ -1,6 +1,18 @@
 import { Router } from 'express';
 import { requireAuth, requireGM } from './middleware.js';
 
+function toIsoString(dateVal) {
+  if (!dateVal) return new Date().toISOString();
+  if (dateVal instanceof Date) return dateVal.toISOString();
+  if (typeof dateVal === 'string') {
+    if (dateVal.includes('T') && (dateVal.endsWith('Z') || dateVal.includes('+') || dateVal.includes('-'))) {
+      return dateVal;
+    }
+    return dateVal.replace(' ', 'T') + 'Z';
+  }
+  return new Date(dateVal).toISOString();
+}
+
 export function createRollRouter(db, io) {
   const router = Router();
 
@@ -20,11 +32,15 @@ export function createRollRouter(db, io) {
         LIMIT 20
       `).all(mode);
 
-      const formatted = rows.map(r => ({
-        ...r,
-        rollSummary: r.rollSummary ? JSON.parse(r.rollSummary) : {},
-        timestamp: r.createdAt ? r.createdAt.split(' ')[1] || r.createdAt : ''
-      }));
+      const formatted = rows.map(r => {
+        const createdAtIso = toIsoString(r.createdAt);
+        return {
+          ...r,
+          rollSummary: r.rollSummary ? JSON.parse(r.rollSummary) : {},
+          createdAt: createdAtIso,
+          timestamp: createdAtIso
+        };
+      });
 
       res.json(formatted);
     } catch (err) {
@@ -54,11 +70,12 @@ export function createRollRouter(db, io) {
       }
 
       const summaryStr = rollSummary ? JSON.stringify(rollSummary) : null;
+      const createdAt = new Date().toISOString();
       const stmt = db.prepare(`
-        INSERT INTO roll_logs (mode, user_id, username, role, type, label, total, breakdown, roll_summary)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO roll_logs (mode, user_id, username, role, type, label, total, breakdown, roll_summary, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const info = stmt.run(mode, user.id, user.username, user.role, type, label, total, breakdown, summaryStr);
+      const info = stmt.run(mode, user.id, user.username, user.role, type, label, total, breakdown, summaryStr, createdAt);
 
       const inserted = db.prepare(`
         SELECT id, mode, user_id AS userId, username, role, type, label, total, breakdown, roll_summary AS rollSummary, created_at AS createdAt
@@ -73,8 +90,7 @@ export function createRollRouter(db, io) {
         )
       `).run(mode, mode);
 
-      const now = new Date();
-      const timeStr = now.toTimeString().split(' ')[0];
+      const createdAtIso = toIsoString(inserted.createdAt);
 
       const rollPayload = {
         id: inserted.id,
@@ -87,8 +103,8 @@ export function createRollRouter(db, io) {
         total: inserted.total,
         breakdown: inserted.breakdown,
         rollSummary: inserted.rollSummary ? JSON.parse(inserted.rollSummary) : {},
-        timestamp: timeStr,
-        createdAt: inserted.createdAt
+        timestamp: createdAtIso,
+        createdAt: createdAtIso
       };
 
       if (io) {

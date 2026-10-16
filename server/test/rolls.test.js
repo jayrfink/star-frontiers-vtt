@@ -91,11 +91,15 @@ describe('Rolls API & Sockets', () => {
     expect(res.body.role).toBe('Player');
     expect(res.body.mode).toBe('rpg');
     expect(res.body.total).toBe(42);
+    expect(res.body.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    expect(res.body.timestamp).toBe(res.body.createdAt);
 
     expect(emittedEvent).not.toBeNull();
     expect(emittedEvent.mode).toBe('rpg');
     expect(emittedEvent.roll.id).toBe(res.body.id);
     expect(emittedEvent.roll.username).toBe('playerUser');
+    expect(emittedEvent.roll.createdAt).toBe(res.body.createdAt);
+    expect(emittedEvent.roll.timestamp).toBe(res.body.createdAt);
   });
 
   it('lists rolls filtered by mode in descending chronological order', async () => {
@@ -108,6 +112,8 @@ describe('Rolls API & Sockets', () => {
     expect(rpgRes.body.length).toBe(2);
     expect(rpgRes.body[0].total).toBe(99);
     expect(rpgRes.body[0].username).toBe('gmUser');
+    expect(rpgRes.body[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    expect(rpgRes.body[0].timestamp).toBe(rpgRes.body[0].createdAt);
     expect(rpgRes.body[1].total).toBe(10);
     expect(rpgRes.body[1].username).toBe('playerUser');
 

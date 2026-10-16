@@ -27,10 +27,10 @@ describe('SpaceVttView Roll Log', () => {
 
   it('hooks into rollPercentile and rollDamage', () => {
     const rollPercentileFn = content.slice(content.indexOf('async function rollPercentile'), content.indexOf('async function rollDamage'));
-    expect(rollPercentileFn).toMatch(/addRollToLog\(/);
+    expect(rollPercentileFn).toMatch(/(sendRollToServer|addRollToLog)\(/);
 
     const rollDamageFn = content.slice(content.indexOf('async function rollDamage'), content.indexOf('function clearDice'));
-    expect(rollDamageFn).toMatch(/addRollToLog\(/);
+    expect(rollDamageFn).toMatch(/(sendRollToServer|addRollToLog)\(/);
   });
 });
 
