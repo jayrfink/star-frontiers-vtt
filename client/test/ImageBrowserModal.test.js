@@ -1,5 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
+import { createSSRApp } from 'vue';
+import { renderToString } from 'vue/server-renderer';
 import ImageBrowserModal from '../src/components/ImageBrowserModal.vue';
+import { useAuthStore } from '../src/stores/auth.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 describe('ImageBrowserModal.vue', () => {
   const sampleFiles = [
@@ -313,6 +319,277 @@ describe('ImageBrowserModal.vue', () => {
       expect(vm.selectedUrl).toBe('/uploads/ship.png');
       expect(vm.searchQuery).toBe('');
       expect(fetchFilesMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('GM Quick Actions (Rename & Delete)', () => {
+    let pinia;
+    let authStore;
+
+    beforeEach(() => {
+      pinia = createPinia();
+      setActivePinia(pinia);
+      authStore = useAuthStore();
+      global.window = global.window || {};
+      global.window.prompt = vi.fn();
+      global.window.confirm = vi.fn();
+    });
+
+    it('computes isGm safely without throwing even if pinia is uninitialized', () => {
+      setActivePinia(undefined);
+      const isGm = ImageBrowserModal.computed.isGm.call({});
+      expect(isGm).toBe(false);
+    });
+
+    it('computes isGm true when user role is GameMaster', () => {
+      authStore.user = { id: 1, username: 'gm', role: 'GameMaster' };
+      const isGm = ImageBrowserModal.computed.isGm.call({});
+      expect(isGm).toBe(true);
+    });
+
+    it('computes isGm false when user role is Player', () => {
+      authStore.user = { id: 2, username: 'player', role: 'Player' };
+      const isGm = ImageBrowserModal.computed.isGm.call({});
+      expect(isGm).toBe(false);
+    });
+
+    it('displays rename and delete buttons on image cards when auth user is GameMaster', async () => {
+      authStore.user = { id: 1, username: 'gm', role: 'GameMaster' };
+      const ModalWithFiles = {
+        ...ImageBrowserModal,
+        data() {
+          return {
+            ...ImageBrowserModal.data(),
+            files: sampleFiles,
+            folders: sampleFolders,
+            loading: false,
+          };
+        },
+        methods: {
+          ...ImageBrowserModal.methods,
+          fetchFiles: vi.fn(),
+        },
+      };
+      const app = createSSRApp(ModalWithFiles, {
+        modelValue: true,
+      });
+      app.use(pinia);
+      const html = await renderToString(app);
+      expect(html).toContain('btn-card-rename');
+      expect(html).toContain('btn-card-delete');
+    });
+
+    it('does not display rename and delete buttons when auth user is Player', async () => {
+      authStore.user = { id: 2, username: 'player', role: 'Player' };
+      const ModalWithFiles = {
+        ...ImageBrowserModal,
+        data() {
+          return {
+            ...ImageBrowserModal.data(),
+            files: sampleFiles,
+            folders: sampleFolders,
+            loading: false,
+          };
+        },
+        methods: {
+          ...ImageBrowserModal.methods,
+          fetchFiles: vi.fn(),
+        },
+      };
+      const app = createSSRApp(ModalWithFiles, {
+        modelValue: true,
+      });
+      app.use(pinia);
+      const html = await renderToString(app);
+      expect(html).not.toContain('btn-card-rename');
+      expect(html).not.toContain('btn-card-delete');
+    });
+
+    it('handles GM rename action and triggers PUT /api/upload/rename', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          oldUrl: '/uploads/alpha.png',
+          newUrl: '/uploads/renamed_alpha.png',
+        }),
+      });
+      global.fetch = mockFetch;
+      global.window.prompt.mockReturnValue('renamed_alpha.png');
+      const fetchFilesMock = vi.fn();
+
+      const vm = {
+        selectedUrl: '/uploads/alpha.png',
+        errorMessage: '',
+        fetchFiles: fetchFilesMock,
+      };
+
+      const targetFile = {
+        name: 'alpha.png',
+        relativePath: 'alpha.png',
+        url: '/uploads/alpha.png',
+      };
+
+      await ImageBrowserModal.methods.handleRename.call(vm, targetFile);
+
+      expect(global.window.prompt).toHaveBeenCalledWith(
+        'Enter new filename for "alpha.png":',
+        'alpha.png'
+      );
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/upload/rename',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            oldPath: 'alpha.png',
+            newName: 'renamed_alpha.png',
+          }),
+        })
+      );
+      expect(vm.selectedUrl).toBe('/uploads/renamed_alpha.png');
+      expect(fetchFilesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles GM delete action and triggers DELETE /api/upload/file', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      });
+      global.fetch = mockFetch;
+      global.window.confirm.mockReturnValue(true);
+      const fetchFilesMock = vi.fn();
+
+      const vm = {
+        selectedUrl: '/uploads/alpha.png',
+        errorMessage: '',
+        fetchFiles: fetchFilesMock,
+      };
+
+      const targetFile = {
+        name: 'alpha.png',
+        relativePath: 'alpha.png',
+        url: '/uploads/alpha.png',
+      };
+
+      await ImageBrowserModal.methods.handleDelete.call(vm, targetFile);
+
+      expect(global.window.confirm).toHaveBeenCalledWith('Are you sure you want to delete "alpha.png"?');
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/upload/file?path=alpha.png',
+        expect.objectContaining({
+          method: 'DELETE',
+          credentials: 'include',
+        })
+      );
+      expect(vm.selectedUrl).toBe('');
+      expect(fetchFilesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancels rename if prompt is cancelled or empty', async () => {
+      const mockFetch = vi.fn();
+      global.fetch = mockFetch;
+      global.window.prompt.mockReturnValue(null);
+
+      const vm = {
+        selectedUrl: '/uploads/alpha.png',
+        errorMessage: '',
+        fetchFiles: vi.fn(),
+      };
+
+      await ImageBrowserModal.methods.handleRename.call(vm, {
+        name: 'alpha.png',
+        relativePath: 'alpha.png',
+        url: '/uploads/alpha.png',
+      });
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('cancels delete if confirmation is rejected', async () => {
+      const mockFetch = vi.fn();
+      global.fetch = mockFetch;
+      global.window.confirm.mockReturnValue(false);
+
+      const vm = {
+        selectedUrl: '/uploads/alpha.png',
+        errorMessage: '',
+        fetchFiles: vi.fn(),
+      };
+
+      await ImageBrowserModal.methods.handleDelete.call(vm, {
+        name: 'alpha.png',
+        relativePath: 'alpha.png',
+        url: '/uploads/alpha.png',
+      });
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('template binds @click.stop on rename and delete buttons to avoid triggering card selection', () => {
+      const modalSrc = fs.readFileSync(path.resolve(__dirname, '../src/components/ImageBrowserModal.vue'), 'utf-8');
+      expect(modalSrc).toMatch(/@click\.stop=["']handleRename\(file\)["']/);
+      expect(modalSrc).toMatch(/@click\.stop=["']handleDelete\(file\)["']/);
+    });
+
+    it('leaves selectedUrl intact when a non-selected image is renamed or deleted', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          oldUrl: '/uploads/beta.png',
+          newUrl: '/uploads/renamed_beta.png',
+        }),
+      });
+      global.window.prompt.mockReturnValue('renamed_beta.png');
+      const vm = {
+        selectedUrl: '/uploads/alpha.png',
+        errorMessage: '',
+        fetchFiles: vi.fn(),
+      };
+      await ImageBrowserModal.methods.handleRename.call(vm, {
+        name: 'beta.png',
+        relativePath: 'beta.png',
+        url: '/uploads/beta.png',
+      });
+      expect(vm.selectedUrl).toBe('/uploads/alpha.png');
+
+      global.window.confirm.mockReturnValue(true);
+      await ImageBrowserModal.methods.handleDelete.call(vm, {
+        name: 'beta.png',
+        relativePath: 'beta.png',
+        url: '/uploads/renamed_beta.png',
+      });
+      expect(vm.selectedUrl).toBe('/uploads/alpha.png');
+    });
+  });
+
+  describe('Canvas Real-Time Asset Update (VttCanvas & SpaceVttCanvas)', () => {
+    it('VttCanvas.vue includes socket listeners for token:asset-renamed and token:asset-deleted', () => {
+      const vttSrc = fs.readFileSync(path.resolve(__dirname, '../src/components/VttCanvas.vue'), 'utf-8');
+      expect(vttSrc).toContain("token:asset-renamed");
+      expect(vttSrc).toContain("token:asset-deleted");
+      expect(vttSrc).toContain("socket.on('token:asset-renamed', handleAssetRenamed)");
+      expect(vttSrc).toContain("socket.on('token:asset-deleted', handleAssetDeleted)");
+      expect(vttSrc).toContain("socket.off('token:asset-renamed', handleAssetRenamed)");
+      expect(vttSrc).toContain("socket.off('token:asset-deleted', handleAssetDeleted)");
+      expect(vttSrc).toContain("t.avatar_url = newUrl");
+      expect(vttSrc).toContain("t.avatar_url = ''");
+      expect(vttSrc).toContain("drawCanvas()");
+    });
+
+    it('SpaceVttCanvas.vue includes socket listeners for token:asset-renamed and token:asset-deleted', () => {
+      const spaceSrc = fs.readFileSync(path.resolve(__dirname, '../src/components/SpaceVttCanvas.vue'), 'utf-8');
+      expect(spaceSrc).toContain("token:asset-renamed");
+      expect(spaceSrc).toContain("token:asset-deleted");
+      expect(spaceSrc).toContain("socket.on('token:asset-renamed', handleAssetRenamed)");
+      expect(spaceSrc).toContain("socket.on('token:asset-deleted', handleAssetDeleted)");
+      expect(spaceSrc).toContain("socket.off('token:asset-renamed', handleAssetRenamed)");
+      expect(spaceSrc).toContain("socket.off('token:asset-deleted', handleAssetDeleted)");
+      expect(spaceSrc).toContain("t.avatar_url = newUrl");
+      expect(spaceSrc).toContain("t.avatar_url = ''");
+      expect(spaceSrc).toContain("drawCanvas()");
     });
   });
 });

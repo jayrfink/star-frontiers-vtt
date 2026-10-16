@@ -15,6 +15,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { socket } from '../services/socket.js';
 
 const props = defineProps({
   map: {
@@ -91,12 +92,43 @@ function getCachedImage(url) {
   imageCache.set(url, record);
   img.onload = () => {
     record.loaded = true;
+    drawCanvas();
   };
   img.onerror = () => {
     imageCache.delete(url);
   };
   img.src = url;
   return null;
+}
+
+function handleAssetRenamed({ oldUrl, newUrl }) {
+  if (props.tokens && Array.isArray(props.tokens)) {
+    for (const t of props.tokens) {
+      if (t.avatar_url === oldUrl) {
+        t.avatar_url = newUrl;
+      }
+    }
+  }
+  if (imageCache.has(oldUrl)) {
+    const cached = imageCache.get(oldUrl);
+    imageCache.delete(oldUrl);
+    if (newUrl) {
+      imageCache.set(newUrl, cached);
+    }
+  }
+  drawCanvas();
+}
+
+function handleAssetDeleted({ url }) {
+  if (props.tokens && Array.isArray(props.tokens)) {
+    for (const t of props.tokens) {
+      if (t.avatar_url === url) {
+        t.avatar_url = '';
+      }
+    }
+  }
+  imageCache.delete(url);
+  drawCanvas();
 }
 
 // Helpers
@@ -549,10 +581,15 @@ onMounted(() => {
   }
 
   startRenderLoop();
+
+  socket.on('token:asset-renamed', handleAssetRenamed);
+  socket.on('token:asset-deleted', handleAssetDeleted);
 });
 
 onBeforeUnmount(() => {
   stopRenderLoop();
+  socket.off('token:asset-renamed', handleAssetRenamed);
+  socket.off('token:asset-deleted', handleAssetDeleted);
   if (resizeObserver && containerRef.value) {
     resizeObserver.unobserve(containerRef.value);
   }

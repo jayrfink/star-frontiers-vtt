@@ -109,6 +109,26 @@
               <img :src="file.url" :alt="file.name" class="thumbnail-img" loading="lazy" />
             </div>
             <div class="image-name" :title="file.name">{{ file.name }}</div>
+
+            <!-- GM Quick Actions -->
+            <div v-if="isGm" class="image-card-actions">
+              <button
+                type="button"
+                class="btn-card-action btn-card-rename"
+                title="Rename image"
+                @click.stop="handleRename(file)"
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
+                class="btn-card-action btn-card-delete"
+                title="Delete image"
+                @click.stop="handleDelete(file)"
+              >
+                🗑️
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -137,6 +157,8 @@
 </template>
 
 <script>
+import { useAuthStore } from '../stores/auth.js';
+
 export default {
   name: 'ImageBrowserModal',
   props: {
@@ -189,6 +211,14 @@ export default {
     }
   },
   computed: {
+    isGm() {
+      try {
+        const auth = useAuthStore();
+        return auth?.user?.role === 'GameMaster';
+      } catch {
+        return false;
+      }
+    },
     breadcrumbs() {
       const crumbs = [{ name: 'Uploads', path: '' }];
       if (!this.currentFolder) {
@@ -336,6 +366,69 @@ export default {
         if (event.target) {
           event.target.value = '';
         }
+      }
+    },
+    async handleRename(file) {
+      if (!file) return;
+      const win = typeof window !== 'undefined' ? window : (globalThis.window || {});
+      const newName = win.prompt ? win.prompt(`Enter new filename for "${file.name}":`, file.name) : null;
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === file.name) return;
+
+      this.errorMessage = '';
+      try {
+        const res = await fetch('/api/upload/rename', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            oldPath: file.relativePath || file.url,
+            newName: trimmed,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          this.errorMessage = data.error || 'Failed to rename image';
+          return;
+        }
+
+        if (this.selectedUrl === file.url) {
+          this.selectedUrl = data.newUrl;
+        }
+        await this.fetchFiles();
+      } catch (err) {
+        this.errorMessage = err.message || 'Error renaming image';
+      }
+    },
+    async handleDelete(file) {
+      if (!file) return;
+      const win = typeof window !== 'undefined' ? window : (globalThis.window || {});
+      if (!win.confirm || !win.confirm(`Are you sure you want to delete "${file.name}"?`)) {
+        return;
+      }
+
+      this.errorMessage = '';
+      try {
+        const targetPath = file.relativePath || file.url;
+        const res = await fetch(`/api/upload/file?path=${encodeURIComponent(targetPath)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          this.errorMessage = data.error || 'Failed to delete image';
+          return;
+        }
+
+        if (this.selectedUrl === file.url) {
+          this.selectedUrl = '';
+        }
+        await this.fetchFiles();
+      } catch (err) {
+        this.errorMessage = err.message || 'Error deleting image';
       }
     },
   },
@@ -636,7 +729,40 @@ export default {
 }
 
 .image-card {
+  position: relative;
   height: 130px;
+}
+
+.image-card-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.btn-card-action {
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(0, 128, 128, 0.6);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 5px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-card-action:hover {
+  background: rgba(0, 30, 35, 0.95);
+  border-color: aquamarine;
+  transform: scale(1.1);
+}
+
+.btn-card-delete:hover {
+  border-color: #ff6b6b;
+  background: rgba(40, 10, 10, 0.95);
 }
 
 .image-card.selected {
