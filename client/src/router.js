@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import { useAuthStore } from './stores/auth.js';
+import { getUserState, saveUserState } from './utils/userState.js';
 import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
 import RpgVttView from './views/RpgVttView.vue';
@@ -9,6 +10,19 @@ import ShipSheetsView from './views/ShipSheetsView.vue';
 import RulebooksView from './views/RulebooksView.vue';
 import AdminView from './views/AdminView.vue';
 
+function getSavedDashboardPath(user) {
+  const defaultPath = '/dashboard/rpg-vtt';
+  if (!user || user.id === undefined) return defaultPath;
+  const { lastPath } = getUserState(user.id, 'navigation', { lastPath: defaultPath });
+  if (!lastPath || typeof lastPath !== 'string' || !lastPath.startsWith('/dashboard/')) {
+    return defaultPath;
+  }
+  if (lastPath.startsWith('/dashboard/admin') && user.role !== 'GameMaster') {
+    return defaultPath;
+  }
+  return lastPath;
+}
+
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'Login', component: LoginView, meta: { guest: true, title: 'Login' } },
@@ -17,7 +31,13 @@ const routes = [
     component: DashboardView,
     meta: { requiresAuth: true },
     children: [
-      { path: '', redirect: '/dashboard/rpg-vtt' },
+      {
+        path: '',
+        redirect: () => {
+          const auth = useAuthStore();
+          return getSavedDashboardPath(auth.user);
+        },
+      },
       { path: 'rpg-vtt', name: 'RpgVtt', component: RpgVttView, meta: { title: 'RPG VTT' } },
       { path: 'space-vtt', name: 'SpaceVtt', component: SpaceVttView, meta: { title: 'Space VTT' } },
       { path: 'character-sheets', name: 'CharacterSheets', component: CharacterSheetsView, meta: { title: 'Character Sheets' } },
@@ -44,7 +64,7 @@ router.beforeEach(async (to, from, next) => {
   if (requiresAuth && !auth.isAuthenticated) {
     next('/login');
   } else if (to.meta.guest && auth.isAuthenticated) {
-    next('/dashboard');
+    next(getSavedDashboardPath(auth.user));
   } else if (requiresGm && auth.user?.role !== 'GameMaster') {
     next('/dashboard');
   } else {
@@ -55,6 +75,14 @@ router.beforeEach(async (to, from, next) => {
 router.afterEach((to) => {
   const tabTitle = to.meta?.title;
   document.title = tabTitle ? `SFVTT: ${tabTitle}` : 'Star Frontiers VTT';
+  try {
+    const auth = useAuthStore();
+    if (auth.user?.id !== undefined && to.path.startsWith('/dashboard/') && to.path !== '/dashboard/') {
+      saveUserState(auth.user.id, 'navigation', { lastPath: to.path });
+    }
+  } catch {
+    // Ignore if Pinia is not active
+  }
 });
 
 export default router;
