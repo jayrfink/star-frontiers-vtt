@@ -120,11 +120,82 @@
         </table>
       </div>
     </section>
+
+    <!-- Token Assets Manager Card -->
+    <section class="admin-card">
+      <div class="card-header-row">
+        <h3>Token Assets Manager</h3>
+        <button class="btn-secondary" @click="fetchTokens" :disabled="loadingTokens">
+          {{ loadingTokens ? 'Refreshing...' : '↻ Refresh' }}
+        </button>
+      </div>
+
+      <div class="search-row">
+        <input
+          v-model.trim="tokenSearchQuery"
+          type="text"
+          class="token-search-input"
+          placeholder="Search tokens by filename..."
+        />
+      </div>
+
+      <div v-if="loadingTokens && tokens.length === 0" class="loading-state">
+        Loading tokens...
+      </div>
+      <div v-else-if="filteredTokens.length === 0" class="empty-state">
+        {{ tokenSearchQuery ? 'No tokens matching search.' : 'No token assets found.' }}
+      </div>
+      <div v-else class="table-wrapper">
+        <table class="tokens-table">
+          <thead>
+            <tr>
+              <th>Preview</th>
+              <th>Filename</th>
+              <th>Size</th>
+              <th>Modified</th>
+              <th class="actions-header">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="token in filteredTokens" :key="token.relativePath">
+              <td class="col-preview">
+                <img :src="token.url" :alt="token.name" class="token-thumb" />
+              </td>
+              <td class="col-filename">
+                <span class="token-name-text">{{ token.name }}</span>
+              </td>
+              <td class="col-size">
+                <span class="token-meta">{{ formatFileSize(token.size) }}</span>
+              </td>
+              <td class="col-date">
+                <span class="token-meta">{{ formatDate(token.mtime) }}</span>
+              </td>
+              <td class="actions-cell">
+                <button
+                  class="btn-secondary btn-small"
+                  title="Rename token file"
+                  @click="renameToken(token)"
+                >
+                  Rename
+                </button>
+                <button
+                  class="btn-danger btn-small"
+                  title="Delete token file"
+                  @click="deleteToken(token)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth.js';
 
 const auth = useAuthStore();
@@ -134,6 +205,16 @@ const loading = ref(false);
 const creating = ref(false);
 const error = ref('');
 const successMessage = ref('');
+
+const tokens = ref([]);
+const loadingTokens = ref(false);
+const tokenSearchQuery = ref('');
+
+const filteredTokens = computed(() => {
+  if (!tokenSearchQuery.value) return tokens.value;
+  const q = tokenSearchQuery.value.toLowerCase();
+  return tokens.value.filter((t) => t.name && t.name.toLowerCase().includes(q));
+});
 
 const newUsername = ref('');
 const newPassword = ref('');
@@ -256,8 +337,112 @@ async function deleteUser(user) {
   }
 }
 
+async function fetchTokens() {
+  loadingTokens.value = true;
+  error.value = '';
+  try {
+    const res = await fetch('/api/upload/files', { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to retrieve token files');
+    }
+    const data = await res.json();
+    const allFiles = Array.isArray(data.files) ? data.files : [];
+    tokens.value = allFiles.filter(
+      (file) => file.folder === 'tokens' || (file.relativePath && file.relativePath.startsWith('tokens/'))
+    );
+  } catch (err) {
+    error.value = err.message || 'Failed to load tokens';
+  } finally {
+    loadingTokens.value = false;
+  }
+}
+
+async function renameToken(token) {
+  const newName = window.prompt(`Enter new filename for "${token.name}":`, token.name);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === token.name) return;
+
+  error.value = '';
+  successMessage.value = '';
+
+  try {
+    const res = await fetch('/api/upload/rename', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        oldPath: token.relativePath,
+        newName: trimmed,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to rename token');
+    }
+
+    successMessage.value = `Token renamed to "${trimmed}" successfully.`;
+    await fetchTokens();
+  } catch (err) {
+    error.value = err.message || 'Failed to rename token';
+  }
+}
+
+async function deleteToken(token) {
+  if (!window.confirm(`Are you sure you want to delete token "${token.name}"?`)) {
+    return;
+  }
+
+  error.value = '';
+  successMessage.value = '';
+
+  try {
+    const res = await fetch(`/api/upload/file?path=${encodeURIComponent(token.relativePath)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete token');
+    }
+
+    successMessage.value = `Token "${token.name}" deleted successfully.`;
+    tokens.value = tokens.value.filter((t) => t.relativePath !== token.relativePath);
+  } catch (err) {
+    error.value = err.message || 'Failed to delete token';
+  }
+}
+
+function formatFileSize(bytes) {
+  if (!bytes || typeof bytes !== 'number') return '0 KB';
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function formatDate(isoString) {
+  if (!isoString) return '';
+  return new Date(isoString).toLocaleDateString();
+}
+
 onMounted(() => {
   fetchUsers();
+  fetchTokens();
+});
+
+defineExpose({
+  tokens,
+  loadingTokens,
+  tokenSearchQuery,
+  filteredTokens,
+  fetchTokens,
+  renameToken,
+  deleteToken,
+  formatFileSize,
+  formatDate,
+  error,
+  successMessage,
 });
 </script>
 
@@ -513,5 +698,73 @@ onMounted(() => {
   color: #ff8585 !important;
   -webkit-text-fill-color: #ff8585;
   box-shadow: 0 0 10px rgba(248, 81, 73, 0.45);
+}
+
+.search-row {
+  margin-bottom: 16px;
+}
+
+.token-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #000000;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.token-search-input:focus {
+  outline: none;
+  border-color: aqua;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.tokens-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tokens-table th,
+.tokens-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.tokens-table th {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.col-preview {
+  width: 50px;
+}
+
+.token-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  background: #000;
+  display: block;
+}
+
+.token-name-text {
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.token-meta {
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
 }
 </style>
