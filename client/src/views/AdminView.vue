@@ -121,67 +121,195 @@
       </div>
     </section>
 
-    <!-- Token Assets Manager Card -->
+    <!-- Uploads & Assets Manager Card -->
     <section class="admin-card">
       <div class="card-header-row">
-        <h3>Token Assets Manager</h3>
-        <button class="btn-secondary" @click="fetchTokens" :disabled="loadingTokens">
-          {{ loadingTokens ? 'Refreshing...' : '↻ Refresh' }}
-        </button>
+        <h3>Uploads &amp; Assets Manager</h3>
+        <div class="header-actions">
+          <button class="btn-secondary" @click="createFolder">
+            + New Folder
+          </button>
+          <button class="btn-secondary" @click="triggerUploadInput" :disabled="uploading">
+            {{ uploading ? 'Uploading...' : 'Upload File Here' }}
+          </button>
+          <input
+            ref="fileInputRef"
+            type="file"
+            class="hidden-file-input"
+            @change="handleFileUpload"
+          />
+          <button class="btn-secondary" @click="fetchFiles" :disabled="loadingFiles">
+            {{ loadingFiles ? 'Refreshing...' : '↻ Refresh' }}
+          </button>
+        </div>
       </div>
 
+      <!-- Breadcrumbs Bar -->
+      <nav class="breadcrumbs-bar" aria-label="Breadcrumb">
+        <span class="breadcrumb-label">Path:</span>
+        <ol class="breadcrumbs-list">
+          <li v-for="(crumb, idx) in breadcrumbs" :key="crumb.path" class="breadcrumb-item">
+            <span v-if="idx > 0" class="breadcrumb-separator">/</span>
+            <button
+              type="button"
+              class="breadcrumb-btn"
+              :class="{ active: currentFolder === crumb.path }"
+              @click="navigateToFolder(crumb.path)"
+            >
+              {{ crumb.name }}
+            </button>
+          </li>
+        </ol>
+      </nav>
+
+      <!-- Search Row -->
       <div class="search-row">
         <input
-          v-model.trim="tokenSearchQuery"
+          v-model.trim="searchQuery"
           type="text"
-          class="token-search-input"
-          placeholder="Search tokens by filename..."
+          class="search-input token-search-input"
+          placeholder="Search files and folders in current directory..."
         />
       </div>
 
-      <div v-if="loadingTokens && tokens.length === 0" class="loading-state">
-        Loading tokens...
+      <div v-if="loadingFiles && files.length === 0" class="loading-state">
+        Loading files and folders...
       </div>
-      <div v-else-if="filteredTokens.length === 0" class="empty-state">
-        {{ tokenSearchQuery ? 'No tokens matching search.' : 'No token assets found.' }}
+      <div
+        v-else-if="filteredSubfolders.length === 0 && filteredFiles.length === 0 && !currentFolder"
+        class="empty-state"
+      >
+        {{ searchQuery ? 'No files or folders matching search.' : 'This folder is empty.' }}
       </div>
-      <div v-else class="table-wrapper">
-        <table class="tokens-table">
+      <div
+        v-else-if="filteredSubfolders.length === 0 && filteredFiles.length === 0 && currentFolder"
+        class="table-wrapper"
+      >
+        <table class="assets-table tokens-table">
           <thead>
             <tr>
-              <th>Preview</th>
-              <th>Filename</th>
+              <th class="col-preview">Type</th>
+              <th>Name</th>
               <th>Size</th>
-              <th>Modified</th>
+              <th>Modified / Items</th>
               <th class="actions-header">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="token in filteredTokens" :key="token.relativePath">
-              <td class="col-preview">
-                <img :src="token.url" :alt="token.name" class="token-thumb" />
+            <tr class="folder-row folder-up-row" @click="goUpOneLevel">
+              <td class="col-preview"><span class="folder-icon">📁</span></td>
+              <td colspan="3" class="col-name">
+                <span class="folder-name-link">.. (Go up one level)</span>
               </td>
-              <td class="col-filename">
-                <span class="token-name-text">{{ token.name }}</span>
+              <td class="actions-cell">
+                <button class="btn-secondary btn-small" @click.stop="goUpOneLevel">
+                  Up
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="5" class="empty-state-cell">
+                {{ searchQuery ? 'No files or folders matching search.' : 'This folder is empty.' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="table-wrapper">
+        <table class="assets-table tokens-table">
+          <thead>
+            <tr>
+              <th class="col-preview">Type</th>
+              <th>Name</th>
+              <th>Size</th>
+              <th>Modified / Items</th>
+              <th class="actions-header">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Up one level row if inside a subfolder -->
+            <tr v-if="currentFolder" class="folder-row folder-up-row" @click="goUpOneLevel">
+              <td class="col-preview"><span class="folder-icon">📁</span></td>
+              <td colspan="3" class="col-name">
+                <span class="folder-name-link">.. (Go up one level)</span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-secondary btn-small" @click.stop="goUpOneLevel">
+                  Up
+                </button>
+              </td>
+            </tr>
+
+            <!-- Subfolders -->
+            <tr
+              v-for="subfolder in filteredSubfolders"
+              :key="'folder-' + subfolder.path"
+              class="folder-row"
+              @click="navigateToFolder(subfolder.path)"
+            >
+              <td class="col-preview"><span class="folder-icon">📁</span></td>
+              <td class="col-name">
+                <span class="folder-name-link">{{ subfolder.name }}/</span>
               </td>
               <td class="col-size">
-                <span class="token-meta">{{ formatFileSize(token.size) }}</span>
+                <span class="asset-meta">—</span>
+              </td>
+              <td class="col-meta">
+                <span class="asset-meta">
+                  {{ subfolder.count === 1 ? '1 item' : `${subfolder.count} items` }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button
+                  class="btn-danger btn-small"
+                  :disabled="subfolder.count > 0"
+                  :title="subfolder.count > 0 ? 'Folder must be empty to delete' : 'Delete folder'"
+                  @click.stop="deleteFolder(subfolder)"
+                >
+                  Delete Folder
+                </button>
+              </td>
+            </tr>
+
+            <!-- Files -->
+            <tr v-for="file in filteredFiles" :key="'file-' + file.relativePath" class="file-row">
+              <td class="col-preview">
+                <img
+                  v-if="isImageFile(file.name)"
+                  :src="file.url"
+                  :alt="file.name"
+                  class="file-thumb token-thumb"
+                />
+                <span v-else class="file-icon">📄</span>
+              </td>
+              <td class="col-filename">
+                <span class="file-name-text token-name-text">{{ file.name }}</span>
+              </td>
+              <td class="col-size">
+                <span class="asset-meta token-meta">{{ formatFileSize(file.size) }}</span>
               </td>
               <td class="col-date">
-                <span class="token-meta">{{ formatDate(token.mtime) }}</span>
+                <span class="asset-meta token-meta">{{ formatDate(file.mtime) }}</span>
               </td>
               <td class="actions-cell">
                 <button
                   class="btn-secondary btn-small"
-                  title="Rename token file"
-                  @click="renameToken(token)"
+                  title="Rename file"
+                  @click="renameFile(file)"
                 >
                   Rename
                 </button>
                 <button
+                  class="btn-secondary btn-small"
+                  title="Move file"
+                  @click="openMoveModal(file)"
+                >
+                  Move
+                </button>
+                <button
                   class="btn-danger btn-small"
-                  title="Delete token file"
-                  @click="deleteToken(token)"
+                  title="Delete file"
+                  @click="deleteFile(file)"
                 >
                   Delete
                 </button>
@@ -191,6 +319,45 @@
         </table>
       </div>
     </section>
+
+    <!-- Move File Modal -->
+    <div v-if="moveModalOpen" class="modal-overlay" @click.self="closeMoveModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4>Move File</h4>
+          <button class="modal-close" @click="closeMoveModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="move-target-info">
+            Moving: <strong class="move-filename">{{ fileToMove?.name }}</strong>
+          </p>
+          <div class="form-group">
+            <label for="move-destination">Destination Folder</label>
+            <select
+              id="move-destination"
+              v-model="destinationFolder"
+              class="folder-select role-select"
+            >
+              <option
+                v-for="folder in availableDestinationFolders"
+                :key="folder"
+                :value="folder"
+              >
+                {{ folder === '' ? 'Root (uploads/)' : folder }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary btn-small" @click="closeMoveModal" :disabled="moving">
+            Cancel
+          </button>
+          <button class="primary btn-small" @click="confirmMove" :disabled="moving">
+            {{ moving ? 'Moving...' : 'Move File' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -200,26 +367,148 @@ import { useAuthStore } from '../stores/auth.js';
 
 const auth = useAuthStore();
 
+// User management state
 const users = ref([]);
 const loading = ref(false);
 const creating = ref(false);
 const error = ref('');
 const successMessage = ref('');
 
-const tokens = ref([]);
-const loadingTokens = ref(false);
-const tokenSearchQuery = ref('');
-
-const filteredTokens = computed(() => {
-  if (!tokenSearchQuery.value) return tokens.value;
-  const q = tokenSearchQuery.value.toLowerCase();
-  return tokens.value.filter((t) => t.name && t.name.toLowerCase().includes(q));
-});
-
 const newUsername = ref('');
 const newPassword = ref('');
 const newRole = ref('Player');
 
+// Uploads & Assets File Manager state
+const files = ref([]);
+const allFolders = ref([]);
+const currentFolder = ref('');
+const loadingFiles = ref(false);
+const searchQuery = ref('');
+const uploading = ref(false);
+const fileInputRef = ref(null);
+
+// Move modal state
+const moveModalOpen = ref(false);
+const fileToMove = ref(null);
+const destinationFolder = ref('');
+const moving = ref(false);
+
+// Computed breadcrumbs
+const breadcrumbs = computed(() => {
+  const crumbs = [{ name: 'uploads', path: '' }];
+  if (!currentFolder.value) return crumbs;
+  const parts = currentFolder.value.split('/').filter(Boolean);
+  let cumulative = '';
+  for (const part of parts) {
+    cumulative = cumulative ? `${cumulative}/${part}` : part;
+    crumbs.push({ name: part, path: cumulative });
+  }
+  return crumbs;
+});
+
+// Computed direct subfolders in current folder
+const immediateSubfolders = computed(() => {
+  const folderSet = new Set(allFolders.value || []);
+  (files.value || []).forEach((f) => {
+    if (f.folder) folderSet.add(f.folder);
+  });
+
+  const currentPrefix = currentFolder.value ? `${currentFolder.value}/` : '';
+  const prefixLen = currentPrefix.length;
+  const subfolderMap = new Map();
+
+  for (const f of folderSet) {
+    if (!f || f === currentFolder.value) continue;
+    let immediateName = '';
+    let fullSubPath = '';
+
+    if (currentPrefix === '') {
+      const slashIdx = f.indexOf('/');
+      immediateName = slashIdx === -1 ? f : f.substring(0, slashIdx);
+      fullSubPath = immediateName;
+    } else if (f.startsWith(currentPrefix)) {
+      const remainder = f.slice(prefixLen);
+      const slashIdx = remainder.indexOf('/');
+      immediateName = slashIdx === -1 ? remainder : remainder.substring(0, slashIdx);
+      fullSubPath = `${currentPrefix}${immediateName}`;
+    }
+
+    if (immediateName && !subfolderMap.has(fullSubPath)) {
+      const fileCount = (files.value || []).filter(
+        (file) => file.folder === fullSubPath || (file.folder && file.folder.startsWith(`${fullSubPath}/`))
+      ).length;
+      const subDirCount = Array.from(folderSet).filter(
+        (folder) => folder !== fullSubPath && folder.startsWith(`${fullSubPath}/`)
+      ).length;
+      const count = fileCount + subDirCount;
+
+      subfolderMap.set(fullSubPath, {
+        name: immediateName,
+        path: fullSubPath,
+        count,
+      });
+    }
+  }
+
+  return Array.from(subfolderMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// Filtered subfolders by search query
+const filteredSubfolders = computed(() => {
+  if (!searchQuery.value) return immediateSubfolders.value;
+  const q = searchQuery.value.toLowerCase();
+  return immediateSubfolders.value.filter((sub) => sub.name.toLowerCase().includes(q));
+});
+
+// Computed direct files in current folder
+const currentFiles = computed(() => {
+  if (!files.value || !Array.isArray(files.value)) return [];
+  const curr = currentFolder.value || '';
+  return files.value.filter((file) => (file.folder || '') === curr);
+});
+
+// Filtered files by search query
+const filteredFiles = computed(() => {
+  if (!searchQuery.value) return currentFiles.value;
+  const q = searchQuery.value.toLowerCase();
+  return currentFiles.value.filter((f) => f.name && f.name.toLowerCase().includes(q));
+});
+
+// Available destination folders for move modal
+const availableDestinationFolders = computed(() => {
+  const set = new Set(allFolders.value || []);
+  set.add('');
+  (files.value || []).forEach((f) => {
+    if (f.folder) set.add(f.folder);
+  });
+  const arr = Array.from(set);
+  return arr.sort((a, b) => {
+    if (a === '') return -1;
+    if (b === '') return 1;
+    return a.localeCompare(b);
+  });
+});
+
+// Backward compatibility references
+const tokens = computed(() => files.value);
+const loadingTokens = computed(() => loadingFiles.value);
+
+// Navigation functions
+function navigateToFolder(path) {
+  currentFolder.value = path || '';
+}
+
+function goUpOneLevel() {
+  if (!currentFolder.value) return;
+  const idx = currentFolder.value.lastIndexOf('/');
+  if (idx === -1) {
+    currentFolder.value = '';
+  } else {
+    currentFolder.value = currentFolder.value.slice(0, idx);
+  }
+}
+
+// User management API functions
 async function fetchUsers() {
   loading.value = true;
   error.value = '';
@@ -282,7 +571,7 @@ async function createUser() {
 
 async function resetPassword(user) {
   const newPass = window.prompt(`Enter new password for "${user.username}" (minimum 6 characters):`);
-  if (newPass === null) return; // user cancelled
+  if (newPass === null) return;
 
   if (!newPass || newPass.length < 6) {
     error.value = 'Password must be at least 6 characters';
@@ -337,32 +626,137 @@ async function deleteUser(user) {
   }
 }
 
-async function fetchTokens() {
-  loadingTokens.value = true;
+// Uploads & Assets API functions
+async function fetchFiles() {
+  loadingFiles.value = true;
   error.value = '';
   try {
     const res = await fetch('/api/upload/files', { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Failed to retrieve token files');
+      throw new Error(data.error || 'Failed to retrieve uploads');
     }
     const data = await res.json();
-    const allFiles = Array.isArray(data.files) ? data.files : [];
-    tokens.value = allFiles.filter(
-      (file) => file.folder === 'tokens' || (file.relativePath && file.relativePath.startsWith('tokens/'))
-    );
+    files.value = Array.isArray(data.files) ? data.files : [];
+    allFolders.value = Array.isArray(data.folders) ? data.folders : [];
   } catch (err) {
-    error.value = err.message || 'Failed to load tokens';
+    error.value = err.message || 'Failed to load uploads';
   } finally {
-    loadingTokens.value = false;
+    loadingFiles.value = false;
   }
 }
 
-async function renameToken(token) {
-  const newName = window.prompt(`Enter new filename for "${token.name}":`, token.name);
+const fetchTokens = fetchFiles;
+
+function triggerUploadInput() {
+  if (fileInputRef.value) {
+    fileInputRef.value.click();
+  }
+}
+
+async function handleFileUpload(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+
+  uploading.value = true;
+  error.value = '';
+  successMessage.value = '';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (currentFolder.value) {
+      formData.append('folder', currentFolder.value);
+    }
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to upload file');
+    }
+
+    successMessage.value = `File "${file.name}" uploaded successfully.`;
+    await fetchFiles();
+  } catch (err) {
+    error.value = err.message || 'Failed to upload file';
+  } finally {
+    uploading.value = false;
+    if (event.target) {
+      event.target.value = '';
+    }
+  }
+}
+
+async function createFolder() {
+  const folderName = window.prompt('Enter new folder name:');
+  if (folderName === null) return;
+  const trimmed = folderName.trim();
+  if (!trimmed) return;
+
+  const targetPath = currentFolder.value ? `${currentFolder.value}/${trimmed}` : trimmed;
+
+  error.value = '';
+  successMessage.value = '';
+  try {
+    const res = await fetch('/api/upload/folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ folder: targetPath }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to create folder');
+    }
+
+    successMessage.value = `Folder "${trimmed}" created successfully.`;
+    await fetchFiles();
+  } catch (err) {
+    error.value = err.message || 'Failed to create folder';
+  }
+}
+
+async function deleteFolder(folder) {
+  if (folder.count > 0) {
+    error.value = 'Cannot delete non-empty folder';
+    return;
+  }
+
+  if (!window.confirm(`Are you sure you want to delete folder "${folder.name}"?`)) {
+    return;
+  }
+
+  error.value = '';
+  successMessage.value = '';
+  try {
+    const res = await fetch(`/api/upload/folder?folder=${encodeURIComponent(folder.path)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete folder');
+    }
+
+    successMessage.value = `Folder "${folder.name}" deleted successfully.`;
+    await fetchFiles();
+  } catch (err) {
+    error.value = err.message || 'Failed to delete folder';
+  }
+}
+
+async function renameFile(file) {
+  const newName = window.prompt(`Enter new filename for "${file.name}":`, file.name);
   if (newName === null) return;
   const trimmed = newName.trim();
-  if (!trimmed || trimmed === token.name) return;
+  if (!trimmed || trimmed === file.name) return;
 
   error.value = '';
   successMessage.value = '';
@@ -373,25 +767,27 @@ async function renameToken(token) {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        oldPath: token.relativePath,
+        oldPath: file.relativePath,
         newName: trimmed,
       }),
     });
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to rename token');
+      throw new Error(data.error || 'Failed to rename file');
     }
 
-    successMessage.value = `Token renamed to "${trimmed}" successfully.`;
-    await fetchTokens();
+    successMessage.value = `File renamed to "${trimmed}" successfully.`;
+    await fetchFiles();
   } catch (err) {
-    error.value = err.message || 'Failed to rename token';
+    error.value = err.message || 'Failed to rename file';
   }
 }
 
-async function deleteToken(token) {
-  if (!window.confirm(`Are you sure you want to delete token "${token.name}"?`)) {
+const renameToken = renameFile;
+
+async function deleteFile(file) {
+  if (!window.confirm(`Are you sure you want to delete "${file.name}"?`)) {
     return;
   }
 
@@ -399,20 +795,66 @@ async function deleteToken(token) {
   successMessage.value = '';
 
   try {
-    const res = await fetch(`/api/upload/file?path=${encodeURIComponent(token.relativePath)}`, {
+    const res = await fetch(`/api/upload/file?path=${encodeURIComponent(file.relativePath)}`, {
       method: 'DELETE',
       credentials: 'include',
     });
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to delete token');
+      throw new Error(data.error || 'Failed to delete file');
     }
 
-    successMessage.value = `Token "${token.name}" deleted successfully.`;
-    tokens.value = tokens.value.filter((t) => t.relativePath !== token.relativePath);
+    successMessage.value = `File "${file.name}" deleted successfully.`;
+    files.value = files.value.filter((f) => f.relativePath !== file.relativePath);
   } catch (err) {
-    error.value = err.message || 'Failed to delete token';
+    error.value = err.message || 'Failed to delete file';
+  }
+}
+
+const deleteToken = deleteFile;
+
+function openMoveModal(file) {
+  fileToMove.value = file;
+  destinationFolder.value = file.folder || '';
+  moveModalOpen.value = true;
+}
+
+function closeMoveModal() {
+  moveModalOpen.value = false;
+  fileToMove.value = null;
+  destinationFolder.value = '';
+}
+
+async function confirmMove() {
+  if (!fileToMove.value) return;
+  moving.value = true;
+  error.value = '';
+  successMessage.value = '';
+
+  try {
+    const res = await fetch('/api/upload/move', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        sourcePath: fileToMove.value.relativePath,
+        destinationFolder: destinationFolder.value,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to move file');
+    }
+
+    successMessage.value = `File "${fileToMove.value.name}" moved successfully.`;
+    closeMoveModal();
+    await fetchFiles();
+  } catch (err) {
+    error.value = err.message || 'Failed to move file';
+  } finally {
+    moving.value = false;
   }
 }
 
@@ -426,21 +868,69 @@ function formatDate(isoString) {
   return new Date(isoString).toLocaleDateString();
 }
 
+function isImageFile(filename) {
+  if (!filename) return false;
+  return /\.(png|jpe?g|webp|gif|svg)$/i.test(filename);
+}
+
 onMounted(() => {
   fetchUsers();
-  fetchTokens();
+  fetchFiles();
 });
 
 defineExpose({
+  // Uploads File Manager state & methods
+  files,
+  allFolders,
+  currentFolder,
+  loadingFiles,
+  searchQuery,
+  breadcrumbs,
+  immediateSubfolders,
+  filteredSubfolders,
+  currentFiles,
+  filteredFiles,
+  availableDestinationFolders,
+  navigateToFolder,
+  goUpOneLevel,
+  createFolder,
+  deleteFolder,
+  renameFile,
+  deleteFile,
+  openMoveModal,
+  closeMoveModal,
+  confirmMove,
+  moveModalOpen,
+  fileToMove,
+  destinationFolder,
+  moving,
+  handleFileUpload,
+  triggerUploadInput,
+  fetchFiles,
+  formatFileSize,
+  formatDate,
+  isImageFile,
+
+  // Backward compatibility
   tokens,
   loadingTokens,
-  tokenSearchQuery,
-  filteredTokens,
+  tokenSearchQuery: searchQuery,
+  filteredTokens: filteredFiles,
   fetchTokens,
   renameToken,
   deleteToken,
-  formatFileSize,
-  formatDate,
+
+  // User Management
+  users,
+  loading,
+  creating,
+  newUsername,
+  newPassword,
+  newRole,
+  fetchUsers,
+  createUser,
+  resetPassword,
+  deleteUser,
   error,
   successMessage,
 });
@@ -515,10 +1005,88 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .card-header-row h3 {
   margin-bottom: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.breadcrumbs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.breadcrumb-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.breadcrumbs-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumb-separator {
+  color: var(--text-secondary);
+  font-size: 13px;
+  user-select: none;
+}
+
+.breadcrumb-btn {
+  background: transparent;
+  border: none;
+  color: aqua;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  transition: background 0.15s ease-in-out;
+}
+
+.breadcrumb-btn:hover:not(.active) {
+  text-decoration: underline;
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.breadcrumb-btn.active {
+  font-weight: 700;
+  color: #ffffff;
+  cursor: default;
+  text-decoration: none;
 }
 
 .create-user-form {
@@ -589,20 +1157,29 @@ defineExpose({
   overflow-x: auto;
 }
 
-.users-table {
+.users-table,
+.assets-table,
+.tokens-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
 .users-table th,
-.users-table td {
-  padding: 12px;
+.users-table td,
+.assets-table th,
+.assets-table td,
+.tokens-table th,
+.tokens-table td {
+  padding: 10px 12px;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  vertical-align: middle;
 }
 
-.users-table th {
+.users-table th,
+.assets-table th,
+.tokens-table th {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -704,6 +1281,7 @@ defineExpose({
   margin-bottom: 16px;
 }
 
+.search-input,
 .token-search-input {
   width: 100%;
   padding: 8px 12px;
@@ -715,38 +1293,19 @@ defineExpose({
   box-sizing: border-box;
 }
 
+.search-input:focus,
 .token-search-input:focus {
   outline: none;
   border-color: aqua;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
-.tokens-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.tokens-table th,
-.tokens-table td {
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.tokens-table th {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .col-preview {
   width: 50px;
+  text-align: center;
 }
 
+.file-thumb,
 .token-thumb {
   width: 38px;
   height: 38px;
@@ -755,16 +1314,137 @@ defineExpose({
   border: 1px solid rgba(0, 255, 255, 0.4);
   background: #000;
   display: block;
+  margin: 0 auto;
 }
 
+.file-icon {
+  font-size: 22px;
+  display: block;
+  text-align: center;
+}
+
+.folder-icon {
+  font-size: 20px;
+  display: block;
+  text-align: center;
+}
+
+.folder-row {
+  cursor: pointer;
+}
+
+.folder-row:hover {
+  background-color: rgba(0, 255, 255, 0.04);
+}
+
+.folder-name-link {
+  color: aqua;
+  font-weight: 600;
+}
+
+.folder-up-row .folder-name-link {
+  color: var(--text-secondary);
+}
+
+.folder-row:hover .folder-name-link {
+  text-decoration: underline;
+}
+
+.file-name-text,
 .token-name-text {
   font-weight: 500;
   word-break: break-all;
 }
 
+.asset-meta,
 .token-meta {
   color: var(--text-secondary);
   font-size: 13px;
   white-space: nowrap;
+}
+
+.empty-state-cell {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid aqua;
+  border-radius: 8px;
+  width: 440px;
+  max-width: 90vw;
+  padding: 20px;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.modal-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: aqua;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.modal-close:hover {
+  color: #fff;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.move-target-info {
+  font-size: 14px;
+  margin: 0;
+}
+
+.move-filename {
+  color: aqua;
+  word-break: break-all;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 </style>

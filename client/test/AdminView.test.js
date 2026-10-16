@@ -15,8 +15,46 @@ vi.mock('vue', async (importOriginal) => {
   };
 });
 
-describe('AdminView.vue - Token Assets Management', () => {
+describe('AdminView.vue - Uploads & Assets File Manager', () => {
   let mockFetch;
+
+  const mockUploadsData = {
+    files: [
+      {
+        name: 'dralasite.png',
+        relativePath: 'tokens/dralasite.png',
+        folder: 'tokens',
+        url: '/uploads/tokens/dralasite.png',
+        size: 20480,
+        mtime: '2026-10-16T12:00:00.000Z'
+      },
+      {
+        name: 'vrusk.png',
+        relativePath: 'tokens/vrusk.png',
+        folder: 'tokens',
+        url: '/uploads/tokens/vrusk.png',
+        size: 40960,
+        mtime: '2026-10-16T14:30:00.000Z'
+      },
+      {
+        name: 'map1.jpg',
+        relativePath: 'maps/map1.jpg',
+        folder: 'maps',
+        url: '/uploads/maps/map1.jpg',
+        size: 1048576,
+        mtime: '2026-10-15T09:00:00.000Z'
+      },
+      {
+        name: 'other.png',
+        relativePath: 'other.png',
+        folder: '',
+        url: '/uploads/other.png',
+        size: 1024,
+        mtime: '2026-10-15T10:00:00.000Z'
+      }
+    ],
+    folders: ['', 'tokens', 'maps', 'empty-folder']
+  };
 
   beforeEach(() => {
     const pinia = createPinia();
@@ -36,42 +74,28 @@ describe('AdminView.vue - Token Assets Management', () => {
       if (url === '/api/upload/files') {
         return Promise.resolve({
           ok: true,
+          json: () => Promise.resolve(JSON.parse(JSON.stringify(mockUploadsData))),
+        });
+      }
+      if (url === '/api/upload/folder') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, folder: 'new-folder' }),
+        });
+      }
+      if (typeof url === 'string' && url.startsWith('/api/upload/folder?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      if (url === '/api/upload/move') {
+        return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve({
-            files: [
-              {
-                name: 'dralasite.png',
-                relativePath: 'tokens/dralasite.png',
-                folder: 'tokens',
-                url: '/uploads/tokens/dralasite.png',
-                size: 20480,
-                mtime: '2026-10-16T12:00:00.000Z'
-              },
-              {
-                name: 'vrusk.png',
-                relativePath: 'tokens/vrusk.png',
-                folder: 'tokens',
-                url: '/uploads/tokens/vrusk.png',
-                size: 40960,
-                mtime: '2026-10-16T14:30:00.000Z'
-              },
-              {
-                name: 'map1.jpg',
-                relativePath: 'maps/map1.jpg',
-                folder: 'maps',
-                url: '/uploads/maps/map1.jpg',
-                size: 1048576,
-                mtime: '2026-10-15T09:00:00.000Z'
-              },
-              {
-                name: 'other.png',
-                relativePath: 'other.png',
-                folder: '',
-                url: '/uploads/other.png',
-                size: 1024,
-                mtime: '2026-10-15T10:00:00.000Z'
-              }
-            ],
-            folders: ['', 'tokens', 'maps']
+            success: true,
+            oldUrl: '/uploads/other.png',
+            newUrl: '/uploads/tokens/other.png'
           }),
         });
       }
@@ -119,78 +143,235 @@ describe('AdminView.vue - Token Assets Management', () => {
     return exposed;
   }
 
-  describe('UI Template & Structure', () => {
-    it('renders Token Assets Manager card in template with empty state', async () => {
+  describe('UI Template & File Manager Structure', () => {
+    it('1. renders File Manager card with breadcrumbs starting at uploads', async () => {
       const pinia = createPinia();
       setActivePinia(pinia);
       const app = createSSRApp(AdminView);
       app.use(pinia);
       const html = await renderToString(app);
 
-      expect(html).toContain('Token Assets Manager');
-      expect(html).toContain('token-search-input');
+      expect(html).toContain('Uploads &amp; Assets Manager');
+      expect(html).toContain('uploads');
+      expect(html).toContain('+ New Folder');
+      expect(html).toContain('Upload File Here');
+      expect(html).toContain('search-input');
       expect(html).toContain('Refresh');
-      expect(html).toContain('No token assets found.');
     });
 
-    it('renders tokens table with preview, filename, metadata and action buttons', () => {
+    it('2. lists direct child folders and files for current directory', async () => {
       const instance = getSetupInstance();
-      const mockTokens = [
+      await instance.fetchFiles();
+
+      // At root directory (currentFolder === '')
+      expect(instance.currentFolder.value).toBe('');
+
+      // Direct child folders should be 'tokens', 'maps', 'empty-folder'
+      const folderNames = instance.filteredSubfolders.value.map(f => f.name);
+      expect(folderNames).toContain('tokens');
+      expect(folderNames).toContain('maps');
+      expect(folderNames).toContain('empty-folder');
+
+      // Item counts
+      const tokensFolder = instance.filteredSubfolders.value.find(f => f.name === 'tokens');
+      expect(tokensFolder.count).toBe(2); // dralasite.png and vrusk.png
+
+      const emptyFolder = instance.filteredSubfolders.value.find(f => f.name === 'empty-folder');
+      expect(emptyFolder.count).toBe(0);
+
+      // Direct files in root: only other.png
+      const fileNames = instance.filteredFiles.value.map(f => f.name);
+      expect(fileNames).toEqual(['other.png']);
+    });
+
+    it('3. navigating into a subfolder updates breadcrumbs and shows .. (Go up one level)', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchFiles();
+
+      // Navigate into 'tokens'
+      instance.navigateToFolder('tokens');
+      expect(instance.currentFolder.value).toBe('tokens');
+
+      // Breadcrumbs should now be 'uploads' and 'tokens'
+      expect(instance.breadcrumbs.value).toEqual([
+        { name: 'uploads', path: '' },
+        { name: 'tokens', path: 'tokens' }
+      ]);
+
+      // Direct files in 'tokens'
+      const tokenFileNames = instance.filteredFiles.value.map(f => f.name);
+      expect(tokenFileNames).toEqual(['dralasite.png', 'vrusk.png']);
+
+      // Subfolders in 'tokens' should be empty
+      expect(instance.filteredSubfolders.value).toEqual([]);
+
+      // Go up one level
+      instance.goUpOneLevel();
+      expect(instance.currentFolder.value).toBe('');
+      expect(instance.breadcrumbs.value).toEqual([
+        { name: 'uploads', path: '' }
+      ]);
+    });
+
+    it('4. clicking breadcrumb segment navigates directly to that folder', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchFiles();
+
+      // Simulate being deep in a folder: 'tokens/aliens/dralasite'
+      instance.currentFolder.value = 'tokens/aliens/dralasite';
+      expect(instance.breadcrumbs.value).toEqual([
+        { name: 'uploads', path: '' },
+        { name: 'tokens', path: 'tokens' },
+        { name: 'aliens', path: 'tokens/aliens' },
+        { name: 'dralasite', path: 'tokens/aliens/dralasite' }
+      ]);
+
+      // Click 'tokens' breadcrumb
+      instance.navigateToFolder('tokens');
+      expect(instance.currentFolder.value).toBe('tokens');
+
+      // Click 'uploads' root breadcrumb
+      instance.navigateToFolder('');
+      expect(instance.currentFolder.value).toBe('');
+    });
+
+    it('5. create new folder flow prompts and calls POST /api/upload/folder', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchFiles();
+      mockFetch.mockClear();
+
+      // At root, user creates 'scenarios'
+      window.prompt.mockReturnValue('scenarios');
+      await instance.createFolder();
+
+      expect(window.prompt).toHaveBeenCalledWith(expect.stringContaining('folder name'));
+      expect(mockFetch).toHaveBeenCalledWith('/api/upload/folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ folder: 'scenarios' })
+      });
+      expect(instance.successMessage.value).toMatch(/created successfully/i);
+
+      // In a subfolder 'tokens', user creates 'npcs'
+      instance.currentFolder.value = 'tokens';
+      window.prompt.mockReturnValue('npcs');
+      await instance.createFolder();
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/upload/folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ folder: 'tokens/npcs' })
+      });
+
+      // Canceling prompt does not call API
+      mockFetch.mockClear();
+      window.prompt.mockReturnValue(null);
+      await instance.createFolder();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('6. delete empty folder flow confirms and calls DELETE /api/upload/folder', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchFiles();
+      mockFetch.mockClear();
+
+      const emptyFolder = instance.filteredSubfolders.value.find(f => f.name === 'empty-folder');
+      window.confirm.mockReturnValue(true);
+
+      await instance.deleteFolder(emptyFolder);
+
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('empty-folder'));
+      expect(mockFetch).toHaveBeenCalledWith(
+        `/api/upload/folder?folder=${encodeURIComponent('empty-folder')}`,
         {
-          name: 'dralasite.png',
-          relativePath: 'tokens/dralasite.png',
-          folder: 'tokens',
-          url: '/uploads/tokens/dralasite.png',
-          size: 20480,
-          mtime: '2026-10-16T12:00:00.000Z'
-        },
-        {
-          name: 'vrusk.png',
-          relativePath: 'tokens/vrusk.png',
-          folder: 'tokens',
-          url: '/uploads/tokens/vrusk.png',
-          size: 40960,
-          mtime: '2026-10-16T14:30:00.000Z'
+          method: 'DELETE',
+          credentials: 'include'
         }
-      ];
-      instance.tokens.value = mockTokens;
+      );
+      expect(instance.successMessage.value).toMatch(/deleted successfully/i);
 
-      const proxy = {
-        error: '',
-        successMessage: '',
-        users: [],
-        loading: false,
-        creating: false,
-        newUsername: '',
-        newPassword: '',
-        newRole: 'Player',
-        tokens: mockTokens,
-        filteredTokens: mockTokens,
-        loadingTokens: false,
-        tokenSearchQuery: '',
-        formatFileSize: instance.formatFileSize,
-        formatDate: instance.formatDate,
-        fetchTokens: instance.fetchTokens,
-        renameToken: instance.renameToken,
-        deleteToken: instance.deleteToken,
-      };
+      // Attempting to delete a non-empty folder is rejected
+      const nonEmptyFolder = instance.filteredSubfolders.value.find(f => f.name === 'tokens');
+      mockFetch.mockClear();
+      await instance.deleteFolder(nonEmptyFolder);
+      expect(instance.error.value).toMatch(/empty/i);
+      expect(mockFetch).not.toHaveBeenCalled();
 
-      const chunks = [];
-      const _push = (chunk) => chunks.push(chunk);
-      AdminView.ssrRender(proxy, _push, null, {}, {}, proxy);
-      const html = chunks.join('');
+      // Canceling confirmation does not call API
+      window.confirm.mockReturnValue(false);
+      await instance.deleteFolder(emptyFolder);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
 
-      expect(html).toContain('Preview');
-      expect(html).toContain('Filename');
-      expect(html).toContain('Size');
-      expect(html).toContain('Modified');
-      expect(html).toContain('Actions');
-      expect(html).toContain('dralasite.png');
-      expect(html).toContain('vrusk.png');
-      expect(html).toContain('token-thumb');
-      expect(html).toContain('20.0 KB');
-      expect(html).toContain('Rename');
-      expect(html).toContain('Delete');
+    it('7. move file modal opening, folder select dropdown, and move submission', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchFiles();
+
+      const fileToMove = instance.filteredFiles.value[0]; // other.png at root
+      expect(fileToMove.name).toBe('other.png');
+
+      // Open move modal
+      expect(instance.moveModalOpen.value).toBe(false);
+      instance.openMoveModal(fileToMove);
+
+      expect(instance.moveModalOpen.value).toBe(true);
+      expect(instance.fileToMove.value).toEqual(fileToMove);
+      expect(instance.destinationFolder.value).toBe('');
+
+      // Check available destination folders list includes root, tokens, maps, empty-folder
+      expect(instance.availableDestinationFolders.value).toContain('');
+      expect(instance.availableDestinationFolders.value).toContain('tokens');
+      expect(instance.availableDestinationFolders.value).toContain('maps');
+
+      // Select 'tokens' as destination and confirm move
+      instance.destinationFolder.value = 'tokens';
+      await instance.confirmMove();
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/upload/move', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          sourcePath: 'other.png',
+          destinationFolder: 'tokens'
+        })
+      });
+      expect(instance.moveModalOpen.value).toBe(false);
+      expect(instance.successMessage.value).toMatch(/moved successfully/i);
+
+      // Close modal cancels move
+      instance.openMoveModal(fileToMove);
+      expect(instance.moveModalOpen.value).toBe(true);
+      instance.closeMoveModal();
+      expect(instance.moveModalOpen.value).toBe(false);
+      expect(instance.fileToMove.value).toBeNull();
+    });
+
+    it('8. search filtering within current folder', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchFiles();
+
+      // At root: searching for 'other' keeps other.png
+      instance.searchQuery.value = 'oth';
+      expect(instance.filteredFiles.value.map(f => f.name)).toEqual(['other.png']);
+      expect(instance.filteredSubfolders.value).toEqual([]); // no folder matches 'oth'
+
+      instance.searchQuery.value = 'map';
+      expect(instance.filteredFiles.value).toEqual([]);
+      expect(instance.filteredSubfolders.value.map(f => f.name)).toEqual(['maps']);
+
+      // Navigate to 'tokens'
+      instance.currentFolder.value = 'tokens';
+      instance.searchQuery.value = 'dral';
+      expect(instance.filteredFiles.value.map(f => f.name)).toEqual(['dralasite.png']);
+
+      instance.searchQuery.value = 'vrusk';
+      expect(instance.filteredFiles.value.map(f => f.name)).toEqual(['vrusk.png']);
+
+      instance.searchQuery.value = 'nomatch';
+      expect(instance.filteredFiles.value).toEqual([]);
     });
   });
 
@@ -214,59 +395,16 @@ describe('AdminView.vue - Token Assets Management', () => {
     });
   });
 
-  describe('fetchTokens and token filtering', () => {
-    it('fetches files from /api/upload/files and filters to only tokens folder', async () => {
+  describe('renameFile and deleteFile', () => {
+    it('renames file with PUT /api/upload/rename', async () => {
       const instance = getSetupInstance();
-      expect(instance.fetchTokens).toBeDefined();
+      await instance.fetchFiles();
 
-      await instance.fetchTokens();
-      expect(mockFetch).toHaveBeenCalledWith('/api/upload/files', { credentials: 'include' });
-      expect(instance.tokens.value).toHaveLength(2);
-      expect(instance.tokens.value.map(t => t.name)).toEqual(['dralasite.png', 'vrusk.png']);
-    });
-
-    it('handles fetchTokens API error gracefully', async () => {
-      const instance = getSetupInstance();
-      mockFetch.mockImplementationOnce((url) => {
-        if (url === '/api/upload/files') {
-          return Promise.resolve({
-            ok: false,
-            json: () => Promise.resolve({ error: 'Server error loading uploads' })
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      });
-
-      await instance.fetchTokens();
-      expect(instance.error.value).toBe('Server error loading uploads');
-      expect(instance.tokens.value).toEqual([]);
-    });
-
-    it('filters tokens by filename search query', async () => {
-      const instance = getSetupInstance();
-      await instance.fetchTokens();
-
-      instance.tokenSearchQuery.value = 'vrusk';
-      expect(instance.filteredTokens.value).toHaveLength(1);
-      expect(instance.filteredTokens.value[0].name).toBe('vrusk.png');
-
-      instance.tokenSearchQuery.value = 'nonexistent';
-      expect(instance.filteredTokens.value).toHaveLength(0);
-
-      instance.tokenSearchQuery.value = '';
-      expect(instance.filteredTokens.value).toHaveLength(2);
-    });
-  });
-
-  describe('renameToken', () => {
-    it('prompts for new name and calls PUT /api/upload/rename with trimmed new name', async () => {
-      const instance = getSetupInstance();
-      await instance.fetchTokens();
-
-      const tokenToRename = instance.tokens.value[0]; // dralasite.png
+      instance.currentFolder.value = 'tokens';
+      const fileToRename = instance.filteredFiles.value[0]; // dralasite.png
       window.prompt.mockReturnValue('dralasite-warrior.png');
 
-      await instance.renameToken(tokenToRename);
+      await instance.renameFile(fileToRename);
 
       expect(window.prompt).toHaveBeenCalledWith(
         expect.stringContaining('Enter new filename'),
@@ -284,51 +422,15 @@ describe('AdminView.vue - Token Assets Management', () => {
       expect(instance.successMessage.value).toMatch(/renamed/i);
     });
 
-    it('cancels rename if prompt returns null or empty', async () => {
+    it('deletes file with DELETE /api/upload/file?path=...', async () => {
       const instance = getSetupInstance();
-      await instance.fetchTokens();
-      mockFetch.mockClear();
+      await instance.fetchFiles();
 
-      const token = instance.tokens.value[0];
-      window.prompt.mockReturnValue(null);
-      await instance.renameToken(token);
-      expect(mockFetch).not.toHaveBeenCalled();
-
-      window.prompt.mockReturnValue('   ');
-      await instance.renameToken(token);
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    it('handles rename API error gracefully', async () => {
-      const instance = getSetupInstance();
-      await instance.fetchTokens();
-
-      mockFetch.mockImplementationOnce((url) => {
-        if (url === '/api/upload/rename') {
-          return Promise.resolve({
-            ok: false,
-            json: () => Promise.resolve({ error: 'Target file already exists' })
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      });
-
-      window.prompt.mockReturnValue('existing.png');
-      await instance.renameToken(instance.tokens.value[0]);
-
-      expect(instance.error.value).toBe('Target file already exists');
-    });
-  });
-
-  describe('deleteToken', () => {
-    it('prompts confirmation and calls DELETE /api/upload/file?path=...', async () => {
-      const instance = getSetupInstance();
-      await instance.fetchTokens();
-
-      const tokenToDelete = instance.tokens.value[1]; // vrusk.png
+      instance.currentFolder.value = 'tokens';
+      const fileToDelete = instance.filteredFiles.value[1]; // vrusk.png
       window.confirm.mockReturnValue(true);
 
-      await instance.deleteToken(tokenToDelete);
+      await instance.deleteFile(fileToDelete);
 
       expect(window.confirm).toHaveBeenCalledWith(
         expect.stringContaining('vrusk.png')
@@ -341,40 +443,120 @@ describe('AdminView.vue - Token Assets Management', () => {
         }
       );
       expect(instance.successMessage.value).toMatch(/deleted/i);
-      expect(instance.tokens.value.map(t => t.name)).not.toContain('vrusk.png');
     });
+  });
 
-    it('does not call DELETE if user cancels confirmation', async () => {
+  describe('file upload into current folder', () => {
+    it('uploads a file into the current folder using FormData', async () => {
       const instance = getSetupInstance();
-      await instance.fetchTokens();
+      await instance.fetchFiles();
+
+      instance.currentFolder.value = 'maps';
+      const fakeFile = new File(['fake image content'], 'newmap.png', { type: 'image/png' });
+      const event = {
+        target: {
+          files: [fakeFile],
+          value: 'C:\\fakepath\\newmap.png'
+        }
+      };
+
       mockFetch.mockClear();
+      await instance.handleFileUpload(event);
 
-      const token = instance.tokens.value[0];
-      window.confirm.mockReturnValue(false);
+      expect(mockFetch).toHaveBeenCalledWith('/api/upload', expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }));
 
-      await instance.deleteToken(token);
-
-      expect(mockFetch).not.toHaveBeenCalled();
+      const callArgs = mockFetch.mock.calls.find(call => call[0] === '/api/upload');
+      expect(callArgs).toBeDefined();
+      const body = callArgs[1].body;
+      expect(body).toBeInstanceOf(FormData);
+      expect(body.get('file')).toBe(fakeFile);
+      expect(body.get('folder')).toBe('maps');
+      expect(instance.successMessage.value).toMatch(/uploaded successfully/i);
+      expect(event.target.value).toBe('');
     });
 
-    it('handles delete API error gracefully', async () => {
+    it('handles file upload error gracefully', async () => {
       const instance = getSetupInstance();
-      await instance.fetchTokens();
-
       mockFetch.mockImplementationOnce((url) => {
-        if (typeof url === 'string' && url.startsWith('/api/upload/file')) {
+        if (url === '/api/upload') {
           return Promise.resolve({
             ok: false,
-            json: () => Promise.resolve({ error: 'File not found' })
+            json: () => Promise.resolve({ error: 'File too large' })
           });
         }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       });
 
-      window.confirm.mockReturnValue(true);
-      await instance.deleteToken(instance.tokens.value[0]);
+      const fakeFile = new File(['oversized content'], 'huge.png', { type: 'image/png' });
+      await instance.handleFileUpload({ target: { files: [fakeFile], value: 'huge.png' } });
 
-      expect(instance.error.value).toBe('File not found');
+      expect(instance.error.value).toBe('File too large');
+    });
+  });
+
+  describe('User Management', () => {
+    it('fetches existing users', async () => {
+      const instance = getSetupInstance();
+      await instance.fetchUsers();
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/auth/users', { credentials: 'include' });
+      expect(instance.users.value).toHaveLength(1);
+      expect(instance.users.value[0].username).toBe('admin');
+    });
+
+    it('creates a new user', async () => {
+      const instance = getSetupInstance();
+      instance.newUsername.value = 'newplayer';
+      instance.newPassword.value = 'password123';
+      instance.newRole.value = 'Player';
+
+      mockFetch.mockImplementationOnce((url) => {
+        if (url === '/api/auth/register') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ username: 'newplayer', role: 'Player' })
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      await instance.createUser();
+      expect(instance.successMessage.value).toMatch(/created successfully/i);
+      expect(instance.newUsername.value).toBe('');
+      expect(instance.newPassword.value).toBe('');
+    });
+
+    it('resets user password', async () => {
+      const instance = getSetupInstance();
+      const user = { id: 2, username: 'player2' };
+      window.prompt.mockReturnValue('newsecret123');
+
+      await instance.resetPassword(user);
+      expect(mockFetch).toHaveBeenCalledWith('/api/auth/users/2/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password: 'newsecret123' })
+      });
+      expect(instance.successMessage.value).toMatch(/updated successfully/i);
+    });
+
+    it('deletes user after confirmation', async () => {
+      const instance = getSetupInstance();
+      instance.users.value = [{ id: 2, username: 'player2' }];
+      window.confirm.mockReturnValue(true);
+
+      await instance.deleteUser({ id: 2, username: 'player2' });
+      expect(mockFetch).toHaveBeenCalledWith('/api/auth/users/2', {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      expect(instance.successMessage.value).toMatch(/deleted successfully/i);
+      expect(instance.users.value).toEqual([]);
     });
   });
 });
+
