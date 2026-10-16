@@ -415,6 +415,20 @@
             </ul>
           </section>
         </div>
+
+        <!-- Notes Section -->
+        <section class="card notes-section">
+          <div class="section-header">
+            <h4>Notes</h4>
+          </div>
+          <textarea
+            v-model="selectedChar.notes"
+            @change="updateCharacter"
+            class="notes-textarea"
+            rows="4"
+            placeholder="Add notes..."
+          ></textarea>
+        </section>
       </div>
     </main>
 
@@ -792,6 +806,7 @@ export default {
       if (!c.skills) c.skills = [];
       if (!c.inventory) c.inventory = [];
       c.avatar_url = c.avatar_url || '';
+      c.notes = c.notes || '';
       return c;
     },
     async fetchCharacters() {
@@ -2255,5 +2270,29 @@ export default {
   color: #00a8a8 !important;
   -webkit-text-fill-color: #00a8a8;
   box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.notes-section {
+  margin-top: 1.5rem;
+}
+
+.notes-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #121212;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 90px;
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: #4fc3f7;
 }
 </style>

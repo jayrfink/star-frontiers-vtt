@@ -211,4 +211,52 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(CharacterSheetsView.computed.imageBrowserTitle.call(vmCreate)).toBe('Select Character Avatar');
     });
   });
+
+  describe('Character Notes Section', () => {
+    it('normalizes missing notes to empty string and preserves existing notes', () => {
+      const normalize = CharacterSheetsView.methods.normalizeCharacterData;
+      const charWithoutNotes = normalize({ name: 'Ace' });
+      expect(charWithoutNotes.notes).toBe('');
+
+      const charWithNotes = normalize({ name: 'Ace', notes: 'Carries backup power clip' });
+      expect(charWithNotes.notes).toBe('Carries backup power clip');
+    });
+
+    it('sends notes in updateCharacter PUT payload', async () => {
+      let sentBody = null;
+      const origFetch = global.fetch;
+      global.fetch = async (url, opts) => {
+        sentBody = JSON.parse(opts.body);
+        return { ok: true, json: async () => sentBody };
+      };
+
+      try {
+        const vm = {
+          selectedChar: {
+            id: 42,
+            name: 'Ace',
+            str: 50,
+            sta: 50,
+            dex: 50,
+            rs: 50,
+            int: 50,
+            log: 50,
+            per: 50,
+            ldr: 50,
+            current_stamina: 50,
+            notes: 'Met contact on Volturnus',
+          },
+          characters: [{ id: 42, name: 'Ace', notes: '' }],
+          normalizeCharacterData: CharacterSheetsView.methods.normalizeCharacterData,
+        };
+
+        await CharacterSheetsView.methods.updateCharacter.call(vm);
+        expect(sentBody).not.toBeNull();
+        expect(sentBody.notes).toBe('Met contact on Volturnus');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
 });
+
