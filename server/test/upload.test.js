@@ -249,7 +249,7 @@ describe('Upload API', () => {
     `).run('adv-1', 'Sathar Guard', 'npc', 2, '/uploads/tokens/guard.png', 50);
 
     // Insert map and token referencing oldUrl
-    const mapRes = db.prepare('INSERT INTO maps (user_id, name) VALUES (?, ?)').run(userId, 'Battle Map');
+    const mapRes = db.prepare('INSERT INTO maps (user_id, name, background_url) VALUES (?, ?, ?)').run(userId, 'Battle Map', '/uploads/tokens/guard.png');
     db.prepare(`
       INSERT INTO tokens (map_id, name, avatar_url)
       VALUES (?, ?, ?)
@@ -279,8 +279,15 @@ describe('Upload API', () => {
     const token = db.prepare('SELECT avatar_url FROM tokens WHERE map_id = ?').get(mapRes.lastInsertRowid);
     expect(token.avatar_url).toBe('/uploads/tokens/sentry.png');
 
+    const updatedMap = db.prepare('SELECT background_url FROM maps WHERE id = ?').get(mapRes.lastInsertRowid);
+    expect(updatedMap.background_url).toBe('/uploads/tokens/sentry.png');
+
     // Socket.io emit verification
     expect(emitSpy).toHaveBeenCalledWith('token:asset-renamed', {
+      oldUrl: '/uploads/tokens/guard.png',
+      newUrl: '/uploads/tokens/sentry.png',
+    });
+    expect(emitSpy).toHaveBeenCalledWith('map:asset-renamed', {
       oldUrl: '/uploads/tokens/guard.png',
       newUrl: '/uploads/tokens/sentry.png',
     });
@@ -334,7 +341,7 @@ describe('Upload API', () => {
     `).run('adv-2', 'Security Drone', 'creature', 1, '/uploads/tokens/drone.png', 20);
 
     // Insert map and token referencing url
-    const mapRes = db.prepare('INSERT INTO maps (user_id, name) VALUES (?, ?)').run(userId, 'Hangar Map');
+    const mapRes = db.prepare('INSERT INTO maps (user_id, name, background_url) VALUES (?, ?, ?)').run(userId, 'Hangar Map', '/uploads/tokens/drone.png');
     db.prepare(`
       INSERT INTO tokens (map_id, name, avatar_url)
       VALUES (?, ?, ?)
@@ -362,9 +369,329 @@ describe('Upload API', () => {
     const token = db.prepare('SELECT avatar_url FROM tokens WHERE map_id = ?').get(mapRes.lastInsertRowid);
     expect(token.avatar_url).toBe('');
 
+    const updatedMap = db.prepare('SELECT background_url FROM maps WHERE id = ?').get(mapRes.lastInsertRowid);
+    expect(updatedMap.background_url).toBe('');
+
     // Socket.io emit verification
     expect(emitSpy).toHaveBeenCalledWith('token:asset-deleted', {
       url: '/uploads/tokens/drone.png',
     });
+    expect(emitSpy).toHaveBeenCalledWith('map:asset-deleted', {
+      url: '/uploads/tokens/drone.png',
+    });
+  });
+
+  describe('Folder CRUD endpoints', () => {
+    it('returns 401 when unauthenticated on POST /api/upload/folder', async () => {
+      const res = await request(app)
+        .post('/api/upload/folder')
+        .send({ folder: 'new-folder' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when Player on POST /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123', role: 'Player' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent
+        .post('/api/upload/folder')
+        .send({ folder: 'new-folder' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 400 on directory traversal attempt on POST /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const res = await gmAgent
+        .post('/api/upload/folder')
+        .send({ folder: '../evil' });
+      expect(res.status).toBe(400);
+    });
+
+    it('creates new folder with 201 for GM on POST /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const res = await gmAgent
+        .post('/api/upload/folder')
+        .send({ folder: 'maps/sublevel' });
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({
+        success: true,
+        folder: 'maps/sublevel',
+      });
+      expect(fs.existsSync(path.join(tempUploadDir, 'maps/sublevel'))).toBe(true);
+    });
+
+    it('returns 409 Conflict if folder already exists on POST /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      fs.mkdirSync(path.join(tempUploadDir, 'existing'), { recursive: true });
+
+      const res = await gmAgent
+        .post('/api/upload/folder')
+        .send({ folder: 'existing' });
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/already exists/i);
+    });
+
+    it('returns 401 when unauthenticated on DELETE /api/upload/folder', async () => {
+      const res = await request(app)
+        .delete('/api/upload/folder')
+        .send({ folder: 'some-folder' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when Player on DELETE /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123', role: 'Player' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent
+        .delete('/api/upload/folder')
+        .send({ folder: 'some-folder' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 400 on directory traversal attempt on DELETE /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const res = await gmAgent
+        .delete('/api/upload/folder')
+        .query({ folder: '../evil' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when attempting to delete root folder on DELETE /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const res = await gmAgent
+        .delete('/api/upload/folder')
+        .send({ folder: '' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/Cannot delete root folder/i);
+    });
+
+    it('returns 404 when folder does not exist on DELETE /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const res = await gmAgent
+        .delete('/api/upload/folder')
+        .query({ folder: 'nonexistent' });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toMatch(/Folder not found/i);
+    });
+
+    it('returns 400 when folder is not empty on DELETE /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const targetDir = path.join(tempUploadDir, 'busy-folder');
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(path.join(targetDir, 'item.png'), 'content');
+
+      const res = await gmAgent
+        .delete('/api/upload/folder')
+        .send({ folder: 'busy-folder' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/Folder is not empty/i);
+      expect(fs.existsSync(targetDir)).toBe(true);
+    });
+
+    it('successfully deletes empty folder with 200 for GM on DELETE /api/upload/folder', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const targetDir = path.join(tempUploadDir, 'clean-folder');
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      const res = await gmAgent
+        .delete('/api/upload/folder')
+        .query({ folder: 'clean-folder' });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        success: true,
+        folder: 'clean-folder',
+      });
+      expect(fs.existsSync(targetDir)).toBe(false);
+    });
+  });
+
+  describe('File Move endpoint (PUT /api/upload/move)', () => {
+    it('returns 401 when unauthenticated on PUT /api/upload/move', async () => {
+      const res = await request(app)
+        .put('/api/upload/move')
+        .send({ sourcePath: 'token.png', destinationFolder: 'tokens' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 when Player on PUT /api/upload/move', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123', role: 'Player' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const res = await playerAgent
+        .put('/api/upload/move')
+        .send({ sourcePath: 'token.png', destinationFolder: 'tokens' });
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 400 on path traversal on PUT /api/upload/move', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      // Traversal in sourcePath
+      const res1 = await gmAgent
+        .put('/api/upload/move')
+        .send({ sourcePath: '../secret.png', destinationFolder: 'tokens' });
+      expect(res1.status).toBe(400);
+
+      // Traversal in destinationFolder
+      const res2 = await gmAgent
+        .put('/api/upload/move')
+        .send({ sourcePath: 'token.png', destinationFolder: '../escaped' });
+      expect(res2.status).toBe(400);
+    });
+
+    it('returns 404 when source file does not exist on PUT /api/upload/move', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      const res = await gmAgent
+        .put('/api/upload/move')
+        .send({ sourcePath: 'missing.png', destinationFolder: 'tokens' });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toMatch(/Source file not found/i);
+    });
+
+    it('returns 409 when target destination file already exists on PUT /api/upload/move', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+      fs.writeFileSync(path.join(tempUploadDir, 'hero.png'), 'source');
+      const targetDir = path.join(tempUploadDir, 'heroes');
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(path.join(targetDir, 'hero.png'), 'existing target');
+
+      const res = await gmAgent
+        .put('/api/upload/move')
+        .send({ sourcePath: 'hero.png', destinationFolder: 'heroes' });
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/Target file already exists/i);
+    });
+
+    it('moves file, cascades updates across tokens, maps, adversary_templates, character_sheets, ship_sheets, and emits socket events for GM on PUT /api/upload/move', async () => {
+      const gmAgent = request.agent(app);
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+      const userId = regRes.body.id;
+
+      // Create root file to move
+      fs.writeFileSync(path.join(tempUploadDir, 'hero.png'), 'hero image data');
+
+      const oldUrl = '/uploads/hero.png';
+      const newUrl = '/uploads/characters/pcs/hero.png';
+
+      // Insert references across all 5 tables
+      // 1. adversary_templates
+      db.prepare(`
+        INSERT INTO adversary_templates (id, name, category, threat_tier, token_image_path, hp_max)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('adv-move-1', 'Moved Hero NPC', 'npc', 1, oldUrl, 45);
+
+      // 2. maps
+      const mapRes = db.prepare('INSERT INTO maps (user_id, name, background_url) VALUES (?, ?, ?)').run(userId, 'Hero Map', oldUrl);
+
+      // 3. tokens
+      const tokenRes = db.prepare(`
+        INSERT INTO tokens (map_id, name, avatar_url)
+        VALUES (?, ?, ?)
+      `).run(mapRes.lastInsertRowid, 'Hero Token', oldUrl);
+
+      // 4. character_sheets
+      const charRes = db.prepare(`
+        INSERT INTO character_sheets (user_id, name, race, avatar_url)
+        VALUES (?, ?, ?, ?)
+      `).run(userId, 'Hero Character', 'Human', oldUrl);
+
+      // 5. ship_sheets
+      const shipRes = db.prepare(`
+        INSERT INTO ship_sheets (user_id, name, ship_type, avatar_url)
+        VALUES (?, ?, ?, ?)
+      `).run(userId, 'Hero Ship', 'Scout', oldUrl);
+
+      const emitSpy = vi.spyOn(io, 'emit');
+
+      const res = await gmAgent
+        .put('/api/upload/move')
+        .send({ sourcePath: 'hero.png', destinationFolder: 'characters/pcs' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        success: true,
+        oldUrl,
+        newUrl,
+      });
+
+      // File system verification
+      expect(fs.existsSync(path.join(tempUploadDir, 'hero.png'))).toBe(false);
+      expect(fs.existsSync(path.join(tempUploadDir, 'characters/pcs/hero.png'))).toBe(true);
+
+      // Database verification across all 5 tables
+      const advRow = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-move-1');
+      expect(advRow.token_image_path).toBe(newUrl);
+
+      const mapRow = db.prepare('SELECT background_url FROM maps WHERE id = ?').get(mapRes.lastInsertRowid);
+      expect(mapRow.background_url).toBe(newUrl);
+
+      const tokenRow = db.prepare('SELECT avatar_url FROM tokens WHERE id = ?').get(tokenRes.lastInsertRowid);
+      expect(tokenRow.avatar_url).toBe(newUrl);
+
+      const charRow = db.prepare('SELECT avatar_url FROM character_sheets WHERE id = ?').get(charRes.lastInsertRowid);
+      expect(charRow.avatar_url).toBe(newUrl);
+
+      const shipRow = db.prepare('SELECT avatar_url FROM ship_sheets WHERE id = ?').get(shipRes.lastInsertRowid);
+      expect(shipRow.avatar_url).toBe(newUrl);
+
+      // Socket.io emit verification
+      expect(emitSpy).toHaveBeenCalledWith('token:asset-renamed', {
+        oldUrl,
+        newUrl,
+      });
+      expect(emitSpy).toHaveBeenCalledWith('map:asset-renamed', {
+        oldUrl,
+        newUrl,
+      });
+    });
   });
 });
+

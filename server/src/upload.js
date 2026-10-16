@@ -259,6 +259,7 @@ export function createUploadRouter(customUploadDir, db, io) {
         const cascadeRename = db.transaction((toUrl, fromUrl) => {
           db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(toUrl, fromUrl);
           db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE maps SET background_url = ? WHERE background_url = ?').run(toUrl, fromUrl);
           db.prepare('UPDATE character_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
           db.prepare('UPDATE ship_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
         });
@@ -267,11 +268,164 @@ export function createUploadRouter(customUploadDir, db, io) {
 
       if (io) {
         io.emit('token:asset-renamed', { oldUrl, newUrl });
+        io.emit('map:asset-renamed', { oldUrl, newUrl });
       }
 
       res.json({ success: true, oldUrl, newUrl });
     } catch (err) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.put('/move', gmGuard, (req, res) => {
+    try {
+      const rawSource = req.body?.sourcePath || req.body?.sourceUrl || req.body?.oldPath || req.body?.oldUrl;
+      const relSource = sanitizeUploadPath(rawSource);
+      if (!relSource) {
+        return res.status(400).json({ error: 'Invalid or missing sourcePath' });
+      }
+
+      const sourceFullPath = path.resolve(uploadDir, relSource);
+      const relativeSource = path.relative(uploadDir, sourceFullPath);
+      if (relativeSource.startsWith('..') || path.isAbsolute(relativeSource)) {
+        return res.status(400).json({ error: 'Invalid path' });
+      }
+
+      const rawDestFolder = req.body?.destinationFolder ?? req.body?.destinationPath ?? req.body?.targetFolder ?? '';
+      let targetDestFolder;
+      try {
+        targetDestFolder = sanitizeFolder(rawDestFolder);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      const destDir = targetDestFolder ? path.resolve(uploadDir, targetDestFolder) : uploadDir;
+      const relativeDest = path.relative(uploadDir, destDir);
+      if (relativeDest.startsWith('..') || path.isAbsolute(relativeDest)) {
+        return res.status(400).json({ error: 'Invalid path' });
+      }
+
+      if (!fs.existsSync(sourceFullPath) || !fs.statSync(sourceFullPath).isFile()) {
+        return res.status(404).json({ error: 'Source file not found' });
+      }
+
+      const targetFilename = path.basename(sourceFullPath);
+      const destFullPath = path.join(destDir, targetFilename);
+      const relativeTarget = path.relative(uploadDir, destFullPath);
+      if (relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+        return res.status(400).json({ error: 'Invalid path' });
+      }
+
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+
+      if (fs.existsSync(destFullPath)) {
+        return res.status(409).json({ error: 'Target file already exists' });
+      }
+
+      fs.renameSync(sourceFullPath, destFullPath);
+
+      const oldRel = path.relative(uploadDir, sourceFullPath).split(path.sep).join('/');
+      const newRel = path.relative(uploadDir, destFullPath).split(path.sep).join('/');
+      const oldUrl = `/uploads/${oldRel}`;
+      const newUrl = `/uploads/${newRel}`;
+
+      if (db) {
+        const cascadeMove = db.transaction((toUrl, fromUrl) => {
+          db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE maps SET background_url = ? WHERE background_url = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE character_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          db.prepare('UPDATE ship_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+        });
+        cascadeMove(newUrl, oldUrl);
+      }
+
+      if (io) {
+        io.emit('token:asset-renamed', { oldUrl, newUrl });
+        io.emit('map:asset-renamed', { oldUrl, newUrl });
+      }
+
+      return res.json({ success: true, oldUrl, newUrl });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/folder', gmGuard, (req, res) => {
+    try {
+      const rawFolder = req.body?.folder;
+      if (rawFolder === undefined || rawFolder === null || typeof rawFolder !== 'string') {
+        return res.status(400).json({ error: 'Invalid or missing folder name' });
+      }
+
+      let sanitizedFolder;
+      try {
+        sanitizedFolder = sanitizeFolder(rawFolder);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      if (!sanitizedFolder) {
+        return res.status(400).json({ error: 'Invalid or missing folder name' });
+      }
+
+      const targetDir = path.resolve(uploadDir, sanitizedFolder);
+      const relativeToRoot = path.relative(uploadDir, targetDir);
+      if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) {
+        return res.status(400).json({ error: 'Invalid folder path' });
+      }
+
+      if (fs.existsSync(targetDir)) {
+        return res.status(409).json({ error: 'Folder already exists' });
+      }
+
+      fs.mkdirSync(targetDir, { recursive: true });
+      return res.status(201).json({ success: true, folder: sanitizedFolder });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.delete('/folder', gmGuard, (req, res) => {
+    try {
+      const rawFolder = req.query?.folder !== undefined ? req.query.folder : req.body?.folder;
+      if (rawFolder === undefined || rawFolder === null || typeof rawFolder !== 'string') {
+        return res.status(400).json({ error: 'Cannot delete root folder' });
+      }
+
+      let sanitizedFolder;
+      try {
+        sanitizedFolder = sanitizeFolder(rawFolder);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      if (!sanitizedFolder) {
+        return res.status(400).json({ error: 'Cannot delete root folder' });
+      }
+
+      const targetDir = path.resolve(uploadDir, sanitizedFolder);
+      const relativeToRoot = path.relative(uploadDir, targetDir);
+      if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) {
+        return res.status(400).json({ error: 'Invalid folder path' });
+      }
+
+      if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+        return res.status(404).json({ error: 'Folder not found' });
+      }
+
+      const entries = fs.readdirSync(targetDir);
+      const nonHidden = entries.filter((e) => !e.startsWith('.'));
+      if (nonHidden.length > 0) {
+        return res.status(400).json({ error: 'Folder is not empty' });
+      }
+
+      fs.rmSync(targetDir, { recursive: true, force: true });
+      return res.json({ success: true, folder: sanitizedFolder });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
   });
 
@@ -302,6 +456,7 @@ export function createUploadRouter(customUploadDir, db, io) {
         const cascadeDelete = db.transaction((toClear) => {
           db.prepare("UPDATE adversary_templates SET token_image_path = '' WHERE token_image_path = ?").run(toClear);
           db.prepare("UPDATE tokens SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
+          db.prepare("UPDATE maps SET background_url = '' WHERE background_url = ?").run(toClear);
           db.prepare("UPDATE character_sheets SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
           db.prepare("UPDATE ship_sheets SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
         });
@@ -310,6 +465,7 @@ export function createUploadRouter(customUploadDir, db, io) {
 
       if (io) {
         io.emit('token:asset-deleted', { url: targetUrl });
+        io.emit('map:asset-deleted', { url: targetUrl });
       }
 
       res.json({ success: true, url: targetUrl });
