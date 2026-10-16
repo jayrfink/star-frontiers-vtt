@@ -10,14 +10,32 @@ import ShipSheetsView from './views/ShipSheetsView.vue';
 import RulebooksView from './views/RulebooksView.vue';
 import AdminView from './views/AdminView.vue';
 
+const ALLOWED_DASHBOARD_PATHS = [
+  '/dashboard/rpg-vtt',
+  '/dashboard/space-vtt',
+  '/dashboard/character-sheets',
+  '/dashboard/ship-sheets',
+  '/dashboard/rulebooks',
+  '/dashboard/admin',
+];
+
+const ALLOWED_DASHBOARD_NAMES = [
+  'RpgVtt',
+  'SpaceVtt',
+  'CharacterSheets',
+  'ShipSheets',
+  'Rulebooks',
+  'Admin',
+];
+
 function getSavedDashboardPath(user) {
   const defaultPath = '/dashboard/rpg-vtt';
   if (!user || user.id === undefined) return defaultPath;
   const { lastPath } = getUserState(user.id, 'navigation', { lastPath: defaultPath });
-  if (!lastPath || typeof lastPath !== 'string' || !lastPath.startsWith('/dashboard/')) {
+  if (!lastPath || typeof lastPath !== 'string' || !ALLOWED_DASHBOARD_PATHS.includes(lastPath)) {
     return defaultPath;
   }
-  if (lastPath.startsWith('/dashboard/admin') && user.role !== 'GameMaster') {
+  if (lastPath === '/dashboard/admin' && user.role !== 'GameMaster') {
     return defaultPath;
   }
   return lastPath;
@@ -77,7 +95,7 @@ router.afterEach((to) => {
   document.title = tabTitle ? `SFVTT: ${tabTitle}` : 'Star Frontiers VTT';
   try {
     const auth = useAuthStore();
-    if (auth.user?.id !== undefined && to.path.startsWith('/dashboard/') && to.path !== '/dashboard/') {
+    if (auth.user?.id !== undefined && ALLOWED_DASHBOARD_NAMES.includes(to.name)) {
       saveUserState(auth.user.id, 'navigation', { lastPath: to.path });
     }
   } catch {

@@ -11,7 +11,7 @@
       <div v-else-if="characters.length === 0" class="sidebar-empty">
         No characters found. Create one to get started!
       </div>
-      <ul v-else ref="sidebarList" class="character-list sheet-list" @scroll="saveScrollPositions">
+      <ul v-else ref="sidebarList" class="character-list sheet-list" @scroll="onScrollSave">
         <li
           v-for="char in characters"
           :key="char.id"
@@ -28,7 +28,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="saveScrollPositions">
+    <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="onScrollSave">
       <div v-if="!selectedChar" class="no-selection">
         <div class="stub-icon">📋</div>
         <h2>Select or Create a Character</h2>
@@ -721,12 +721,25 @@ export default {
     this.setupSocketListeners();
   },
   beforeUnmount() {
+    if (this._scrollSaveTimer) {
+      clearTimeout(this._scrollSaveTimer);
+      this._scrollSaveTimer = null;
+    }
     this.saveScrollPositions();
     this.removeSocketListeners();
   },
   methods: {
     getCurrentUserId() {
       return getSafeUserId();
+    },
+    onScrollSave() {
+      if (this._scrollSaveTimer) {
+        clearTimeout(this._scrollSaveTimer);
+      }
+      this._scrollSaveTimer = setTimeout(() => {
+        this._scrollSaveTimer = null;
+        this.saveScrollPositions();
+      }, 150);
     },
     saveScrollPositions() {
       const sidebarEl = this.$refs?.sidebarList || this.$el?.querySelector?.('.sheet-list, .character-list');

@@ -41,9 +41,9 @@ export function getUserState(userId, section, defaults = {}) {
     const raw = readRaw(getStorageKey(userId));
     if (!raw) return { ...defaults };
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return { ...defaults };
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ...defaults };
     const sectionData = parsed[section];
-    if (!sectionData || typeof sectionData !== 'object') return { ...defaults };
+    if (!sectionData || typeof sectionData !== 'object' || Array.isArray(sectionData)) return { ...defaults };
     return { ...defaults, ...sectionData };
   } catch (err) {
     console.error(`Failed to load user state for section "${section}":`, err);
@@ -56,8 +56,9 @@ export function saveUserState(userId, section, partialState) {
     const key = getStorageKey(userId);
     const raw = readRaw(key);
     const parsed = raw ? JSON.parse(raw) : {};
-    const root = parsed && typeof parsed === 'object' ? parsed : {};
-    const currentSection = root[section] && typeof root[section] === 'object' ? root[section] : {};
+    const root = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    const sectionData = root[section];
+    const currentSection = sectionData && typeof sectionData === 'object' && !Array.isArray(sectionData) ? sectionData : {};
     root[section] = { ...currentSection, ...partialState };
     writeRaw(key, JSON.stringify(root));
   } catch (err) {

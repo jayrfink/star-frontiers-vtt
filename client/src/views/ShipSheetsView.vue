@@ -11,7 +11,7 @@
       <div v-else-if="ships.length === 0" class="sidebar-empty">
         No ships found. Create one to get started!
       </div>
-      <ul v-else ref="sidebarList" class="ship-list sheet-list" @scroll="saveScrollPositions">
+      <ul v-else ref="sidebarList" class="ship-list sheet-list" @scroll="onScrollSave">
         <li
           v-for="ship in ships"
           :key="ship.id"
@@ -28,7 +28,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="saveScrollPositions">
+    <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="onScrollSave">
       <div v-if="!selectedShip" class="no-selection">
         <div class="stub-icon">🛸</div>
         <h2>Select or Create a Knight Hawks Ship</h2>
@@ -456,12 +456,25 @@ export default {
     this.setupSocketListeners();
   },
   beforeUnmount() {
+    if (this._scrollSaveTimer) {
+      clearTimeout(this._scrollSaveTimer);
+      this._scrollSaveTimer = null;
+    }
     this.saveScrollPositions();
     this.removeSocketListeners();
   },
   methods: {
     getCurrentUserId() {
       return getSafeUserId();
+    },
+    onScrollSave() {
+      if (this._scrollSaveTimer) {
+        clearTimeout(this._scrollSaveTimer);
+      }
+      this._scrollSaveTimer = setTimeout(() => {
+        this._scrollSaveTimer = null;
+        this.saveScrollPositions();
+      }, 150);
     },
     saveScrollPositions() {
       const sidebarEl = this.$refs?.sidebarList || this.$el?.querySelector?.('.sheet-list, .ship-list');

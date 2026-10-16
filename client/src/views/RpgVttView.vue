@@ -821,7 +821,9 @@ const activeTool = ref(initialVttState.activeTool || 'select');
 const zoomLevel = ref(initialVttState.zoomLevel ?? 1.0);
 const selectedTokenId = ref(initialVttState.selectedTokenId ?? null);
 
-function persistVttState() {
+let persistStateTimer = null;
+
+function persistVttStateNow() {
   saveUserState(getSafeUserId(), 'rpgVtt', {
     panX: panX.value,
     panY: panY.value,
@@ -830,6 +832,16 @@ function persistVttState() {
     selectedTokenId: selectedTokenId.value,
     isRollLogOpen: isRollLogOpen.value,
   });
+}
+
+function persistVttState() {
+  if (persistStateTimer) {
+    clearTimeout(persistStateTimer);
+  }
+  persistStateTimer = setTimeout(() => {
+    persistStateTimer = null;
+    persistVttStateNow();
+  }, 150);
 }
 
 watch([panX, panY, zoomLevel, activeTool, selectedTokenId, isRollLogOpen], () => {
@@ -1502,7 +1514,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  persistVttState();
+  if (persistStateTimer) {
+    clearTimeout(persistStateTimer);
+    persistStateTimer = null;
+  }
+  persistVttStateNow();
   if (colorDebounceTimer) {
     clearTimeout(colorDebounceTimer);
     colorDebounceTimer = null;

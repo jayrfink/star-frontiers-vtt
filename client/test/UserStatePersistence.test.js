@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { getStorageKey, getUserState, saveUserState, clearUserStateMemory } from '../src/utils/userState.js';
+import { getStorageKey, getSafeUserId, getUserState, saveUserState, clearUserStateMemory } from '../src/utils/userState.js';
 import router from '../src/router.js';
 import { useAuthStore } from '../src/stores/auth.js';
 
@@ -11,7 +11,7 @@ describe('Per-User Tab and View State Persistence', () => {
     }
     setActivePinia(createPinia());
     clearUserStateMemory();
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== 'undefined' && typeof localStorage.clear === 'function') {
       localStorage.clear();
     }
   });
@@ -42,6 +42,49 @@ describe('Per-User Tab and View State Persistence', () => {
       expect(getUserState(101, 'shipSheets', { selectedShipId: null })).toEqual({
         selectedShipId: 3,
       });
+    });
+
+    it('getSafeUserId returns authenticated user ID or falls back to guest', () => {
+      expect(getSafeUserId()).toBe('guest');
+
+      const auth = useAuthStore();
+      auth.user = { id: 777, username: 'pilot', role: 'Player' };
+      expect(getSafeUserId()).toBe(777);
+
+      setActivePinia(undefined);
+      expect(getSafeUserId()).toBe('guest');
+    });
+
+    it('guards against corrupt array JSON at root or section level in getUserState and saveUserState', () => {
+      const store = new Map();
+      const prevStorage = globalThis.localStorage;
+      globalThis.localStorage = {
+        getItem: (k) => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, v),
+        clear: () => store.clear(),
+      };
+
+      try {
+        const key = getStorageKey(101);
+
+        // Corrupt root-level array in storage
+        store.set(key, JSON.stringify(['corrupt', 'array']));
+        expect(getUserState(101, 'rpgVtt', { panX: 50 })).toEqual({ panX: 50 });
+
+        // Saving when root is an array replaces root with an object
+        saveUserState(101, 'rpgVtt', { panX: 120 });
+        expect(JSON.parse(store.get(key))).toEqual({ rpgVtt: { panX: 120 } });
+
+        // Corrupt section-level array in storage
+        store.set(key, JSON.stringify({ rpgVtt: ['bad', 'section'] }));
+        expect(getUserState(101, 'rpgVtt', { panX: 50 })).toEqual({ panX: 50 });
+
+        // Saving when section is an array replaces section with an object without spreading array indices
+        saveUserState(101, 'rpgVtt', { zoomLevel: 2.0 });
+        expect(JSON.parse(store.get(key))).toEqual({ rpgVtt: { zoomLevel: 2.0 } });
+      } finally {
+        globalThis.localStorage = prevStorage;
+      }
     });
 
     it('saves last visited dashboard tab per user and redirects /dashboard to it', async () => {
