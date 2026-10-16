@@ -278,6 +278,35 @@
                   @change="updateActiveMapSettings"
                 />
               </div>
+              <div class="form-group grid-dimensions-group">
+                <label>Grid Dimensions (hexes):</label>
+                <div class="grid-dimensions-row">
+                  <input
+                    type="number"
+                    list="space-grid-dimension-options"
+                    class="grid-width-input"
+                    v-model.number="activeMapForm.width"
+                    min="5"
+                    max="100"
+                    placeholder="Width"
+                    @change="updateActiveMapSettings"
+                  />
+                  <span class="grid-dimensions-x">×</span>
+                  <input
+                    type="number"
+                    list="space-grid-dimension-options"
+                    class="grid-height-input"
+                    v-model.number="activeMapForm.height"
+                    min="5"
+                    max="100"
+                    placeholder="Height"
+                    @change="updateActiveMapSettings"
+                  />
+                  <datalist id="space-grid-dimension-options">
+                    <option v-for="n in gridDimensionOptions" :key="n" :value="n"></option>
+                  </datalist>
+                </div>
+              </div>
               <div class="form-group">
                 <label>Grid Line Color:</label>
                 <input
@@ -912,7 +941,11 @@ const tokenFileInput = ref(null);
 const uploadingAvatar = ref(false);
 
 // Forms
+const gridDimensionOptions = [10, 15, 20, 25, 30, 40, 50, 60, 80, 100];
+
 const activeMapForm = reactive({
+  width: 20,
+  height: 20,
   grid_size: 40,
   grid_color: '#334155',
   preset_bg: 'starfield',
@@ -993,6 +1026,8 @@ watch(selectedToken, (newToken) => {
 // Watch activeMap to update local settings form
 watch(activeMap, (map) => {
   if (map) {
+    activeMapForm.width = map.width || 20;
+    activeMapForm.height = map.height || 20;
     activeMapForm.grid_size = map.grid_size || 40;
     activeMapForm.grid_color = map.grid_color || '#334155';
     activeMapForm.preset_bg = map.preset_bg || 'starfield';
@@ -1125,6 +1160,12 @@ async function activateMap(mapId) {
   }
 }
 
+function clampGridDimension(value, fallback) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || n <= 0) return fallback || 20;
+  return Math.min(100, Math.max(5, n));
+}
+
 async function updateActiveMapSettings() {
   if (!activeMap.value) return;
   try {
@@ -1134,6 +1175,8 @@ async function updateActiveMapSettings() {
       credentials: 'include',
       body: JSON.stringify({
         background_url: activeMapForm.background_url,
+        width: clampGridDimension(activeMapForm.width, activeMap.value.width),
+        height: clampGridDimension(activeMapForm.height, activeMap.value.height),
         grid_size: activeMapForm.grid_size,
         grid_color: activeMapForm.grid_color,
         preset_bg: activeMapForm.preset_bg,
@@ -3111,5 +3154,20 @@ onBeforeUnmount(() => {
   padding: 1px 5px;
   border-radius: 3px;
   margin-right: 6px;
+}
+
+.grid-dimensions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grid-dimensions-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.grid-dimensions-x {
+  color: #8b949e;
 }
 </style>
