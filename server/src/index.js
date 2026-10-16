@@ -10,6 +10,7 @@ import { createCharacterRouter, createShipRouter } from './sheets.js';
 import { createMapRouter, createTokenRouter } from './maps.js';
 import { createUploadRouter } from './upload.js';
 import { createRollRouter } from './rolls.js';
+import { createAdversariesRouter } from './adversaries.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -39,7 +40,7 @@ export function createApp(db, sessionDir, uploadDir) {
   app.use(express.json());
   app.use(createSessionMiddleware(sessionDir));
   app.use('/uploads', express.static(uploadsPath));
-  app.use('/api/upload', createUploadRouter(uploadsPath));
+  app.use('/api/upload', createUploadRouter(uploadsPath, db, io));
   app.use('/api/auth', createAuthRouter(db));
   app.use('/api/rulebooks', createRulebooksRouter());
   app.use('/api/characters', createCharacterRouter(db, io));
@@ -47,6 +48,7 @@ export function createApp(db, sessionDir, uploadDir) {
   app.use('/api/maps', createMapRouter(db, io));
   app.use('/api/tokens', createTokenRouter(db, io));
   app.use('/api/rolls', createRollRouter(db, io));
+  app.use('/api/adversaries', createAdversariesRouter(db, io));
 
 // Equipment Route
 app.get('/api/equipment', (req, res) => {

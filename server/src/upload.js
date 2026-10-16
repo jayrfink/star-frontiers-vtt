@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { requireAuth } from './middleware.js';
+import { requireAuth, requireGM } from './middleware.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_UPLOADS_DIR = path.resolve(__dirname, '../../data/uploads');
@@ -17,6 +17,23 @@ export function sanitizeFolder(folder) {
   const parts = clean.split('/').filter(Boolean);
   if (parts.some((p) => p === '..' || p === '.')) {
     throw new Error('Invalid folder path');
+  }
+  return parts.join('/');
+}
+
+export function sanitizeUploadPath(inputPath) {
+  if (!inputPath || typeof inputPath !== 'string') return null;
+  let clean = inputPath.trim().replace(/\\/g, '/');
+  if (clean.startsWith('/uploads/')) {
+    clean = clean.slice('/uploads/'.length);
+  } else if (clean.startsWith('uploads/')) {
+    clean = clean.slice('uploads/'.length);
+  }
+  clean = clean.replace(/^\/+|\/+$/g, '');
+  if (!clean) return null;
+  const parts = clean.split('/').filter(Boolean);
+  if (parts.some((p) => p === '..' || p === '.')) {
+    return null;
   }
   return parts.join('/');
 }
@@ -87,11 +104,20 @@ export function scanUploads(dir, baseDir = dir) {
   return { files, folders: sortedFolders };
 }
 
-export function createUploadRouter(customUploadDir) {
+export function createUploadRouter(customUploadDir, db, io) {
   const uploadDir = customUploadDir || DEFAULT_UPLOADS_DIR;
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
+
+  const gmGuard = db
+    ? requireGM(db)
+    : (req, res, next) => {
+        if (!req.session || !req.session.userId) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+        return res.status(403).json({ error: 'GameMaster access required' });
+      };
 
   const storage = multer.diskStorage({
     destination: (req, _file, cb) => {
@@ -171,6 +197,115 @@ export function createUploadRouter(customUploadDir) {
       const publicUrl = `/uploads/${relPath}`;
       res.json({ url: publicUrl });
     });
+  });
+
+  router.put('/rename', gmGuard, (req, res) => {
+    try {
+      const oldPath = req.body?.oldPath || req.body?.oldUrl;
+      const newName = req.body?.newName;
+
+      const relSource = sanitizeUploadPath(oldPath);
+      if (!relSource) {
+        return res.status(400).json({ error: 'Invalid or missing oldPath' });
+      }
+
+      if (!newName || typeof newName !== 'string') {
+        return res.status(400).json({ error: 'Invalid or missing newName' });
+      }
+
+      const trimmedNewName = newName.trim();
+      if (
+        trimmedNewName.includes('/') ||
+        trimmedNewName.includes('\\') ||
+        trimmedNewName.includes('..') ||
+        trimmedNewName === '.'
+      ) {
+        return res.status(400).json({ error: 'Invalid newName' });
+      }
+
+      const ext = path.extname(trimmedNewName).toLowerCase();
+      if (!VALID_IMAGE_EXTENSIONS.has(ext)) {
+        return res.status(400).json({ error: 'Invalid file extension' });
+      }
+
+      const sourcePath = path.resolve(uploadDir, relSource);
+      const relativeSource = path.relative(uploadDir, sourcePath);
+      if (relativeSource.startsWith('..') || path.isAbsolute(relativeSource)) {
+        return res.status(400).json({ error: 'Invalid path' });
+      }
+
+      const targetPath = path.join(path.dirname(sourcePath), trimmedNewName);
+      const relativeTarget = path.relative(uploadDir, targetPath);
+      if (relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+        return res.status(400).json({ error: 'Invalid path' });
+      }
+
+      if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+        return res.status(404).json({ error: 'Source file not found' });
+      }
+
+      if (fs.existsSync(targetPath)) {
+        return res.status(409).json({ error: 'Target file already exists' });
+      }
+
+      fs.renameSync(sourcePath, targetPath);
+
+      const oldRel = path.relative(uploadDir, sourcePath).split(path.sep).join('/');
+      const newRel = path.relative(uploadDir, targetPath).split(path.sep).join('/');
+      const oldUrl = `/uploads/${oldRel}`;
+      const newUrl = `/uploads/${newRel}`;
+
+      if (db) {
+        db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(newUrl, oldUrl);
+        db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(newUrl, oldUrl);
+      }
+
+      if (io) {
+        io.emit('token:asset-renamed', { oldUrl, newUrl });
+      }
+
+      res.json({ success: true, oldUrl, newUrl });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.delete('/file', gmGuard, (req, res) => {
+    try {
+      const rawPath = req.query?.path || req.body?.path || req.body?.url;
+      const relPath = sanitizeUploadPath(rawPath);
+      if (!relPath) {
+        return res.status(400).json({ error: 'Invalid or missing file path' });
+      }
+
+      const filePath = path.resolve(uploadDir, relPath);
+      const relativePath = path.relative(uploadDir, filePath);
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        return res.status(400).json({ error: 'Invalid file path' });
+      }
+
+      if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+
+      fs.unlinkSync(filePath);
+
+      const targetRel = path.relative(uploadDir, filePath).split(path.sep).join('/');
+      const targetUrl = `/uploads/${targetRel}`;
+
+      if (db) {
+        db.prepare("UPDATE adversary_templates SET token_image_path = '' WHERE token_image_path = ?").run(targetUrl);
+        db.prepare("UPDATE tokens SET avatar_url = '' WHERE avatar_url = ?").run(targetUrl);
+      }
+
+      if (io) {
+        io.emit('token:asset-deleted', { url: targetUrl });
+      }
+
+      res.json({ success: true, url: targetUrl });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   return router;

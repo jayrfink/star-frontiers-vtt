@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import fs from 'fs';
 import path from 'path';
@@ -7,7 +7,7 @@ import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
 
 describe('Upload API', () => {
-  let db, app, server, tempUploadDir;
+  let db, app, server, io, tempUploadDir;
 
   beforeEach(() => {
     db = createTestDb();
@@ -15,6 +15,7 @@ describe('Upload API', () => {
     const result = createApp(db, ':memory:', tempUploadDir);
     app = result.app;
     server = result.server;
+    io = result.io;
   });
 
   afterEach(() => {
@@ -175,5 +176,195 @@ describe('Upload API', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/Invalid folder path/i);
+  });
+
+  it('rejects rename from unauthenticated requests with 401', async () => {
+    const res = await request(app)
+      .put('/api/upload/rename')
+      .send({ oldPath: 'test.png', newName: 'renamed.png' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects rename from Player with 403', async () => {
+    const gmAgent = request.agent(app);
+    await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123', role: 'Player' });
+
+    const playerAgent = request.agent(app);
+    await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+    const res = await playerAgent
+      .put('/api/upload/rename')
+      .send({ oldPath: 'test.png', newName: 'renamed.png' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects rename with path traversal with 400', async () => {
+    const gmAgent = request.agent(app);
+    await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+    // Traversal in newName
+    const res1 = await gmAgent
+      .put('/api/upload/rename')
+      .send({ oldPath: 'test.png', newName: '../evil.png' });
+    expect(res1.status).toBe(400);
+
+    // Traversal in oldPath
+    const res2 = await gmAgent
+      .put('/api/upload/rename')
+      .send({ oldPath: '../../secret.png', newName: 'safe.png' });
+    expect(res2.status).toBe(400);
+  });
+
+  it('rejects rename when target file already exists with 409', async () => {
+    const gmAgent = request.agent(app);
+    await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+    fs.writeFileSync(path.join(tempUploadDir, 'file1.png'), 'file1');
+    fs.writeFileSync(path.join(tempUploadDir, 'file2.png'), 'file2');
+
+    const res = await gmAgent
+      .put('/api/upload/rename')
+      .send({ oldPath: 'file1.png', newName: 'file2.png' });
+    expect(res.status).toBe(409);
+  });
+
+  it('successfully renames file, updates database references, and emits token:asset-renamed for GM', async () => {
+    const gmAgent = request.agent(app);
+    const regRes = await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+    const userId = regRes.body.id;
+
+    const subDir = path.join(tempUploadDir, 'tokens');
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(path.join(subDir, 'guard.png'), 'guard image content');
+
+    // Insert adversary template referencing oldUrl
+    db.prepare(`
+      INSERT INTO adversary_templates (id, name, category, threat_tier, token_image_path, hp_max)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('adv-1', 'Sathar Guard', 'npc', 2, '/uploads/tokens/guard.png', 50);
+
+    // Insert map and token referencing oldUrl
+    const mapRes = db.prepare('INSERT INTO maps (user_id, name) VALUES (?, ?)').run(userId, 'Battle Map');
+    db.prepare(`
+      INSERT INTO tokens (map_id, name, avatar_url)
+      VALUES (?, ?, ?)
+    `).run(mapRes.lastInsertRowid, 'Guard Token', '/uploads/tokens/guard.png');
+
+    const emitSpy = vi.spyOn(io, 'emit');
+
+    const res = await gmAgent
+      .put('/api/upload/rename')
+      .send({ oldPath: 'tokens/guard.png', newName: 'sentry.png' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      oldUrl: '/uploads/tokens/guard.png',
+      newUrl: '/uploads/tokens/sentry.png',
+    });
+
+    // File system verification
+    expect(fs.existsSync(path.join(subDir, 'guard.png'))).toBe(false);
+    expect(fs.existsSync(path.join(subDir, 'sentry.png'))).toBe(true);
+
+    // Database verification
+    const template = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-1');
+    expect(template.token_image_path).toBe('/uploads/tokens/sentry.png');
+
+    const token = db.prepare('SELECT avatar_url FROM tokens WHERE map_id = ?').get(mapRes.lastInsertRowid);
+    expect(token.avatar_url).toBe('/uploads/tokens/sentry.png');
+
+    // Socket.io emit verification
+    expect(emitSpy).toHaveBeenCalledWith('token:asset-renamed', {
+      oldUrl: '/uploads/tokens/guard.png',
+      newUrl: '/uploads/tokens/sentry.png',
+    });
+  });
+
+  it('rejects delete from Player with 403', async () => {
+    const gmAgent = request.agent(app);
+    await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123', role: 'Player' });
+
+    const playerAgent = request.agent(app);
+    await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+    const res = await playerAgent
+      .delete('/api/upload/file')
+      .query({ path: 'test.png' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects delete with path traversal with 400', async () => {
+    const gmAgent = request.agent(app);
+    await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+
+    const res1 = await gmAgent
+      .delete('/api/upload/file')
+      .query({ path: '../secret.png' });
+    expect(res1.status).toBe(400);
+
+    const res2 = await gmAgent
+      .delete('/api/upload/file')
+      .send({ path: '../../etc/passwd' });
+    expect(res2.status).toBe(400);
+  });
+
+  it('successfully deletes file, clears database references, and emits token:asset-deleted for GM', async () => {
+    const gmAgent = request.agent(app);
+    const regRes = await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+    await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+    const userId = regRes.body.id;
+
+    const subDir = path.join(tempUploadDir, 'tokens');
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(path.join(subDir, 'drone.png'), 'drone image content');
+
+    // Insert adversary template referencing url
+    db.prepare(`
+      INSERT INTO adversary_templates (id, name, category, threat_tier, token_image_path, hp_max)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('adv-2', 'Security Drone', 'creature', 1, '/uploads/tokens/drone.png', 20);
+
+    // Insert map and token referencing url
+    const mapRes = db.prepare('INSERT INTO maps (user_id, name) VALUES (?, ?)').run(userId, 'Hangar Map');
+    db.prepare(`
+      INSERT INTO tokens (map_id, name, avatar_url)
+      VALUES (?, ?, ?)
+    `).run(mapRes.lastInsertRowid, 'Drone Token', '/uploads/tokens/drone.png');
+
+    const emitSpy = vi.spyOn(io, 'emit');
+
+    const res = await gmAgent
+      .delete('/api/upload/file')
+      .query({ path: 'tokens/drone.png' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      url: '/uploads/tokens/drone.png',
+    });
+
+    // File system verification
+    expect(fs.existsSync(path.join(subDir, 'drone.png'))).toBe(false);
+
+    // Database verification
+    const template = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-2');
+    expect(template.token_image_path).toBe('');
+
+    const token = db.prepare('SELECT avatar_url FROM tokens WHERE map_id = ?').get(mapRes.lastInsertRowid);
+    expect(token.avatar_url).toBe('');
+
+    // Socket.io emit verification
+    expect(emitSpy).toHaveBeenCalledWith('token:asset-deleted', {
+      url: '/uploads/tokens/drone.png',
+    });
   });
 });
