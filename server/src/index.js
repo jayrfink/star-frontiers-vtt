@@ -9,6 +9,7 @@ import { createRulebooksRouter } from './rulebooks.js';
 import { createCharacterRouter, createShipRouter } from './sheets.js';
 import { createMapRouter, createTokenRouter } from './maps.js';
 import { createUploadRouter } from './upload.js';
+import { createRollRouter } from './rolls.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -45,6 +46,7 @@ export function createApp(db, sessionDir, uploadDir) {
   app.use('/api/ships', createShipRouter(db, io));
   app.use('/api/maps', createMapRouter(db, io));
   app.use('/api/tokens', createTokenRouter(db, io));
+  app.use('/api/rolls', createRollRouter(db, io));
 
 // Equipment Route
 app.get('/api/equipment', (req, res) => {

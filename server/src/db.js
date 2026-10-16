@@ -103,6 +103,21 @@ function migrate(db) {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS roll_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mode TEXT NOT NULL CHECK(mode IN ('rpg', 'space')),
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      role TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('percentile', 'damage')),
+      label TEXT NOT NULL,
+      total INTEGER NOT NULL,
+      breakdown TEXT NOT NULL,
+      roll_summary TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_roll_logs_mode_created ON roll_logs(mode, created_at DESC);
   `);
 
   const mapCols = db.prepare("PRAGMA table_info(maps)").all().map(c => c.name);
