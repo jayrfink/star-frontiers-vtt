@@ -144,7 +144,7 @@
             <div class="roll-log-header">
               <div class="roll-log-title">🎲 Roll Log ({{ rollLog.length }}/20)</div>
               <div class="roll-log-actions">
-                <button type="button" class="btn-roll-log-clear" @click="clearRollLog" :disabled="rollLog.length === 0" title="Clear log">Clear</button>
+                <button v-if="isGm" type="button" class="btn-roll-log-clear" @click="clearRollLog" :disabled="rollLog.length === 0" title="Clear log">Clear</button>
                 <button type="button" class="btn-roll-log-toggle" @click="isRollLogOpen = false" title="Minimize log">▼</button>
               </div>
             </div>
@@ -155,7 +155,10 @@
               <ul v-else class="roll-log-list">
                 <li v-for="item in rollLog" :key="item.id" class="roll-log-item" :class="item.type">
                   <div class="roll-item-meta">
-                    <span class="roll-item-time">{{ item.timestamp }}</span>
+                    <span v-if="item.username" class="roll-user-badge" :class="item.role?.toLowerCase()">
+                      {{ item.username }}
+                    </span>
+                    <span class="roll-item-time">{{ item.timestamp || (item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '') }}</span>
                     <span class="roll-item-badge">{{ item.label }}</span>
                   </div>
                   <div class="roll-item-result">
@@ -176,12 +179,17 @@
             @click="showDamageHud = false"
           >
             <div class="hud-header">
-              <span class="hud-title">💥 DAMAGE TOTAL ({{ lastDamageRoll.count }}d10)</span>
+              <div class="hud-title">
+                <span v-if="lastDamageRoll.username" class="hud-user-tag" :class="lastDamageRoll.role?.toLowerCase()">
+                  {{ lastDamageRoll.role === 'GameMaster' ? 'GM' : 'PLAYER' }} {{ lastDamageRoll.username }}
+                </span>
+                💥 Damage Roll ({{ lastDamageRoll.count }}d10)
+              </div>
               <button class="hud-close" @click.stop="showDamageHud = false">×</button>
             </div>
             <div class="hud-body">
               <span class="hud-total">{{ lastDamageRoll.total }}</span>
-              <span class="hud-dice">({{ lastDamageRoll.dice.join(' + ') }})</span>
+              <span class="hud-dice">({{ lastDamageRoll.dice ? lastDamageRoll.dice.join(' + ') : lastDamageRoll.breakdown }})</span>
             </div>
           </div>
         </transition>
@@ -194,7 +202,12 @@
             @click="showPercentileHud = false"
           >
             <div class="hud-header">
-              <span class="hud-title">🎲 PERCENTILE ROLL (d%)</span>
+              <div class="hud-title">
+                <span v-if="lastPercentileRoll.username" class="hud-user-tag" :class="lastPercentileRoll.role?.toLowerCase()">
+                  {{ lastPercentileRoll.role === 'GameMaster' ? 'GM' : 'PLAYER' }} {{ lastPercentileRoll.username }}
+                </span>
+                🎲 Percentile Roll (d%)
+              </div>
               <button class="hud-close" @click.stop="showPercentileHud = false">×</button>
             </div>
             <div class="hud-body">
@@ -621,42 +634,63 @@ const RPG_ROLL_LOG_KEY = 'sf_vtt_rpg_roll_log';
 const rollLog = ref([]);
 const isRollLogOpen = ref(false);
 
-function loadRollLog() {
+async function fetchRollLog() {
   try {
-    const raw = localStorage.getItem(RPG_ROLL_LOG_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        rollLog.value = parsed.slice(0, 20);
-      }
+    const res = await fetch('/api/rolls?mode=rpg', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      rollLog.value = data;
     }
   } catch (err) {
-    console.error('Failed to load RPG roll log:', err);
+    console.error('Failed to fetch RPG roll log:', err);
   }
 }
 
-function saveRollLog() {
+async function sendRollToServer(rollData) {
   try {
-    localStorage.setItem(RPG_ROLL_LOG_KEY, JSON.stringify(rollLog.value.slice(0, 20)));
+    const res = await fetch('/api/rolls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        mode: 'rpg',
+        type: rollData.type,
+        label: rollData.label,
+        total: rollData.total,
+        breakdown: rollData.breakdown,
+        rollSummary: rollData.rollSummary
+      })
+    });
+    if (res.ok) {
+      const savedRoll = await res.json();
+      if (!rollLog.value.some(r => r.id === savedRoll.id)) {
+        rollLog.value.unshift(savedRoll);
+        if (rollLog.value.length > 20) {
+          rollLog.value = rollLog.value.slice(0, 20);
+        }
+      }
+    }
   } catch (err) {
-    console.error('Failed to save RPG roll log:', err);
+    console.error('Failed to post roll to server:', err);
   }
 }
 
 function addRollToLog(entry) {
-  rollLog.value.unshift(entry);
-  if (rollLog.value.length > 20) {
-    rollLog.value = rollLog.value.slice(0, 20);
-  }
-  saveRollLog();
+  sendRollToServer(entry);
 }
 
-function clearRollLog() {
-  rollLog.value = [];
+async function clearRollLog() {
+  if (!isGm.value) return;
   try {
-    localStorage.removeItem(RPG_ROLL_LOG_KEY);
+    const res = await fetch('/api/rolls?mode=rpg', {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (res.ok) {
+      rollLog.value = [];
+    }
   } catch (err) {
-    console.error('Failed to clear RPG roll log:', err);
+    console.error('Failed to clear RPG roll log on server:', err);
   }
 }
 
@@ -681,18 +715,20 @@ async function rollPercentile() {
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
-        lastPercentileRoll.value = rollSummary;
+        lastPercentileRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
         showPercentileHud.value = true;
-        const now = new Date();
-        const timeStr = now.toTimeString().split(' ')[0];
-        addRollToLog({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          timestamp: timeStr,
+        sendRollToServer({
           type: 'percentile',
           label: 'd%',
           total: rollSummary.total,
-          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`
+          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`,
+          rollSummary
         });
+        // addRollToLog({ id, timestamp, type, label, total, breakdown })
         percentileHudTimeout = setTimeout(() => {
           showPercentileHud.value = false;
         }, 8000);
@@ -716,18 +752,20 @@ async function rollDamage() {
       ]);
       const rollSummary = calculateDamageRoll(results);
       if (rollSummary.count > 0) {
-        lastDamageRoll.value = rollSummary;
+        lastDamageRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
         showDamageHud.value = true;
-        const now = new Date();
-        const timeStr = now.toTimeString().split(' ')[0];
-        addRollToLog({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          timestamp: timeStr,
+        sendRollToServer({
           type: 'damage',
           label: `${rollSummary.count}d10`,
           total: rollSummary.total,
-          breakdown: `[${rollSummary.dice.join(', ')}]`
+          breakdown: `[${rollSummary.dice.join(', ')}]`,
+          rollSummary
         });
+        // addRollToLog({ id, timestamp, type, label, total, breakdown })
         damageHudTimeout = setTimeout(() => {
           showDamageHud.value = false;
         }, 8000);
@@ -1339,6 +1377,53 @@ function setupSocketListeners() {
       selectedTokenId.value = null;
     }
   });
+
+  socket.on('roll:created', ({ mode, roll }) => {
+    if (mode !== 'rpg') return;
+    if (!rollLog.value.some(r => r.id === roll.id)) {
+      rollLog.value.unshift(roll);
+      if (rollLog.value.length > 20) {
+        rollLog.value = rollLog.value.slice(0, 20);
+      }
+    }
+    // If peer rolled, show floating banner
+    if (roll.userId !== authStore.user?.id) {
+      if (roll.type === 'percentile') {
+        lastPercentileRoll.value = {
+          ...roll.rollSummary,
+          username: roll.username,
+          role: roll.role,
+          total: roll.total
+        };
+        showPercentileHud.value = true;
+        if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+        percentileHudTimeout = setTimeout(() => {
+          showPercentileHud.value = false;
+        }, 8000);
+      } else if (roll.type === 'damage') {
+        lastDamageRoll.value = {
+          ...roll.rollSummary,
+          username: roll.username,
+          role: roll.role,
+          total: roll.total,
+          count: roll.rollSummary?.count || (roll.label ? parseInt(roll.label) : 1),
+          dice: roll.rollSummary?.dice || [],
+          breakdown: roll.breakdown
+        };
+        showDamageHud.value = true;
+        if (damageHudTimeout) clearTimeout(damageHudTimeout);
+        damageHudTimeout = setTimeout(() => {
+          showDamageHud.value = false;
+        }, 8000);
+      }
+    }
+  });
+
+  socket.on('roll:cleared', ({ mode }) => {
+    if (mode === 'rpg') {
+      rollLog.value = [];
+    }
+  });
 }
 
 function cleanupSocketListeners() {
@@ -1350,10 +1435,12 @@ function cleanupSocketListeners() {
   socket.off('token:moved');
   socket.off('token:updated');
   socket.off('token:deleted');
+  socket.off('roll:created');
+  socket.off('roll:cleared');
 }
 
 onMounted(() => {
-  loadRollLog();
+  fetchRollLog();
   fetchActiveMap();
   fetchCharacters();
   if (isGm.value) {
@@ -2673,5 +2760,33 @@ onBeforeUnmount(() => {
   font-size: 10px;
   color: #a0a0a0;
   font-family: monospace;
+}
+
+.hud-user-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  text-transform: uppercase;
+}
+.hud-user-tag.gamemaster, .roll-user-badge.gamemaster {
+  background: rgba(229, 192, 123, 0.25);
+  color: #e5c07b;
+  border: 1px solid rgba(229, 192, 123, 0.4);
+}
+.hud-user-tag.player, .roll-user-badge.player {
+  background: rgba(119, 209, 158, 0.2);
+  color: #77d19e;
+  border: 1px solid rgba(119, 209, 158, 0.35);
+}
+.roll-user-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
 }
 </style>
