@@ -15,7 +15,7 @@
           <button title="Zoom Out" @click="adjustZoom(-0.15)">-</button>
           <span class="zoom-readout">{{ Math.round(zoomLevel * 100) }}%</span>
           <button title="Zoom In" @click="adjustZoom(0.15)">+</button>
-          <button title="Reset Zoom" class="btn-sm" @click="zoomLevel = 1.0">Reset</button>
+          <button title="Reset Zoom" class="btn-sm" @click="zoomLevel = 1.0; panX = 50; panY = 50">Reset</button>
         </div>
       </div>
 
@@ -225,6 +225,8 @@
           :tokens="tokens"
           :active-tool="activeTool"
           v-model:zoom-level="zoomLevel"
+          v-model:pan-x="panX"
+          v-model:pan-y="panY"
           :selected-token-id="selectedTokenId"
           @token-moved="onTokenMoved"
           @token-selected="onTokenSelected"
@@ -664,10 +666,20 @@ import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
 import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
+import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 
 
 const authStore = useAuthStore();
 const isGm = computed(() => authStore.user?.role === 'GameMaster');
+
+const initialVttState = getUserState(getSafeUserId(), 'spaceVtt', {
+  panX: 50,
+  panY: 50,
+  zoomLevel: 1.0,
+  activeTool: 'select',
+  selectedTokenId: null,
+  isRollLogOpen: false,
+});
 
 
 // Dice state
@@ -686,6 +698,7 @@ let percentileHudTimeout = null;
 const SPACE_ROLL_LOG_KEY = 'sf_vtt_space_roll_log';
 const rollLog = ref([]);
 const isRollLogOpen = ref(false);
+isRollLogOpen.value = !!initialVttState.isRollLogOpen;
 
 function formatRollTime(item) {
   if (!item) return '';
@@ -855,9 +868,27 @@ const mapList = ref([]);
 const ships = ref([]);
 
 // UI State
-const activeTool = ref('select');
-const zoomLevel = ref(1.0);
-const selectedTokenId = ref(null);
+const panX = ref(initialVttState.panX ?? 50);
+const panY = ref(initialVttState.panY ?? 50);
+const activeTool = ref(initialVttState.activeTool || 'select');
+const zoomLevel = ref(initialVttState.zoomLevel ?? 1.0);
+const selectedTokenId = ref(initialVttState.selectedTokenId ?? null);
+
+function persistVttState() {
+  saveUserState(getSafeUserId(), 'spaceVtt', {
+    panX: panX.value,
+    panY: panY.value,
+    zoomLevel: zoomLevel.value,
+    activeTool: activeTool.value,
+    selectedTokenId: selectedTokenId.value,
+    isRollLogOpen: isRollLogOpen.value,
+  });
+}
+
+watch([panX, panY, zoomLevel, activeTool, selectedTokenId, isRollLogOpen], () => {
+  persistVttState();
+});
+
 const showGmDrawer = ref(false);
 const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
@@ -1625,6 +1656,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  persistVttState();
   if (colorDebounceTimer) {
     clearTimeout(colorDebounceTimer);
     colorDebounceTimer = null;

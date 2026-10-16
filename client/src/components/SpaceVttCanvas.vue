@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 
 const props = defineProps({
   map: {
@@ -33,6 +33,14 @@ const props = defineProps({
     type: Number,
     default: 1.0,
   },
+  panX: {
+    type: Number,
+    default: 50,
+  },
+  panY: {
+    type: Number,
+    default: 50,
+  },
   selectedTokenId: {
     type: [Number, String],
     default: null,
@@ -41,6 +49,8 @@ const props = defineProps({
 
 const emit = defineEmits([
   'update:zoomLevel',
+  'update:panX',
+  'update:panY',
   'token-moved',
   'token-selected',
 ]);
@@ -49,8 +59,16 @@ const containerRef = ref(null);
 const canvasRef = ref(null);
 
 // Canvas transform & interaction state
-const panX = ref(50);
-const panY = ref(50);
+const panX = ref(props.panX);
+const panY = ref(props.panY);
+
+watch(() => props.panX, (val) => {
+  if (typeof val === 'number' && val !== panX.value) panX.value = val;
+});
+watch(() => props.panY, (val) => {
+  if (typeof val === 'number' && val !== panY.value) panY.value = val;
+});
+
 const isPanning = ref(false);
 const panStart = { x: 0, y: 0 };
 const isSpacePressed = ref(false);
@@ -452,6 +470,8 @@ function onMouseMove(e) {
   if (isPanning.value) {
     panX.value = e.clientX - panStart.x;
     panY.value = e.clientY - panStart.y;
+    emit('update:panX', panX.value);
+    emit('update:panY', panY.value);
     return;
   }
 
@@ -492,6 +512,8 @@ function onWheel(e) {
 
     panX.value = mouseX - ((mouseX - panX.value) * newZoom) / props.zoomLevel;
     panY.value = mouseY - ((mouseY - panY.value) * newZoom) / props.zoomLevel;
+    emit('update:panX', panX.value);
+    emit('update:panY', panY.value);
   }
 
   emit('update:zoomLevel', newZoom);

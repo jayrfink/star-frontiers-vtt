@@ -65,4 +65,41 @@ describe('Per-User Tab and View State Persistence', () => {
       expect(router.currentRoute.value.path).toBe('/dashboard/rpg-vtt');
     });
   });
+
+  describe('Task 2: VTT Canvas & RpgVttView / SpaceVttView pan, zoom, and tool state persistence', () => {
+    it('VttCanvas and SpaceVttCanvas define panX and panY props and update:panX / update:panY emits', async () => {
+      const VttCanvas = (await import('../src/components/VttCanvas.vue')).default;
+      const SpaceVttCanvas = (await import('../src/components/SpaceVttCanvas.vue')).default;
+
+      expect(VttCanvas.props.panX).toBeDefined();
+      expect(VttCanvas.props.panY).toBeDefined();
+      expect(VttCanvas.emits).toContain('update:panX');
+      expect(VttCanvas.emits).toContain('update:panY');
+
+      expect(SpaceVttCanvas.props.panX).toBeDefined();
+      expect(SpaceVttCanvas.props.panY).toBeDefined();
+      expect(SpaceVttCanvas.emits).toContain('update:panX');
+      expect(SpaceVttCanvas.emits).toContain('update:panY');
+    });
+
+    it('RpgVttView and SpaceVttView bind v-model:pan-x and v-model:pan-y and persist state via userState', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const rpgContent = fs.readFileSync(path.resolve(__dirname, '../src/views/RpgVttView.vue'), 'utf8');
+      const spaceContent = fs.readFileSync(path.resolve(__dirname, '../src/views/SpaceVttView.vue'), 'utf8');
+
+      expect(rpgContent).toContain('v-model:pan-x="panX"');
+      expect(rpgContent).toContain('v-model:pan-y="panY"');
+      expect(rpgContent).toContain("getUserState(");
+      expect(rpgContent).toContain("'rpgVtt'");
+      expect(rpgContent).toContain("saveUserState(");
+
+      expect(spaceContent).toContain('v-model:pan-x="panX"');
+      expect(spaceContent).toContain('v-model:pan-y="panY"');
+      expect(spaceContent).toContain("getUserState(");
+      expect(spaceContent).toContain("'spaceVtt'");
+      expect(spaceContent).toContain("saveUserState(");
+    });
+  });
 });
+
