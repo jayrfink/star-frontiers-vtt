@@ -121,10 +121,20 @@ describe('VTT Tabletop Dice Audio Integration', () => {
       expect(rpgContent).toMatch(/isDiceAudioMuted\s*\?\s*['"]🔇['"]\s*:\s*['"]🔊['"]/);
     });
 
+    it('includes accessibility attributes aria-label and aria-pressed on toggle buttons in RpgVttView', () => {
+      expect(rpgContent).toMatch(/:aria-label="isDiceAudioMuted\s*\?\s*['"]Unmute dice audio['"]\s*:\s*['"]Mute dice audio['"]/);
+      expect(rpgContent).toMatch(/:aria-pressed="!isDiceAudioMuted"/);
+    });
+
     it('renders btn-audio-toggle in template with 🔊 / 🔇 icons in SpaceVttView', () => {
       expect(spaceContent).toContain('btn-audio-toggle');
       expect(spaceContent).toMatch(/class="[^"]*btn-audio-toggle[^"]*"[^>]*@click="toggleAudioMute"/);
       expect(spaceContent).toMatch(/isDiceAudioMuted\s*\?\s*['"]🔇['"]\s*:\s*['"]🔊['"]/);
+    });
+
+    it('includes accessibility attributes aria-label and aria-pressed on toggle buttons in SpaceVttView', () => {
+      expect(spaceContent).toMatch(/:aria-label="isDiceAudioMuted\s*\?\s*['"]Unmute dice audio['"]\s*:\s*['"]Mute dice audio['"]/);
+      expect(spaceContent).toMatch(/:aria-pressed="!isDiceAudioMuted"/);
     });
   });
 
@@ -193,22 +203,34 @@ describe('VTT Tabletop Dice Audio Integration', () => {
       expect(playDiceSoundMock).not.toHaveBeenCalled();
     });
 
-    it('4. Mute toggle button toggles icon between 🔊 and 🔇 and updates service', () => {
+    it('4. Mute toggle button toggles icon, aria-label, and aria-pressed correctly and updates service', () => {
       expect(isDiceAudioMuted.value).toBe(false);
       let icon = isDiceAudioMuted.value ? '🔇' : '🔊';
+      let ariaLabel = isDiceAudioMuted.value ? 'Unmute dice audio' : 'Mute dice audio';
+      let ariaPressed = !isDiceAudioMuted.value;
       expect(icon).toBe('🔊');
+      expect(ariaLabel).toBe('Mute dice audio');
+      expect(ariaPressed).toBe(true);
 
       toggleAudioMute();
       expect(toggleDiceMuteMock).toHaveBeenCalledTimes(1);
       expect(isDiceAudioMuted.value).toBe(true);
       icon = isDiceAudioMuted.value ? '🔇' : '🔊';
+      ariaLabel = isDiceAudioMuted.value ? 'Unmute dice audio' : 'Mute dice audio';
+      ariaPressed = !isDiceAudioMuted.value;
       expect(icon).toBe('🔇');
+      expect(ariaLabel).toBe('Unmute dice audio');
+      expect(ariaPressed).toBe(false);
 
       toggleAudioMute();
       expect(toggleDiceMuteMock).toHaveBeenCalledTimes(2);
       expect(isDiceAudioMuted.value).toBe(false);
       icon = isDiceAudioMuted.value ? '🔇' : '🔊';
+      ariaLabel = isDiceAudioMuted.value ? 'Unmute dice audio' : 'Mute dice audio';
+      ariaPressed = !isDiceAudioMuted.value;
       expect(icon).toBe('🔊');
+      expect(ariaLabel).toBe('Mute dice audio');
+      expect(ariaPressed).toBe(true);
     });
   });
 });

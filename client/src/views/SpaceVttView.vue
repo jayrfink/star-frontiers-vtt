@@ -145,6 +145,8 @@
               class="btn-audio-toggle btn-audio-toggle-pill"
               @click="toggleAudioMute"
               :title="isDiceAudioMuted ? 'Unmute dice audio' : 'Mute dice audio'"
+              :aria-label="isDiceAudioMuted ? 'Unmute dice audio' : 'Mute dice audio'"
+              :aria-pressed="!isDiceAudioMuted"
             >
               {{ isDiceAudioMuted ? '🔇' : '🔊' }}
             </button>
@@ -158,6 +160,8 @@
                   class="btn-audio-toggle"
                   @click="toggleAudioMute"
                   :title="isDiceAudioMuted ? 'Unmute dice audio' : 'Mute dice audio'"
+                  :aria-label="isDiceAudioMuted ? 'Unmute dice audio' : 'Mute dice audio'"
+                  :aria-pressed="!isDiceAudioMuted"
                 >
                   {{ isDiceAudioMuted ? '🔇' : '🔊' }}
                 </button>

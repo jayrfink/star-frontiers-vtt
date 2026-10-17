@@ -135,8 +135,10 @@ export function getVolume() {
  * @param {number} volume
  */
 export function setVolume(volume) {
-  const num = typeof volume === 'number' && !Number.isNaN(volume) ? volume : DEFAULT_SETTINGS.volume;
-  currentSettings.volume = Math.max(0, Math.min(1, num));
+  if (typeof volume !== 'number' || Number.isNaN(volume) || !Number.isFinite(volume)) {
+    return;
+  }
+  currentSettings.volume = Math.max(0, Math.min(1, volume));
   saveSettings();
 }
 

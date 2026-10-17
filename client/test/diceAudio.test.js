@@ -112,6 +112,26 @@ describe('diceAudio service', () => {
     diceAudio.setVolume(-0.4);
     expect(diceAudio.getVolume()).toBe(0.0);
     expect(JSON.parse(storage['sf_vtt_audio_settings']).volume).toBe(0.0);
+
+    // Calling setVolume with NaN or non-number preserves existing volume
+    diceAudio.setVolume(0.65);
+    expect(diceAudio.getVolume()).toBeCloseTo(0.65, 2);
+
+    diceAudio.setVolume(NaN);
+    expect(diceAudio.getVolume()).toBeCloseTo(0.65, 2);
+    expect(JSON.parse(storage['sf_vtt_audio_settings']).volume).toBeCloseTo(0.65, 2);
+
+    diceAudio.setVolume('invalid');
+    expect(diceAudio.getVolume()).toBeCloseTo(0.65, 2);
+
+    diceAudio.setVolume(null);
+    expect(diceAudio.getVolume()).toBeCloseTo(0.65, 2);
+
+    diceAudio.setVolume(undefined);
+    expect(diceAudio.getVolume()).toBeCloseTo(0.65, 2);
+
+    diceAudio.setVolume(Infinity);
+    expect(diceAudio.getVolume()).toBeCloseTo(0.65, 2);
   });
 
   it('5. restores saved settings from localStorage on initial load', async () => {
