@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/index.js';
 import { createDb } from '../src/db.js';
 
 describe('GET /api/equipment - Alpha Dawn Expanded Equipment Catalog', () => {
+  let db;
+  let server;
   let response;
   const ALLOWED_CATEGORIES = [
     'Weapon',
@@ -16,9 +18,15 @@ describe('GET /api/equipment - Alpha Dawn Expanded Equipment Catalog', () => {
   ];
 
   beforeAll(async () => {
-    const db = createDb(':memory:');
-    const { app } = createApp(db, ':memory:');
-    response = await request(app).get('/api/equipment');
+    db = createDb(':memory:');
+    const result = createApp(db, ':memory:');
+    server = result.server;
+    response = await request(result.app).get('/api/equipment');
+  });
+
+  afterAll(() => {
+    if (db) db.close();
+    if (server && server.close) server.close();
   });
 
   it('returns HTTP 200 with JSON content', () => {
