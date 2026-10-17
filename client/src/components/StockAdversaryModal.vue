@@ -257,10 +257,11 @@
                   <button
                     type="button"
                     class="btn-generate-ai-art"
-                    :disabled="isGeneratingArt"
+                    :disabled="isGeneratingArt || cooldownSeconds > 0"
                     @click="generateAiTokenArt"
                   >
                     <span v-if="isGeneratingArt">⏳ Generating...</span>
+                    <span v-else-if="cooldownSeconds > 0">⏳ Cooldown ({{ cooldownSeconds }}s)</span>
                     <span v-else>✨ Generate AI Token Art</span>
                   </button>
                   <button type="button" class="btn-browse-art" @click="$emit('browse-image')">
@@ -371,6 +372,8 @@ export default {
       customCount: 1,
       isSpawning: false,
       isGeneratingArt: false,
+      cooldownSeconds: 0,
+      artCooldownTimer: null,
       errorMessage: null,
       customForm: {
         name: 'Sathar Shock Trooper',
@@ -486,7 +489,20 @@ export default {
         console.error('Failed to upload adversary image:', err);
       }
     },
+    startArtCooldown(seconds) {
+      if (this.artCooldownTimer) clearInterval(this.artCooldownTimer);
+      this.cooldownSeconds = Math.max(1, Math.round(seconds));
+      this.artCooldownTimer = setInterval(() => {
+        this.cooldownSeconds--;
+        if (this.cooldownSeconds <= 0) {
+          clearInterval(this.artCooldownTimer);
+          this.artCooldownTimer = null;
+          this.cooldownSeconds = 0;
+        }
+      }, 1000);
+    },
     async generateAiTokenArt() {
+      if (this.cooldownSeconds > 0) return;
       this.isGeneratingArt = true;
       this.errorMessage = null;
       try {
@@ -510,16 +526,23 @@ export default {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || errData.message || 'Failed to generate token art');
+          if ((res.status === 429 || errData.retryAfter) && typeof this.startArtCooldown === 'function') {
+            this.startArtCooldown(errData.retryAfter || 45);
+          }
+          throw new Error(errData.message || errData.error || 'Failed to generate token art');
         }
 
         const data = await res.json();
         if (data.token_image_url) {
           this.customForm.source_image_url = data.token_image_url;
         }
+        // Start a 45s pacing cooldown after successful generation
+        if (typeof this.startArtCooldown === 'function') {
+          this.startArtCooldown(45);
+        }
       } catch (err) {
         console.error('Failed to generate token art:', err);
-        this.errorMessage = `AI Art Generation error: ${err.message}`;
+        this.errorMessage = err.message;
       } finally {
         this.isGeneratingArt = false;
       }
@@ -564,6 +587,12 @@ export default {
         this.isSpawning = false;
       }
     },
+  },
+  beforeUnmount() {
+    if (this.artCooldownTimer) {
+      clearInterval(this.artCooldownTimer);
+      this.artCooldownTimer = null;
+    }
   },
 };
 </script>

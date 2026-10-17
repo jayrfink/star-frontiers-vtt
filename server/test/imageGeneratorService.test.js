@@ -36,8 +36,32 @@ describe('imageGeneratorService', () => {
       category: 'creature',
       attacks: 'Venomous Stinger, Mandibles',
     });
-
     expect(prompt).toContain('alien predatory beast called Sand Burrower');
     expect(prompt).toContain('Venomous Stinger, Mandibles');
+  });
+
+  it('throws RATE_LIMITED error with retryAfter when provider returns 402/429', async () => {
+    const { generateAiImage } = await import('../src/imageGeneratorService.js');
+    const origFetch = global.fetch;
+    global.fetch = async () => ({
+      ok: false,
+      status: 402,
+      headers: {
+        get: (h) => (h.toLowerCase() === 'retry-after' ? '30' : null),
+      },
+      json: async () => ({
+        error: { message: 'Free limit reached: 1 image every 45 seconds per IP. Retry after 30s' },
+      }),
+    });
+
+    try {
+      await expect(generateAiImage('test prompt')).rejects.toMatchObject({
+        code: 'RATE_LIMITED',
+        status: 429,
+        retryAfter: 30,
+      });
+    } finally {
+      global.fetch = origFetch;
+    }
   });
 });

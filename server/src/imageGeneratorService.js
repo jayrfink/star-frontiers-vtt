@@ -57,26 +57,70 @@ export async function generateAiImage(enhancedPrompt) {
     }
   }
 
-  // 2. Pollinations AI (free, no API key required)
+  // 2. Pollinations AI (free, no API key required, supports POLLINATIONS_API_KEY / POLLEN_KEY)
+  const apiKey = process.env.POLLINATIONS_API_KEY || process.env.POLLEN_KEY;
   const encoded = encodeURIComponent(enhancedPrompt);
   const seed = Math.floor(Math.random() * 1000000);
-  const url = `https://image.pollinations.ai/prompt/${encoded}?width=512&height=512&seed=${seed}&nologo=true`;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
-
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!res.ok) {
-      throw new Error(`AI generation provider returned status ${res.status}`);
-    }
-    const arrayBuffer = await res.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  } catch (err) {
-    clearTimeout(timeout);
-    throw new Error(`Failed to generate AI image: ${err.message}`);
+  let url = `https://image.pollinations.ai/prompt/${encoded}?width=512&height=512&seed=${seed}&nologo=true`;
+  if (apiKey) {
+    url += `&key=${apiKey}`;
   }
+
+  const fetchWithTimeout = async (targetUrl) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 35000);
+    try {
+      const headers = {};
+      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+      const res = await fetch(targetUrl, { signal: controller.signal, headers });
+      clearTimeout(timeout);
+      return res;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
+    }
+  };
+
+  let res = await fetchWithTimeout(url);
+
+  if (!res.ok) {
+    const retryHeader = res.headers.get('retry-after');
+    let retrySeconds = retryHeader ? parseInt(retryHeader, 10) : 0;
+    let providerError = '';
+    try {
+      const errorJson = await res.json();
+      providerError = errorJson?.error?.message || '';
+      if (!retrySeconds && errorJson?.error?.message) {
+        const match = errorJson.error.message.match(/retry after (\d+)s/i);
+        if (match) retrySeconds = parseInt(match[1], 10);
+      }
+    } catch {
+      // not json
+    }
+
+    // Auto-retry once if retry wait is short (<= 8s)
+    if ((res.status === 402 || res.status === 429) && retrySeconds > 0 && retrySeconds <= 8) {
+      await new Promise((r) => setTimeout(r, (retrySeconds + 1) * 1000));
+      res = await fetchWithTimeout(url);
+    }
+
+    if (!res.ok) {
+      if (res.status === 402 || res.status === 429) {
+        const waitTime = retrySeconds || 45;
+        const err = new Error(
+          `AI image rate limit reached (free tier allows 1 generation every 45s). Please wait ${waitTime} seconds before trying again, or select/upload an image.`
+        );
+        err.code = 'RATE_LIMITED';
+        err.status = 429;
+        err.retryAfter = waitTime;
+        throw err;
+      }
+      throw new Error(`AI generation provider returned status ${res.status}: ${providerError || 'Unknown provider error'}`);
+    }
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }
 
 /**

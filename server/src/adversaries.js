@@ -88,7 +88,12 @@ export function createAdversariesRouter(db, io) {
       res.json(result);
     } catch (err) {
       console.error('Error generating AI token art:', err);
-      res.status(500).json({ error: 'Failed to generate token art', message: err.message });
+      const statusCode = err.status || (err.code === 'RATE_LIMITED' ? 429 : 500);
+      res.status(statusCode).json({
+        error: err.code === 'RATE_LIMITED' ? 'Rate limit reached' : 'Failed to generate token art',
+        message: err.message,
+        retryAfter: err.retryAfter,
+      });
     }
   });
 

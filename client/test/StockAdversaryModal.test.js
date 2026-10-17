@@ -100,5 +100,36 @@ describe('StockAdversaryModal Component', () => {
         global.fetch = originalFetch;
       }
     });
+
+    it('handles rate limit error and starts cooldown timer', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: false,
+        status: 429,
+        json: async () => ({
+          error: 'Rate limit reached',
+          message: 'AI image rate limit reached. Please wait 35 seconds.',
+          retryAfter: 35,
+        }),
+      });
+
+      try {
+        let startedCooldown = 0;
+        const ctx = {
+          isGeneratingArt: false,
+          errorMessage: null,
+          cooldownSeconds: 0,
+          customForm: { name: 'Trooper' },
+          startArtCooldown(s) { startedCooldown = s; },
+        };
+
+        await StockAdversaryModal.methods.generateAiTokenArt.call(ctx);
+        expect(ctx.isGeneratingArt).toBe(false);
+        expect(startedCooldown).toBe(35);
+        expect(ctx.errorMessage).toContain('AI image rate limit reached');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });
