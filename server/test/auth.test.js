@@ -433,6 +433,33 @@ describe('Auth API', () => {
       expect(res3.status).toBe(400);
     });
 
+    it('returns 400 Bad Request when request body is empty/missing or contains non-string passwords', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      // Request without a body
+      const resNoBody = await agent.put('/api/auth/password');
+      expect(resNoBody.status).toBe(400);
+      expect(resNoBody.body.error).toBe('Current password and new password are required');
+
+      // Non-string currentPassword
+      const resNonStringCurrent = await agent.put('/api/auth/password').send({
+        currentPassword: 12345,
+        newPassword: 'validPassword123',
+      });
+      expect(resNonStringCurrent.status).toBe(400);
+      expect(resNonStringCurrent.body.error).toBe('Current password and new password are required');
+
+      // Non-string newPassword
+      const resNonStringNew = await agent.put('/api/auth/password').send({
+        currentPassword: 'password123',
+        newPassword: true,
+      });
+      expect(resNonStringNew.status).toBe(400);
+      expect(resNonStringNew.body.error).toBe('Current password and new password are required');
+    });
+
     it('returns 400 when newPassword is shorter than 6 characters', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });

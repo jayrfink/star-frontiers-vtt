@@ -12,7 +12,7 @@
           type="button"
           class="btn-close"
           title="Close dialog"
-          :disabled="submitting"
+          :disabled="submitting || !!success"
           @click="handleClose"
         >
           ✕
@@ -31,12 +31,13 @@
           <label for="currentPassword">Current Password</label>
           <input
             id="currentPassword"
+            ref="currentPasswordInput"
             v-model="currentPassword"
             type="password"
             autocomplete="current-password"
             placeholder="Enter current password"
             required
-            :disabled="submitting"
+            :disabled="submitting || !!success"
           />
         </div>
 
@@ -50,7 +51,7 @@
             placeholder="At least 6 characters"
             required
             minlength="6"
-            :disabled="submitting"
+            :disabled="submitting || !!success"
           />
         </div>
 
@@ -63,7 +64,7 @@
             autocomplete="new-password"
             placeholder="Re-enter new password"
             required
-            :disabled="submitting"
+            :disabled="submitting || !!success"
           />
         </div>
 
@@ -71,7 +72,7 @@
           <button
             type="button"
             class="btn-cancel"
-            :disabled="submitting"
+            :disabled="submitting || !!success"
             @click="handleClose"
           >
             Cancel
@@ -79,7 +80,7 @@
           <button
             type="submit"
             class="btn-submit"
-            :disabled="submitting"
+            :disabled="submitting || !!success"
           >
             {{ submitting ? 'Updating...' : 'Change Password' }}
           </button>
@@ -120,6 +121,9 @@ export default {
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', this.handleKeydown);
     }
+    this.$nextTick(() => {
+      this.$refs.currentPasswordInput?.focus();
+    });
   },
   beforeUnmount() {
     if (typeof window !== 'undefined') {
@@ -160,6 +164,7 @@ export default {
       return true;
     },
     async handleSubmit() {
+      if (this.submitting || this.success) return;
       if (!this.validate()) {
         return;
       }

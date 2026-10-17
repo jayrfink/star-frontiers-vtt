@@ -67,9 +67,46 @@ describe('ChangePasswordModal.vue', () => {
       expect(htmlSuccess).toContain('success-banner');
       expect(htmlSuccess).toContain('Password updated successfully');
     });
+
+    it('disables inputs, submit button, and cancel button when success is active', async () => {
+      const html = await renderModal({ initialSuccess: 'Password updated successfully' });
+      expect(html).toContain('success-banner');
+      // Inputs should have disabled attribute
+      expect(html).toMatch(/<input[^>]+id="currentPassword"[^>]*disabled/);
+      expect(html).toMatch(/<input[^>]+id="newPassword"[^>]*disabled/);
+      expect(html).toMatch(/<input[^>]+id="confirmPassword"[^>]*disabled/);
+      // Action buttons should have disabled attribute
+      expect(html).toMatch(/<button[^>]+class="btn-submit"[^>]*disabled/);
+      expect(html).toMatch(/<button[^>]+class="btn-cancel"[^>]*disabled/);
+      expect(html).toMatch(/<button[^>]+class="btn-close"[^>]*disabled/);
+    });
   });
 
   describe('Client-side Validation & Submission Logic', () => {
+    it('prevents submission if already submitting or if success is active', async () => {
+      authStore.changePassword = vi.fn();
+
+      const vm = {
+        currentPassword: 'currentPass1',
+        newPassword: 'validPassword123',
+        confirmPassword: 'validPassword123',
+        submitting: true,
+        success: '',
+        validate: vi.fn(),
+        handleSubmit: ChangePasswordModal.methods.handleSubmit,
+      };
+
+      await vm.handleSubmit();
+      expect(authStore.changePassword).not.toHaveBeenCalled();
+      expect(vm.validate).not.toHaveBeenCalled();
+
+      vm.submitting = false;
+      vm.success = 'Password updated successfully';
+      await vm.handleSubmit();
+      expect(authStore.changePassword).not.toHaveBeenCalled();
+      expect(vm.validate).not.toHaveBeenCalled();
+    });
+
     it('validates client-side minimum length (< 6 characters shows error without calling API)', async () => {
       authStore.changePassword = vi.fn();
 

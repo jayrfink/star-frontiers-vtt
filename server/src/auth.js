@@ -171,11 +171,11 @@ export function createAuthRouter(db) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword || typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
       return res.status(400).json({ error: 'Current password and new password are required' });
     }
-    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
