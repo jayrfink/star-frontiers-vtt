@@ -163,7 +163,10 @@ export async function playDiceSound({ isRemote = false } = {}) {
   const soundUrl = SOUND_FILES[trackIndex];
 
   try {
-    const audio = new AudioCtor(soundUrl);
+    const preloaded = preloadedPool[trackIndex];
+    const audio = (preloaded && typeof preloaded.cloneNode === 'function')
+      ? preloaded.cloneNode(true)
+      : new AudioCtor(soundUrl);
 
     // Subtle pitch/speed variation (0.96x - 1.04x) for natural acoustics
     const rate = 0.96 + Math.random() * (1.04 - 0.96);
@@ -181,10 +184,12 @@ export async function playDiceSound({ isRemote = false } = {}) {
 
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.catch === 'function') {
-      await playPromise.catch(() => {});
+      await playPromise.catch((err) => {
+        console.warn('[diceAudio] Audio playback blocked or failed:', err);
+      });
     }
-  } catch {
-    // Silently swallow errors (e.g. autoplay restriction or playback failure)
+  } catch (err) {
+    console.warn('[diceAudio] Failed to initialize audio playback:', err);
   }
 }
 
