@@ -69,5 +69,19 @@ export const useAuthStore = defineStore('auth', () => {
     checked.value = false;
   }
 
-  return { user, checked, requiresSetup, isAuthenticated, fetchUser, login, register, logout, checkSetup };
+  async function changePassword(currentPassword, newPassword) {
+    const res = await fetch('/api/auth/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to update password');
+    }
+    return data;
+  }
+
+  return { user, checked, requiresSetup, isAuthenticated, fetchUser, login, register, logout, checkSetup, changePassword };
 });

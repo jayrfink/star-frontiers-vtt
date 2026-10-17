@@ -1,10 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import NavBar from '../src/components/NavBar.vue';
 import { useAuthStore } from '../src/stores/auth.js';
+
+vi.mock('vue', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useSSRContext: () => ({ modules: new Set() }),
+  };
+});
+
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useRouter: () => ({ push: vi.fn() }),
+  };
+});
+
 
 describe('NavBar.vue', () => {
   async function renderNavBar(userData = null) {
@@ -76,5 +93,42 @@ describe('NavBar.vue', () => {
     expect(htmlPlayer).toContain('Cadet');
     expect(htmlPlayer).toContain('Player');
     expect(htmlPlayer).toContain('Logout');
+  });
+
+  it('renders Password button when user is authenticated and hides when not', async () => {
+    const htmlAuth = await renderNavBar({ username: 'Cadet', role: 'Player' });
+    expect(htmlAuth).toContain('🔑 Password');
+    expect(htmlAuth).toContain('change-password-btn');
+
+    const htmlUnauth = await renderNavBar(null);
+    expect(htmlUnauth).not.toContain('🔑 Password');
+  });
+
+  it('opens ChangePasswordModal when Password button is clicked', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore();
+    auth.user = { username: 'Cadet', role: 'Player' };
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: { template: '<div />' } },
+        { path: '/login', component: { template: '<div />' } },
+      ],
+    });
+
+    let exposed = {};
+    NavBar.setup({}, {
+      expose: (obj) => {
+        Object.assign(exposed, obj);
+      },
+      emit: () => {},
+      slots: {},
+      attrs: {}
+    });
+
+    expect(exposed.showPasswordModal.value).toBe(false);
+    exposed.openPasswordModal();
+    expect(exposed.showPasswordModal.value).toBe(true);
   });
 });

@@ -21,18 +21,41 @@
         {{ auth.user?.role === 'GameMaster' ? 'GM' : 'Player' }}
       </span>
       <span class="username">{{ auth.user?.username }}</span>
+      <button
+        v-if="auth.isAuthenticated"
+        class="change-password-btn"
+        title="Change your password"
+        @click="openPasswordModal"
+      >
+        🔑 Password
+      </button>
       <button class="logout-btn" @click="handleLogout">Logout</button>
     </div>
+    <ChangePasswordModal
+      v-if="showPasswordModal"
+      @close="showPasswordModal = false"
+    />
   </nav>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
+import ChangePasswordModal from './ChangePasswordModal.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
+const showPasswordModal = ref(false);
+
+function openPasswordModal() {
+  showPasswordModal.value = true;
+}
+
+defineExpose({
+  showPasswordModal,
+  openPasswordModal,
+});
 
 const baseTabs = [
   { path: '/dashboard/rpg-vtt', label: 'RPG VTT', icon: '🗺️' },
@@ -150,6 +173,25 @@ async function handleLogout() {
   background: rgba(63, 185, 80, 0.2);
   color: #3fb950;
   border: 1px solid rgba(63, 185, 80, 0.4);
+}
+
+.change-password-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  background-color: #000000;
+  border: 1px solid teal;
+  color: teal;
+  font-weight: 600;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.change-password-btn:hover {
+  background-color: #051414;
+  border-color: #00a8a8;
+  color: #00a8a8;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
 }
 
 .logout-btn {
