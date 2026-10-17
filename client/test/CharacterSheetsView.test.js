@@ -258,5 +258,90 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       }
     });
   });
+
+  describe('Equipment Catalog Category Filtering & Tabs', () => {
+    const mockEquipmentList = [
+      { name: 'Laser Pistol', category: 'Weapon', cost: 500, weight: 1, capabilities: 'Damage: 1d10' },
+      { name: 'Heavy Laser', category: 'Weapon', cost: 1000, weight: 15, capabilities: 'Damage: 1d10 to 30d10' },
+      { name: 'SEU Clip (20 SEU)', category: 'Ammunition', cost: 10, weight: 0.1, capabilities: '20 SEU' },
+      { name: 'Skeinsuit', category: 'Defense', cost: 200, weight: 2, capabilities: 'Defends vs kinetic' },
+      { name: 'Techkit', category: 'Toolkit', cost: 500, weight: 5, capabilities: 'Diagnostic toolkit' },
+      { name: 'Stimdose', category: 'Medical', cost: 20, weight: 0.1, capabilities: 'Restores 10 STA' },
+      { name: 'Chronocom', category: 'Gear', cost: 50, weight: 0.5, capabilities: 'Personal communicator' },
+      { name: 'Power Backpack', category: 'Power', cost: 200, weight: 5, capabilities: '100 SEU' },
+    ];
+
+    it('calculates category count accurately including All', () => {
+      const vm = {
+        equipmentList: mockEquipmentList,
+      };
+
+      const getCount = CharacterSheetsView.methods.getCategoryCount;
+      expect(getCount.call(vm, 'All')).toBe(8);
+      expect(getCount.call(vm, 'Weapon')).toBe(2);
+      expect(getCount.call(vm, 'Ammunition')).toBe(1);
+      expect(getCount.call(vm, 'Defense')).toBe(1);
+      expect(getCount.call(vm, 'Toolkit')).toBe(1);
+      expect(getCount.call(vm, 'Medical')).toBe(1);
+      expect(getCount.call(vm, 'Gear')).toBe(1);
+      expect(getCount.call(vm, 'Power')).toBe(1);
+      expect(getCount.call(vm, 'NonExistent')).toBe(0);
+    });
+
+    it('filters equipment list by activeEquipmentCategory when category is not All', () => {
+      const vm = {
+        equipmentList: mockEquipmentList,
+        activeEquipmentCategory: 'Weapon',
+        equipmentSearchQuery: '',
+      };
+
+      let filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(2);
+      expect(filtered.map(i => i.name)).toEqual(['Laser Pistol', 'Heavy Laser']);
+
+      vm.activeEquipmentCategory = 'Defense';
+      filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Skeinsuit');
+
+      vm.activeEquipmentCategory = 'All';
+      filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(8);
+    });
+
+    it('filters by both category and search query simultaneously', () => {
+      const vm = {
+        equipmentList: mockEquipmentList,
+        activeEquipmentCategory: 'Weapon',
+        equipmentSearchQuery: 'Heavy',
+      };
+
+      let filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Heavy Laser');
+
+      // Search term does not match anything in active category
+      vm.equipmentSearchQuery = 'Skeinsuit';
+      filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(0);
+
+      // Switching category back to All matches search term
+      vm.activeEquipmentCategory = 'All';
+      filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Skeinsuit');
+    });
+
+    it('defaults activeEquipmentCategory gracefully if unset on vm', () => {
+      const vm = {
+        equipmentList: mockEquipmentList,
+        equipmentSearchQuery: '',
+      };
+
+      const filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
+      expect(filtered.length).toBe(8);
+    });
+  });
 });
+
 

@@ -522,6 +522,23 @@
         <p class="equipment-modal-desc">
           Search weapons, defenses, and gear from the Star Frontiers catalog. Click <strong>+ Add</strong> to add an item to your character's inventory.
         </p>
+
+        <!-- Category Filter Tabs -->
+        <div class="equipment-category-tabs" role="tablist" aria-label="Equipment Categories">
+          <button
+            v-for="cat in equipmentCategories"
+            :key="cat"
+            type="button"
+            role="tab"
+            class="cat-tab"
+            :class="{ active: (activeEquipmentCategory || 'All') === cat }"
+            :aria-selected="(activeEquipmentCategory || 'All') === cat"
+            @click="activeEquipmentCategory = cat"
+          >
+            {{ cat }} <span class="cat-count">({{ getCategoryCount(cat) }})</span>
+          </button>
+        </div>
+
         <input 
           type="text" 
           v-model="equipmentSearchQuery" 
@@ -598,6 +615,8 @@ export default {
       officialSkills: OFFICIAL_SKILLS,
       equipmentList: [],
       showEquipmentModal: false,
+      activeEquipmentCategory: 'All',
+      equipmentCategories: ['All', 'Weapon', 'Ammunition', 'Defense', 'Toolkit', 'Medical', 'Gear', 'Power'],
       equipmentSearchQuery: '',
       searchInventoryQuery: '',
       recentlyAddedMap: {},
@@ -627,9 +646,14 @@ export default {
       return this.imageBrowserTarget === 'char' ? 'Select Character Portrait' : 'Select Character Avatar';
     },
     filteredEquipmentList() {
-      if (!this.equipmentSearchQuery) return this.equipmentList;
+      if (!this.equipmentList) return [];
+      let list = this.equipmentList;
+      if (this.activeEquipmentCategory && this.activeEquipmentCategory !== 'All') {
+        list = list.filter(item => item.category === this.activeEquipmentCategory);
+      }
+      if (!this.equipmentSearchQuery) return list;
       const q = this.equipmentSearchQuery.toLowerCase().trim();
-      return this.equipmentList.filter(item => 
+      return list.filter(item => 
         (item.name && item.name.toLowerCase().includes(q)) || 
         (item.category && item.category.toLowerCase().includes(q)) || 
         (item.capabilities && item.capabilities.toLowerCase().includes(q))
@@ -1080,6 +1104,11 @@ export default {
       } catch (err) {
         console.error('Error fetching equipment:', err);
       }
+    },
+    getCategoryCount(category) {
+      if (!this.equipmentList) return 0;
+      if (category === 'All') return this.equipmentList.length;
+      return this.equipmentList.filter(item => item.category === category).length;
     },
     addEquipment(item) {
       if (!this.selectedChar) return;
@@ -2065,6 +2094,47 @@ export default {
   font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 12px;
+}
+
+.equipment-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.cat-tab {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #334455;
+  color: #8899aa;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cat-tab:hover {
+  background: rgba(0, 229, 255, 0.1);
+  border-color: #00e5ff;
+  color: #ffffff;
+}
+
+.cat-tab.active {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+  font-weight: bold;
+}
+
+.cat-count {
+  font-size: 0.75rem;
+  opacity: 0.8;
 }
 
 .modal-search {
