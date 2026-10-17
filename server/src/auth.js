@@ -166,5 +166,38 @@ export function createAuthRouter(db) {
     }
   });
 
+  router.put('/password', async (req, res) => {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    try {
+      const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const matches = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!matches) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, req.session.userId);
+      res.json({ ok: true, message: 'Password updated successfully' });
+    } catch (err) {
+      console.error('Change password error:', err);
+      res.status(500).json({ error: 'Failed to update password' });
+    }
+  });
+
   return router;
 }

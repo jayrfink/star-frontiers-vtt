@@ -409,4 +409,104 @@ describe('Auth API', () => {
       expect(successfulLogin.body.username).toBe('player1');
     });
   });
+
+  describe('PUT /api/auth/password', () => {
+    it('returns 401 when unauthenticated', async () => {
+      const res = await request(app)
+        .put('/api/auth/password')
+        .send({ currentPassword: 'password123', newPassword: 'newpassword123' });
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 400 when missing currentPassword or newPassword', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res1 = await agent.put('/api/auth/password').send({ currentPassword: 'password123' });
+      expect(res1.status).toBe(400);
+
+      const res2 = await agent.put('/api/auth/password').send({ newPassword: 'newpassword123' });
+      expect(res2.status).toBe(400);
+
+      const res3 = await agent.put('/api/auth/password').send({});
+      expect(res3.status).toBe(400);
+    });
+
+    it('returns 400 when newPassword is shorter than 6 characters', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await agent.put('/api/auth/password').send({
+        currentPassword: 'password123',
+        newPassword: 'short',
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/at least 6 characters/i);
+    });
+
+    it('returns 401 when currentPassword is incorrect', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const res = await agent.put('/api/auth/password').send({
+        currentPassword: 'wrongpassword',
+        newPassword: 'newpassword123',
+      });
+      expect(res.status).toBe(401);
+      expect(res.body.error).toMatch(/incorrect/i);
+    });
+
+    it('returns 200 on valid credentials for a Player, and verifies subsequent login succeeds with new password and fails with old', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const updateRes = await playerAgent.put('/api/auth/password').send({
+        currentPassword: 'password123',
+        newPassword: 'playerNewPassword123',
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.ok).toBe(true);
+
+      // Verify old password fails
+      const failedLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'player1', password: 'password123' });
+      expect(failedLogin.status).toBe(401);
+
+      // Verify new password succeeds
+      const successfulLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'player1', password: 'playerNewPassword123' });
+      expect(successfulLogin.status).toBe(200);
+      expect(successfulLogin.body.username).toBe('player1');
+    });
+
+    it('returns 200 on valid credentials for a GameMaster', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      const updateRes = await gmAgent.put('/api/auth/password').send({
+        currentPassword: 'password123',
+        newPassword: 'gmNewPassword123',
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.ok).toBe(true);
+
+      // Verify login with new GM password
+      const successfulLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'gm', password: 'gmNewPassword123' });
+      expect(successfulLogin.status).toBe(200);
+      expect(successfulLogin.body.username).toBe('gm');
+    });
+  });
 });
