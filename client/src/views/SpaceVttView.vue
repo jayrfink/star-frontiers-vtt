@@ -131,19 +131,36 @@
 
         <!-- Collapsible Die Roll Log HUD -->
         <div class="roll-log-hud">
-          <button
-            v-if="!isRollLogOpen"
-            type="button"
-            class="btn-roll-log-pill"
-            @click="isRollLogOpen = true"
-            title="Open Die Roll Log"
-          >
-            🎲 Log ({{ rollLog.length }}) ▲
-          </button>
+          <div v-if="!isRollLogOpen" class="roll-log-pill-row">
+            <button
+              type="button"
+              class="btn-roll-log-pill"
+              @click="isRollLogOpen = true"
+              title="Open Die Roll Log"
+            >
+              🎲 Log ({{ rollLog.length }}) ▲
+            </button>
+            <button
+              type="button"
+              class="btn-audio-toggle btn-audio-toggle-pill"
+              @click="toggleAudioMute"
+              :title="isDiceAudioMuted ? 'Unmute dice audio' : 'Mute dice audio'"
+            >
+              {{ isDiceAudioMuted ? '🔇' : '🔊' }}
+            </button>
+          </div>
           <div v-else class="roll-log-card">
             <div class="roll-log-header">
               <div class="roll-log-title">🎲 Roll Log ({{ rollLog.length }}/20)</div>
               <div class="roll-log-actions">
+                <button
+                  type="button"
+                  class="btn-audio-toggle"
+                  @click="toggleAudioMute"
+                  :title="isDiceAudioMuted ? 'Unmute dice audio' : 'Mute dice audio'"
+                >
+                  {{ isDiceAudioMuted ? '🔇' : '🔊' }}
+                </button>
                 <button v-if="isGm" type="button" class="btn-roll-log-clear" @click="clearRollLog" :disabled="rollLog.length === 0" title="Clear log">Clear</button>
                 <button type="button" class="btn-roll-log-toggle" @click="isRollLogOpen = false" title="Minimize log">▼</button>
               </div>
@@ -723,10 +740,18 @@ import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
 import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
+import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
 
 
 const authStore = useAuthStore();
 const isGm = computed(() => authStore.user?.role === 'GameMaster');
+
+const isDiceAudioMuted = ref(isDiceMuted());
+
+function toggleAudioMute() {
+  const nextState = toggleDiceMute();
+  isDiceAudioMuted.value = nextState;
+}
 
 const initialVttState = getUserState(getSafeUserId(), 'spaceVtt', {
   panX: 50,
@@ -834,6 +859,7 @@ function toggleDmgMenu() {
 }
 
 async function rollPercentile() {
+  playDiceSound({ isRemote: false });
   if (diceBoxInstance) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
@@ -870,6 +896,7 @@ async function rollPercentile() {
 }
 
 async function rollDamage() {
+  playDiceSound({ isRemote: false });
   if (diceBoxInstance) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
@@ -1666,6 +1693,9 @@ function setupSocketListeners() {
 
   socket.on('roll:created', ({ mode, roll }) => {
     if (mode !== 'space') return;
+    if (roll.username !== authStore.user?.username) {
+      playDiceSound({ isRemote: true });
+    }
     if (!rollLog.value.some(r => r.id === roll.id)) {
       rollLog.value.unshift(roll);
       if (rollLog.value.length > 20) {
@@ -2996,6 +3026,54 @@ onBeforeUnmount(() => {
   left: 16px;
   z-index: 105;
   pointer-events: auto;
+}
+
+.roll-log-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-audio-toggle {
+  background: transparent !important;
+  border: 1px solid rgba(0, 128, 128, 0.5) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn-audio-toggle:hover {
+  background: #051414 !important;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+.btn-audio-toggle-pill {
+  background: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.7) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-audio-toggle-pill:hover {
+  background: #051414 !important;
+  border-color: aqua !important;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
 }
 
 .btn-roll-log-pill {
