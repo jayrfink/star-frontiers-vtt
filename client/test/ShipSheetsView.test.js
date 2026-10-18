@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import ShipSheetsView from '../src/views/ShipSheetsView.vue';
 import ImageBrowserModal from '../src/components/ImageBrowserModal.vue';
+import { SHIP_WEAPONS_CATALOG } from '../src/constants/shipWeapons.js';
 
 describe('ShipSheetsView - ImageBrowserModal Integration', () => {
   it('registers ImageBrowserModal component', () => {
@@ -119,6 +120,99 @@ describe('ShipSheetsView - Ship Notes Section', () => {
     } finally {
       global.fetch = origFetch;
     }
+  });
+});
+
+describe('ShipSheetsView - Weapon Selection & Renaming', () => {
+  it('opens and closes add weapon modal', () => {
+    const vm = {
+      showAddWeaponModal: false,
+      customWeaponForm: { name: '', damage: '1d10', range: 5, ammo_max: 0 },
+      weaponCategoryFilter: 'All',
+    };
+    ShipSheetsView.methods.openAddWeaponModal.call(vm);
+    expect(vm.showAddWeaponModal).toBe(true);
+    expect(vm.customWeaponForm.name).toBe('');
+    expect(vm.weaponCategoryFilter).toBe('All');
+  });
+
+  it('equips a canonical weapon from catalog to selectedShip.weapons', () => {
+    let updated = false;
+    const vm = {
+      showAddWeaponModal: true,
+      selectedShip: {
+        weapons: [],
+      },
+      updateShip() {
+        updated = true;
+      },
+    };
+
+    const torpedo = SHIP_WEAPONS_CATALOG.find((w) => w.name === 'Torpedoes');
+    ShipSheetsView.methods.equipWeapon.call(vm, torpedo);
+
+    expect(vm.selectedShip.weapons.length).toBe(1);
+    expect(vm.selectedShip.weapons[0].name).toBe('Torpedoes');
+    expect(vm.selectedShip.weapons[0].damage).toBe('4d10');
+    expect(vm.selectedShip.weapons[0].range).toBe(4);
+    expect(vm.selectedShip.weapons[0].ammo_max).toBe(2);
+    expect(vm.selectedShip.weapons[0].ammo_current).toBe(2);
+    expect(vm.selectedShip.weapons[0].status).toBe('Online');
+    expect(vm.showAddWeaponModal).toBe(false);
+    expect(updated).toBe(true);
+  });
+
+  it('equips a custom weapon to selectedShip.weapons', () => {
+    let updated = false;
+    const vm = {
+      showAddWeaponModal: true,
+      customWeaponForm: {
+        name: 'Heavy Plasma Cannon',
+        damage: '3d10',
+        range: 7,
+        ammo_max: 5,
+      },
+      selectedShip: {
+        weapons: [],
+      },
+      updateShip() {
+        updated = true;
+      },
+    };
+
+    ShipSheetsView.methods.equipCustomWeapon.call(vm);
+
+    expect(vm.selectedShip.weapons.length).toBe(1);
+    expect(vm.selectedShip.weapons[0].name).toBe('Heavy Plasma Cannon');
+    expect(vm.selectedShip.weapons[0].damage).toBe('3d10');
+    expect(vm.selectedShip.weapons[0].range).toBe(7);
+    expect(vm.selectedShip.weapons[0].ammo_max).toBe(5);
+    expect(vm.selectedShip.weapons[0].status).toBe('Online');
+    expect(vm.showAddWeaponModal).toBe(false);
+    expect(updated).toBe(true);
+  });
+
+  it('updates weapon name and type and triggers updateShip onWeaponNameChange', () => {
+    let updated = false;
+    const vm = {
+      updateShip() {
+        updated = true;
+      },
+    };
+    const wpn = {
+      name: 'Port Laser Battery',
+      type: 'Laser Battery',
+    };
+
+    ShipSheetsView.methods.onWeaponNameChange.call(vm, wpn);
+    expect(wpn.name).toBe('Port Laser Battery');
+    expect(wpn.type).toBe('Port Laser Battery');
+    expect(updated).toBe(true);
+
+    // Empty name falls back to previous type
+    wpn.name = '   ';
+    ShipSheetsView.methods.onWeaponNameChange.call(vm, wpn);
+    expect(wpn.name).toBe('Port Laser Battery');
   });
 });
 

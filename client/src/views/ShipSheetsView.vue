@@ -242,7 +242,7 @@
           <section class="card list-card">
             <div class="list-header">
               <h4>Armament / Weapons</h4>
-              <button class="btn-secondary" @click="addWeapon">+ Add Weapon</button>
+              <button class="btn-secondary" @click="openAddWeaponModal">+ Add Weapon</button>
             </div>
             <div v-if="!selectedShip.weapons || selectedShip.weapons.length === 0" class="empty-list">
               No weapon systems equipped.
@@ -250,7 +250,14 @@
             <div v-else class="weapons-wrapper">
               <div v-for="(wpn, index) in selectedShip.weapons" :key="wpn.id || index" class="weapon-card">
                 <div class="weapon-main-row">
-                  <span class="weapon-title-name">{{ wpn.type || wpn.name || 'Laser Battery' }}</span>
+                  <input
+                    type="text"
+                    v-model="wpn.name"
+                    @change="onWeaponNameChange(wpn)"
+                    class="weapon-title-input"
+                    placeholder="Weapon Name"
+                    title="Click to rename weapon"
+                  />
                   <select
                     v-model="wpn.status"
                     @change="updateShip"
@@ -405,6 +412,131 @@
       :current-image="currentBrowserImage"
       @select="onImageSelected"
     />
+
+    <!-- Equip Ship Weapon Modal -->
+    <div v-if="showAddWeaponModal" class="modal-backdrop" @click.self="showAddWeaponModal = false">
+      <div class="modal-card weapon-picker-modal">
+        <div class="modal-header-row">
+          <h3>🚀 Equip Ship Weapon</h3>
+          <button type="button" class="btn-close-modal" @click="showAddWeaponModal = false">✕</button>
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div class="weapon-filter-tabs">
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: weaponCategoryFilter === 'All' }"
+            @click="weaponCategoryFilter = 'All'"
+          >
+            All ({{ weaponCatalog.length }})
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: weaponCategoryFilter === 'Beam' }"
+            @click="weaponCategoryFilter = 'Beam'"
+          >
+            Beams (5)
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: weaponCategoryFilter === 'Ordnance' }"
+            @click="weaponCategoryFilter = 'Ordnance'"
+          >
+            Ordnance & Rockets (5)
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: weaponCategoryFilter === 'Custom' }"
+            @click="weaponCategoryFilter = 'Custom'"
+          >
+            Custom Weapon
+          </button>
+        </div>
+
+        <!-- Weapon Catalog List -->
+        <div v-if="weaponCategoryFilter !== 'Custom'" class="weapon-picker-list">
+          <div
+            v-for="weapon in weaponCatalog"
+            :key="weapon.id"
+            v-show="weaponCategoryFilter === 'All' || weapon.category === weaponCategoryFilter || (weaponCategoryFilter === 'Beam' && (weapon.category === 'Beam' || weapon.category === 'Energy'))"
+            class="weapon-picker-item"
+          >
+            <div class="weapon-picker-info">
+              <div class="weapon-picker-name-row">
+                <span class="weapon-picker-name">{{ weapon.name }}</span>
+                <span class="weapon-picker-category">{{ weapon.category }}</span>
+              </div>
+              <div class="weapon-picker-stats">
+                <span class="stat-pill dmg">💥 {{ weapon.damage }}</span>
+                <span class="stat-pill rng">🎯 {{ weapon.range }} hexes</span>
+                <span class="stat-pill ammo">
+                  {{ weapon.ammo_max > 0 ? `🔋 Ammo: ${weapon.ammo_max}` : '♾️ Unlimited' }}
+                </span>
+              </div>
+              <p class="weapon-picker-desc">{{ weapon.description }}</p>
+            </div>
+            <button type="button" class="btn-equip-weapon" @click="equipWeapon(weapon)">
+              Equip
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Weapon Form -->
+        <div v-else class="custom-weapon-panel">
+          <h4>Design Custom Ship Weapon</h4>
+          <form @submit.prevent="equipCustomWeapon">
+            <div class="form-group">
+              <label>Weapon Name *</label>
+              <input
+                type="text"
+                v-model="customWeaponForm.name"
+                required
+                placeholder="e.g. Heavy Plasma Cannon"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Damage Dice</label>
+                <input
+                  type="text"
+                  v-model="customWeaponForm.damage"
+                  required
+                  placeholder="e.g. 2d10"
+                />
+              </div>
+              <div class="form-group">
+                <label>Range (hexes)</label>
+                <input
+                  type="number"
+                  v-model.number="customWeaponForm.range"
+                  min="0"
+                  placeholder="5"
+                />
+              </div>
+              <div class="form-group">
+                <label>Max Ammo (0 = Unlimited)</label>
+                <input
+                  type="number"
+                  v-model.number="customWeaponForm.ammo_max"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-modal-cancel" @click="showAddWeaponModal = false">Cancel</button>
+              <button type="submit" class="btn-modal-create" :disabled="!customWeaponForm.name.trim()">
+                Equip Custom Weapon
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -413,6 +545,7 @@ import { socket } from '../services/socket.js';
 import { SHIP_PRESETS } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
+import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../constants/shipWeapons.js';
 
 export default {
   name: 'ShipSheetsView',
@@ -430,6 +563,15 @@ export default {
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'sheet',
+      showAddWeaponModal: false,
+      weaponCatalog: SHIP_WEAPONS_CATALOG,
+      weaponCategoryFilter: 'All',
+      customWeaponForm: {
+        name: '',
+        damage: '1d10',
+        range: 5,
+        ammo_max: 0,
+      },
       newShipForm: {
         name: '',
         type: 'Assault Scout',
@@ -822,6 +964,50 @@ export default {
         this.selectedShip.defenses.icm_current -= 1;
         this.updateShip();
       }
+    },
+    openAddWeaponModal() {
+      this.showAddWeaponModal = true;
+      this.customWeaponForm = {
+        name: '',
+        damage: '1d10',
+        range: 5,
+        ammo_max: 0,
+      };
+      this.weaponCategoryFilter = 'All';
+    },
+    equipWeapon(weaponTemplate, ammoOverride = null) {
+      if (!this.selectedShip) return;
+      if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
+      const overrides = {};
+      if (ammoOverride !== null && ammoOverride !== undefined) {
+        overrides.ammo_max = Number(ammoOverride);
+        overrides.ammo_current = Number(ammoOverride);
+      }
+      const instance = createWeaponInstance(weaponTemplate, overrides);
+      this.selectedShip.weapons.push(instance);
+      this.showAddWeaponModal = false;
+      this.updateShip();
+    },
+    equipCustomWeapon() {
+      if (!this.selectedShip) return;
+      const name = (this.customWeaponForm.name || '').trim();
+      if (!name) return;
+      if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
+      const instance = createWeaponInstance(this.customWeaponForm, { name });
+      this.selectedShip.weapons.push(instance);
+      this.showAddWeaponModal = false;
+      this.updateShip();
+    },
+    onWeaponNameChange(wpn) {
+      if (!wpn) return;
+      const trimmed = (wpn.name || '').trim();
+      if (!trimmed) {
+        wpn.name = wpn.type || 'Laser Battery';
+      } else {
+        wpn.name = trimmed;
+      }
+      wpn.type = wpn.name;
+      this.updateShip();
     },
     addWeapon() {
       if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
@@ -1908,5 +2094,230 @@ export default {
 .notes-textarea:focus {
   outline: none;
   border-color: #4fc3f7;
+}
+
+.weapon-title-input {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
+  background: transparent;
+  border: 1px dashed rgba(0, 128, 128, 0.4);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  transition: all 0.15s ease-in-out;
+}
+
+.weapon-title-input:hover {
+  border-color: rgba(0, 255, 255, 0.6);
+  background-color: rgba(0, 40, 40, 0.3);
+}
+
+.weapon-title-input:focus {
+  outline: none;
+  background-color: #000000;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.weapon-picker-modal {
+  max-width: 650px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 128, 128, 0.4);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.modal-header-row h3 {
+  margin: 0;
+  color: #00ffff;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.btn-close-modal:hover {
+  color: #f44336;
+}
+
+.weapon-filter-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.tab-btn:hover {
+  border-color: teal;
+  color: #e0e0e0;
+}
+
+.tab-btn.active {
+  background-color: #051414;
+  border-color: #00a8a8;
+  color: #00ffff;
+  font-weight: 600;
+  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
+}
+
+.weapon-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 55vh;
+  padding-right: 5px;
+}
+
+.weapon-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px 14px;
+  transition: all 0.15s ease-in-out;
+}
+
+.weapon-picker-item:hover {
+  border-color: rgba(0, 128, 128, 0.7);
+  background-color: #111822;
+}
+
+.weapon-picker-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weapon-picker-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weapon-picker-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #00ffff;
+}
+
+.weapon-picker-category {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #8b949e;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.weapon-picker-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  font-size: 0.8rem;
+  background: #000000;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 2px 8px;
+  color: #c9d1d9;
+}
+
+.stat-pill.dmg {
+  border-color: rgba(244, 67, 54, 0.4);
+  color: #ff7b72;
+}
+
+.stat-pill.rng {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #79c0ff;
+}
+
+.stat-pill.ammo {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #7ee787;
+}
+
+.weapon-picker-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8b949e;
+  line-height: 1.3;
+}
+
+.btn-equip-weapon {
+  background-color: #000000;
+  border: 1px solid teal;
+  color: #00ffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-equip-weapon:hover {
+  background-color: #051414;
+  border-color: aqua;
+  color: aqua;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.custom-weapon-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.custom-weapon-panel h4 {
+  margin: 0;
+  color: #00ffff;
+  font-size: 0.95rem;
+  text-transform: uppercase;
 }
 </style>

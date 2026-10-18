@@ -101,7 +101,7 @@ export const SHIP_WEAPONS_CATALOG = [
   },
 ];
 
-export function createWeaponInstance(template, overrides = {}) {
+export function createWeaponInstance(template = {}, overrides = {}) {
   const name = overrides.name || template.name || 'Custom Weapon';
   const ammoMax = overrides.ammo_max !== undefined ? Number(overrides.ammo_max) : (template.ammo_max || 0);
   const ammoCur = overrides.ammo_current !== undefined ? Number(overrides.ammo_current) : (template.ammo_current !== undefined ? template.ammo_current : ammoMax);
