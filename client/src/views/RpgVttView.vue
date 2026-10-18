@@ -715,7 +715,8 @@
     <!-- Deploy Vehicle Modal -->
     <DeployVehicleModal
       v-model="showDeployVehicleModal"
-      :active-map="activeMap"
+      :default-x="getEmptyCenterCoords().x"
+      :default-y="getEmptyCenterCoords().y"
       :is-gm="isGm"
       @deploy="onDeployVehicle"
     />

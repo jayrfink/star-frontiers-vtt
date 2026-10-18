@@ -9,13 +9,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const VEHICLES_JSON_PATH = path.join(__dirname, '../../data/vehicles.json');
 
+let canonicalVehiclesCache = null;
+
 export function loadCanonicalVehicles() {
+  if (canonicalVehiclesCache !== null) {
+    return canonicalVehiclesCache;
+  }
   try {
     if (fs.existsSync(VEHICLES_JSON_PATH)) {
       const raw = fs.readFileSync(VEHICLES_JSON_PATH, 'utf8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed.map(v => ({ ...v, is_canonical: true }));
+        canonicalVehiclesCache = parsed.map(v => ({ ...v, is_canonical: true }));
+        return canonicalVehiclesCache;
       }
     }
   } catch (err) {
@@ -23,6 +29,7 @@ export function loadCanonicalVehicles() {
   }
   return [];
 }
+
 
 export function formatVehicleTemplate(row) {
   if (!row) return null;

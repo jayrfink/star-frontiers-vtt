@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/index.js';
 import { createDb } from '../src/db.js';
+import { loadCanonicalVehicles } from '../src/vehicles.js';
 
 describe('Vehicles API & Token Vehicle Support', () => {
   let app;
@@ -72,6 +73,13 @@ describe('Vehicles API & Token Vehicle Support', () => {
       expect(car.max_seu).toBe(100);
       expect(car.token_size).toBe(2);
       expect(car.is_canonical).toBe(true);
+    });
+
+    it('uses in-memory cache for loadCanonicalVehicles', () => {
+      const v1 = loadCanonicalVehicles();
+      const v2 = loadCanonicalVehicles();
+      expect(v1).toBe(v2);
+      expect(v1.length).toBeGreaterThanOrEqual(10);
     });
   });
 

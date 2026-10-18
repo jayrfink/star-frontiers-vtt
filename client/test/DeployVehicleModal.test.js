@@ -229,4 +229,35 @@ describe('DeployVehicleModal.vue', () => {
     expect(wrapper.emitted('update:modelValue')).toBeTruthy();
     expect(wrapper.emitted('update:modelValue')[0]).toEqual([false]);
   });
+
+  it('emits update:modelValue false when Escape key is pressed', async () => {
+    const wrapper = mount(DeployVehicleModal, {
+      props: {
+        modelValue: true,
+        isGm: true,
+      },
+    });
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted('update:modelValue')).toBeTruthy();
+    expect(wrapper.emitted('update:modelValue')[0]).toEqual([false]);
+  });
+
+  it('hides custom vehicle template creation and delete buttons when isGm is false', async () => {
+    const wrapper = mount(DeployVehicleModal, {
+      props: {
+        modelValue: true,
+        isGm: false,
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 10));
+
+    await wrapper.find('button.tab-custom').trigger('click');
+    expect(wrapper.find('div.create-custom-section').exists()).toBe(false);
+    expect(wrapper.find('button.delete-custom-btn').exists()).toBe(false);
+  });
 });

@@ -144,6 +144,7 @@
                       {{ selectedVehicleId === cv.id ? '✓ Selected' : 'Select' }}
                     </button>
                     <button
+                      v-if="isGm"
                       type="button"
                       class="delete-custom-btn"
                       title="Delete Template"
@@ -157,7 +158,7 @@
             </div>
 
             <!-- Create Custom Vehicle Template Form -->
-            <div class="create-custom-section">
+            <div v-if="isGm" class="create-custom-section">
               <h4>Create New Vehicle Template</h4>
               <form class="create-custom-form" @submit.prevent="createCustomVehicle">
                 <div class="form-row">
@@ -462,7 +463,22 @@ export default {
       }
     },
   },
+  mounted() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', this.handleKeydown);
+    }
+  },
+  beforeUnmount() {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.handleKeydown);
+    }
+  },
   methods: {
+    handleKeydown(e) {
+      if (e.key === 'Escape' && this.modelValue) {
+        this.close();
+      }
+    },
     close() {
       this.$emit('update:modelValue', false);
     },
@@ -501,6 +517,10 @@ export default {
       this.onVehicleSelected();
     },
     async createCustomVehicle() {
+      if (!this.isGm) {
+        this.errorMessage = 'Only Game Masters can create vehicle templates.';
+        return;
+      }
       if (!this.customForm.name || !this.customForm.name.trim()) {
         this.errorMessage = 'Vehicle name is required.';
         return;
@@ -535,6 +555,10 @@ export default {
       }
     },
     async deleteCustomVehicle(id) {
+      if (!this.isGm) {
+        this.errorMessage = 'Only Game Masters can delete vehicle templates.';
+        return;
+      }
       this.errorMessage = null;
       try {
         const res = await fetch(`/api/vehicles/${id}`, {
