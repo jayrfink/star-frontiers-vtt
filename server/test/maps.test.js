@@ -336,6 +336,26 @@ describe('Maps & Tokens API & Socket.io', () => {
       expect(emitSpy).toHaveBeenCalledWith('token:deleted', { id: tokenId });
     });
 
+    it('creates and persists celestial token with layer: "celestial"', async () => {
+      const createRes = await agent.post('/api/tokens').send({
+        map_id: mapId,
+        name: 'Centurian Moon',
+        layer: 'celestial',
+        size: 1,
+        color: '',
+        rotation: 0,
+        current_speed: null,
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.layer).toBe('celestial');
+      expect(createRes.body.name).toBe('Centurian Moon');
+      expect(createRes.body.size).toBe(1);
+
+      const fetchRes = await agent.get(`/api/tokens/${createRes.body.id}`);
+      expect(fetchRes.status).toBe(200);
+      expect(fetchRes.body.layer).toBe('celestial');
+    });
+
     it('returns 400 when missing required fields on token creation', async () => {
       const res = await agent.post('/api/tokens').send({
         color: '#00ff00',
