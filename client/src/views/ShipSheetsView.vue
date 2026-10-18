@@ -1682,8 +1682,8 @@ export default {
 .weapon-title-name {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #00ffff !important;
-  -webkit-text-fill-color: #00ffff !important;
+  color: #e6e6e6 !important;
+  -webkit-text-fill-color: #e6e6e6 !important;
   letter-spacing: 0.4px;
   cursor: pointer;
   white-space: nowrap;
@@ -2262,8 +2262,8 @@ export default {
   flex: 1;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #00ffff !important;
-  -webkit-text-fill-color: #00ffff !important;
+  color: #e6e6e6 !important;
+  -webkit-text-fill-color: #e6e6e6 !important;
   background: rgba(0, 20, 20, 0.6);
   border: 1px dashed rgba(0, 255, 255, 0.6);
   border-radius: 4px;
