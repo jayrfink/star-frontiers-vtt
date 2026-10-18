@@ -16,6 +16,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { socket } from '../services/socket.js';
+import { isCelestialToken } from '../utils/spaceTokens.js';
 
 const props = defineProps({
   map: {
@@ -351,6 +352,7 @@ function drawGhostToken(ctx, token, cell) {
 }
 
 function renderSingleToken(ctx, token, q, r, isSelected) {
+  const isCelestial = isCelestialToken(token);
   const center = getCellCenter(q, r);
   const cx = center.x;
   const cy = center.y;
@@ -372,7 +374,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   // Save context for rotation
   ctx.save();
   ctx.translate(cx, cy);
-  const rotation = token.rotation || 0;
+  const rotation = isCelestial ? 0 : (token.rotation || 0);
   ctx.rotate((rotation * Math.PI) / 180);
 
   // Draw Token Image or fallback
@@ -394,11 +396,13 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   }
   
   // Token Colored Ring Border
-  ctx.beginPath();
-  ctx.arc(0, 0, size, 0, Math.PI * 2);
-  ctx.strokeStyle = token.color || '#666666';
-  ctx.lineWidth = 3.5;
-  ctx.stroke();
+  if (!isCelestial) {
+    ctx.beginPath();
+    ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.strokeStyle = token.color || '#666666';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+  }
   
   // Restore context so badges stay upright
   ctx.restore();
@@ -406,7 +410,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
 
   // Speed badge
   const speed = token.current_speed ?? token.speed;
-  if (speed !== null && speed !== undefined) {
+  if (!isCelestial && speed !== null && speed !== undefined) {
     ctx.fillStyle = '#69c79e'; // speed indicator background
     ctx.beginPath();
     ctx.arc(cx + size * 0.7, cy - size * 0.7, 10, 0, Math.PI * 2);
@@ -435,7 +439,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     }
   }
 
-  if (statusEffects.length > 0) {
+  if (!isCelestial && statusEffects.length > 0) {
     const iconMap = {
       damaged: '💥',
       adrift: '🛰️',
