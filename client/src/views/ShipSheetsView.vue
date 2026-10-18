@@ -2239,6 +2239,15 @@ export default {
   margin-top: 1.5rem;
 }
 
+.notes-section .section-header {
+  padding-bottom: 5%;
+}
+
+.notes-section h4 {
+  margin: 0;
+  color: #3a859c;
+}
+
 .notes-textarea {
   width: 100%;
   box-sizing: border-box;
