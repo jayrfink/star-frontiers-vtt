@@ -214,5 +214,19 @@ describe('ShipSheetsView - Weapon Selection & Renaming', () => {
     ShipSheetsView.methods.onWeaponNameChange.call(vm, wpn);
     expect(wpn.name).toBe('Port Laser Battery');
   });
+
+  it('closes showAddWeaponModal on Escape keydown', () => {
+    const vm = {
+      showAddWeaponModal: true,
+    };
+    ShipSheetsView.methods.handleKeydown.call(vm, { key: 'Escape' });
+    expect(vm.showAddWeaponModal).toBe(false);
+
+    // Other keys do not dismiss modal
+    vm.showAddWeaponModal = true;
+    ShipSheetsView.methods.handleKeydown.call(vm, { key: 'Enter' });
+    expect(vm.showAddWeaponModal).toBe(true);
+  });
 });
+
 

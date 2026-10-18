@@ -255,7 +255,7 @@
                     v-model="wpn.name"
                     @change="onWeaponNameChange(wpn)"
                     class="weapon-title-input"
-                    placeholder="Weapon Name"
+                    :placeholder="wpn.type || 'Weapon Name'"
                     title="Click to rename weapon"
                   />
                   <select
@@ -529,7 +529,7 @@
             </div>
             <div class="modal-actions">
               <button type="button" class="btn-modal-cancel" @click="showAddWeaponModal = false">Cancel</button>
-              <button type="submit" class="btn-modal-create" :disabled="!customWeaponForm.name.trim()">
+              <button type="submit" class="btn-modal-create" :disabled="!customWeaponForm.name?.trim()">
                 Equip Custom Weapon
               </button>
             </div>
@@ -610,6 +610,9 @@ export default {
   mounted() {
     this.fetchShips();
     this.setupSocketListeners();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', this.handleKeydown);
+    }
   },
   beforeUnmount() {
     if (this._scrollSaveTimer) {
@@ -618,8 +621,16 @@ export default {
     }
     this.saveScrollPositions();
     this.removeSocketListeners();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.handleKeydown);
+    }
   },
   methods: {
+    handleKeydown(e) {
+      if (e.key === 'Escape' && this.showAddWeaponModal) {
+        this.showAddWeaponModal = false;
+      }
+    },
     getCurrentUserId() {
       return getSafeUserId();
     },
