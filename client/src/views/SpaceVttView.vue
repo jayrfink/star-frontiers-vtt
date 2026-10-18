@@ -430,7 +430,7 @@
           <!-- Token Creation Button -->
           <button class="primary full-width btn-add-token" @click="openAddTokenModal">+ Add New Token</button>
 
-          <!-- Selected Token Details -->
+          <!-- Selected Token Inspector -->
           <div v-if="selectedToken" class="section-box token-inspector">
             <div class="token-title-row">
               <span
@@ -440,8 +440,13 @@
               <h4>{{ selectedToken.name }}</h4>
             </div>
 
+            <!-- Celestial Object Badge -->
+            <div v-if="isCelestialToken(selectedToken)" class="celestial-badge">
+              🪐 Celestial Object (1 Hex)
+            </div>
+
             <!-- Linked Ship / Character -->
-            <div class="info-row" v-if="selectedToken.character_id">
+            <div class="info-row" v-if="!isCelestialToken(selectedToken) && selectedToken.character_id">
               <span class="label">Linked ID:</span>
               <span class="value">#{{ selectedToken.character_id }}</span>
             </div>
@@ -452,89 +457,90 @@
               <span class="value">({{ selectedToken.x }}, {{ selectedToken.y }})</span>
             </div>
 
-            <!-- Current Speed Control -->
-            <div class="form-group">
-              <label>Current Speed (hexes/turn):</label>
-              <div class="input-with-buttons">
-                <input
-                  type="number"
-                  v-model.number="selectedTokenForm.current_speed"
-                  min="0"
-                  placeholder="0"
-                  @change="updateSelectedToken"
-                />
-                <div class="btn-group-sm">
-                  <button type="button" @click="adjustSelectedSpeed(-1)" :disabled="selectedTokenForm.current_speed <= 0">-1</button>
-                  <button type="button" @click="adjustSelectedSpeed(1)">+1</button>
+            <template v-if="!isCelestialToken(selectedToken)">
+              <!-- Current Speed Control -->
+              <div class="form-group">
+                <label>Current Speed (hexes/turn):</label>
+                <div class="input-with-buttons">
+                  <input
+                    type="number"
+                    v-model.number="selectedTokenForm.current_speed"
+                    min="0"
+                    placeholder="0"
+                    @change="updateSelectedToken"
+                  />
+                  <div class="btn-group-sm">
+                    <button type="button" @click="adjustSelectedSpeed(-1)" :disabled="selectedTokenForm.current_speed <= 0">-1</button>
+                    <button type="button" @click="adjustSelectedSpeed(1)">+1</button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Heading / Rotation Control -->
-            <div class="form-group">
-              <div class="label-with-hint">
-                <label>Heading / Rotation (°):</label>
-                <span class="hint-text">Q / E</span>
-              </div>
-              <div class="input-with-buttons">
-                <input
-                  type="number"
-                  v-model.number="selectedTokenForm.rotation"
-                  step="60"
-                  min="0"
-                  max="359"
-                  placeholder="0"
-                  @change="normalizeAndSaveRotation"
-                />
-                <div class="btn-group-sm">
-                  <button type="button" title="Rotate -60° (Q)" @click="rotateSelectedToken(-60)">⟲ -60°</button>
-                  <button type="button" title="Rotate +60° (E)" @click="rotateSelectedToken(60)">⟳ +60°</button>
+              <!-- Heading / Rotation Control -->
+              <div class="form-group">
+                <div class="label-with-hint">
+                  <label>Heading / Rotation (°):</label>
+                  <span class="hint-text">Q / E</span>
+                </div>
+                <div class="input-with-buttons">
+                  <input
+                    type="number"
+                    v-model.number="selectedTokenForm.rotation"
+                    step="60"
+                    min="0"
+                    max="359"
+                    placeholder="0"
+                    @change="normalizeAndSaveRotation"
+                  />
+                  <div class="btn-group-sm">
+                    <button type="button" title="Rotate -60° (Q)" @click="rotateSelectedToken(-60)">⟲ -60°</button>
+                    <button type="button" title="Rotate +60° (E)" @click="rotateSelectedToken(60)">⟳ +60°</button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-
-            <!-- Tactical Status Effects -->
-            <div class="status-section">
-              <label>Status Effects:</label>
-              <div class="status-toggles">
-                <button
-                  :class="{ active: isStatusActive('damaged') }"
-                  @click="toggleStatus('damaged')"
-                >
-                  💥 Damaged
-                </button>
-                <button
-                  :class="{ active: isStatusActive('adrift') }"
-                  @click="toggleStatus('adrift')"
-                >
-                  🛰️ Adrift
-                </button>
-                <button
-                  :class="{ active: isStatusActive('disabled') }"
-                  @click="toggleStatus('disabled')"
-                >
-                  ⚡ Disabled
-                </button>
-                <button
-                  :class="{ active: isStatusActive('burning') }"
-                  @click="toggleStatus('burning')"
-                >
-                  🔥 Burning
-                </button>
+              <!-- Tactical Status Effects -->
+              <div class="status-section">
+                <label>Status Effects:</label>
+                <div class="status-toggles">
+                  <button
+                    :class="{ active: isStatusActive('damaged') }"
+                    @click="toggleStatus('damaged')"
+                  >
+                    💥 Damaged
+                  </button>
+                  <button
+                    :class="{ active: isStatusActive('adrift') }"
+                    @click="toggleStatus('adrift')"
+                  >
+                    🛰️ Adrift
+                  </button>
+                  <button
+                    :class="{ active: isStatusActive('disabled') }"
+                    @click="toggleStatus('disabled')"
+                  >
+                    ⚡ Disabled
+                  </button>
+                  <button
+                    :class="{ active: isStatusActive('burning') }"
+                    @click="toggleStatus('burning')"
+                  >
+                    🔥 Burning
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <!-- Token Color -->
-            <div class="form-group">
-              <label>Ring Color:</label>
-              <input
-                type="color"
-                v-model="selectedTokenForm.color"
-                @input="onColorInput"
-                @change="onColorChange"
-              />
-            </div>
+              <!-- Token Color -->
+              <div class="form-group">
+                <label>Ring Color:</label>
+                <input
+                  type="color"
+                  v-model="selectedTokenForm.color"
+                  @input="onColorInput"
+                  @change="onColorChange"
+                />
+              </div>
+            </template>
 
             <!-- Action Buttons -->
             <div class="inspector-actions">
@@ -636,8 +642,31 @@
         <h3>Add Token to Space Map</h3>
         <form @submit.prevent="submitAddToken">
 
+          <!-- Token Type Toggle -->
+          <div class="form-group">
+            <label>Token Type</label>
+            <div class="token-type-toggle">
+              <button
+                type="button"
+                class="type-btn"
+                :class="{ active: newTokenForm.token_type === 'ship' }"
+                @click="newTokenForm.token_type = 'ship'"
+              >
+                🚀 Ship / Station
+              </button>
+              <button
+                type="button"
+                class="type-btn"
+                :class="{ active: newTokenForm.token_type === 'celestial' }"
+                @click="newTokenForm.token_type = 'celestial'"
+              >
+                🪐 Celestial Object
+              </button>
+            </div>
+          </div>
+
           <!-- Link to Ship Sheet -->
-          <div class="form-group" v-if="ships.length > 0">
+          <div class="form-group" v-if="newTokenForm.token_type !== 'celestial' && ships.length > 0">
             <label>Link to Ship Sheet (Optional)</label>
             <select v-model="selectedShipId" @change="onShipSelected" class="ship-sheet-select">
               <option :value="null">-- None (Custom Ship / Token) --</option>
@@ -650,9 +679,21 @@
           <div class="form-group">
             <label>Token Name *</label>
             <input type="text" v-model="newTokenForm.name" required placeholder="e.g. UPF Defender" />
+            <div v-if="newTokenForm.token_type === 'celestial'" class="preset-chips">
+              <span class="preset-label">Presets:</span>
+              <button
+                v-for="preset in CELESTIAL_PRESET_NAMES"
+                :key="preset"
+                type="button"
+                class="btn-chip"
+                @click="newTokenForm.name = preset"
+              >
+                {{ preset }}
+              </button>
+            </div>
           </div>
 
-          <div class="form-row">
+          <div class="form-row" v-if="newTokenForm.token_type !== 'celestial'">
             <div class="form-group">
               <label>Ring Color</label>
               <input type="color" v-model="newTokenForm.color" />
@@ -745,6 +786,7 @@ import DiceBox from '@3d-dice/dice-box';
 import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
+import { isCelestialToken, CELESTIAL_PRESET_NAMES } from '../utils/spaceTokens.js';
 
 
 const authStore = useAuthStore();
@@ -1035,6 +1077,7 @@ const newTokenForm = reactive({
   size: 1,
   current_speed: 0,
   rotation: 0,
+  token_type: 'ship',
 });
 
 const selectedTokenForm = reactive({
@@ -1396,6 +1439,7 @@ function getEmptyCenterCoords() {
 
 function openAddTokenModal() {
   selectedShipId.value = null;
+  newTokenForm.token_type = 'ship';
   newTokenForm.name = '';
   newTokenForm.color = '#666666';
   newTokenForm.avatar_url = '';
@@ -1463,21 +1507,23 @@ function onShipSelected() {
 async function submitAddToken() {
   if (!activeMap.value) return;
   try {
+    const isCelestial = newTokenForm.token_type === 'celestial';
     const res = await fetch('/api/tokens', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
         map_id: activeMap.value.id,
-        character_id: selectedShipId.value || null,
+        character_id: isCelestial ? null : (selectedShipId.value || null),
         name: newTokenForm.name,
-        color: newTokenForm.color,
+        color: isCelestial ? '' : newTokenForm.color,
         avatar_url: newTokenForm.avatar_url,
         x: newTokenForm.x,
         y: newTokenForm.y,
-        size: newTokenForm.size,
-        rotation: newTokenForm.rotation || 0,
-        current_speed: newTokenForm.current_speed || 0,
+        size: 1,
+        rotation: isCelestial ? 0 : (newTokenForm.rotation || 0),
+        current_speed: isCelestial ? null : (newTokenForm.current_speed || 0),
+        layer: isCelestial ? 'celestial' : 'character',
       }),
     });
     if (res.ok) {
@@ -3291,5 +3337,91 @@ onBeforeUnmount(() => {
 
 .grid-dimensions-x {
   color: #8b949e;
+}
+
+/* Token Type Toggle & Preset Chips */
+.token-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-tertiary, #1f2937);
+  border: 1px solid var(--border-color, #374151);
+  border-radius: var(--radius, 6px);
+  color: var(--text-secondary, #9ca3af);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.type-btn:hover {
+  background: var(--bg-secondary, #111827);
+  border-color: #00ffff;
+  color: #f0f6fc;
+}
+
+.type-btn.active {
+  background: rgba(0, 255, 255, 0.12);
+  border-color: #00ffff;
+  color: #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.25);
+  font-weight: 600;
+}
+
+.preset-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.preset-label {
+  font-size: 11px;
+  color: var(--text-secondary, #8b949e);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-chip {
+  background: #000000 !important;
+  border: 1px solid rgba(0, 128, 128, 0.7) !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-chip:hover {
+  background: #051414 !important;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.celestial-badge {
+  background: rgba(147, 112, 219, 0.15);
+  border: 1px solid rgba(147, 112, 219, 0.45);
+  color: #d8b4fe;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 </style>
