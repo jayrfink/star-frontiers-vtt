@@ -434,6 +434,7 @@
           <div v-if="selectedToken" class="section-box token-inspector">
             <div class="token-title-row">
               <span
+                v-if="!isCelestialToken(selectedToken)"
                 class="token-color-badge"
                 :style="{ backgroundColor: selectedToken.color || '#666666' }"
               ></span>
@@ -563,8 +564,11 @@
                   <strong>{{ t.name }}</strong>
                 </div>
                 <div class="token-item-right">
-                  <span class="badge-speed" title="Current Speed">⚡{{ t.current_speed ?? 0 }}</span>
-                  <span class="badge-rotation" title="Heading">🧭{{ t.rotation ?? 0 }}°</span>
+                  <template v-if="!isCelestialToken(t)">
+                    <span class="badge-speed token-list-speed" title="Current Speed">⚡{{ t.current_speed ?? 0 }}</span>
+                    <span class="badge-rotation token-list-rotation" title="Heading">🧭{{ t.rotation ?? 0 }}°</span>
+                  </template>
+                  <span v-else class="token-list-celestial" title="Celestial Object">🪐</span>
                   <small>({{ t.x }}, {{ t.y }})</small>
                 </div>
               </li>
@@ -1159,7 +1163,7 @@ function onKeyDown(e) {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (showCreateMapModal.value || showAddTokenModal.value) return;
 
-  if (!selectedToken.value) return;
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
 
   if (e.key === 'q' || e.key === 'Q') {
     e.preventDefault();
@@ -1171,7 +1175,7 @@ function onKeyDown(e) {
 }
 
 async function rotateSelectedToken(delta) {
-  if (!selectedToken.value) return;
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
 
   const currentRotation = selectedToken.value.rotation || 0;
   let newRotation = (currentRotation + delta) % 360;
@@ -1546,9 +1550,12 @@ async function onTokenMoved({ id, x, y }) {
     colorDebounceTimer = null;
   }
   const currentToken = tokens.value.find((t) => t.id === id);
-  const color = (selectedToken.value && selectedToken.value.id === id)
-    ? selectedTokenForm.color
-    : (currentToken?.color || '#666666');
+  const isCelestial = isCelestialToken(currentToken);
+  const color = isCelestial
+    ? ''
+    : ((selectedToken.value && selectedToken.value.id === id)
+        ? selectedTokenForm.color
+        : (currentToken?.color || '#666666'));
 
   if (currentToken) {
     currentToken.x = x;
@@ -2534,7 +2541,8 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
-.badge-speed {
+.badge-speed,
+.token-list-speed {
   font-size: 11px;
   background: rgba(105, 199, 158, 0.2);
   color: #69c79e;
@@ -2544,12 +2552,18 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.badge-rotation {
+.badge-rotation,
+.token-list-rotation {
   font-size: 11px;
   background: #374151;
   color: #e5e7eb;
   padding: 1px 5px;
   border-radius: 4px;
+}
+
+.token-list-celestial {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .token-dot,

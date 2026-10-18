@@ -336,12 +336,17 @@ function drawGrid(ctx, mapW, mapH) {
 }
 
 function drawTokens(ctx) {
-  props.tokens.forEach((token) => {
+  const sortedTokens = [...props.tokens].sort((a, b) => {
+    const aCel = isCelestialToken(a) ? 0 : 1;
+    const bCel = isCelestialToken(b) ? 0 : 1;
+    return aCel - bCel;
+  });
+  for (const token of sortedTokens) {
     if (draggingToken.value && draggingToken.value.id === token.id) {
-      return;
+      continue;
     }
     renderSingleToken(ctx, token, token.x, token.y, token.id === props.selectedTokenId);
-  });
+  }
 }
 
 function drawGhostToken(ctx, token, cell) {

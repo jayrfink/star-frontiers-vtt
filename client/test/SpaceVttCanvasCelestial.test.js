@@ -34,4 +34,11 @@ describe('SpaceVttCanvas Celestial Token Rendering', () => {
     const renderSection = content.slice(content.indexOf('function renderSingleToken'));
     expect(renderSection).toMatch(/isCelestial\s*\?\s*0\s*:\s*\(token\.rotation\s*\|\|\s*0\)/);
   });
+
+  it('sorts tokens in drawTokens so celestial tokens render before ship tokens', () => {
+    const drawSection = content.slice(content.indexOf('function drawTokens'), content.indexOf('function drawGhostToken'));
+    expect(drawSection).toMatch(/const\s+sortedTokens\s*=\s*\[\.\.\.props\.tokens\]\.sort\(/);
+    expect(drawSection).toMatch(/isCelestialToken\(a\)\s*\?\s*0\s*:\s*1/);
+    expect(drawSection).toMatch(/isCelestialToken\(b\)\s*\?\s*0\s*:\s*1/);
+  });
 });

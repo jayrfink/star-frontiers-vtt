@@ -30,4 +30,29 @@ describe('SpaceVttView Celestial Tokens Integration', () => {
     expect(inspectorSection).toMatch(/isCelestialToken/);
     expect(inspectorSection).toContain('celestial-badge');
   });
+
+  it('guards rotation and keyboard shortcuts with isCelestialToken', () => {
+    const rotateSection = content.slice(content.indexOf('async function rotateSelectedToken'));
+    expect(rotateSection).toMatch(/if\s*\(!selectedToken\.value\s*\|\|\s*isCelestialToken\(selectedToken\.value\)\)\s*return/);
+
+    const onKeyDownSection = content.slice(content.indexOf('function onKeyDown'), content.indexOf('async function rotateSelectedToken'));
+    expect(onKeyDownSection).toMatch(/if\s*\(!selectedToken\.value\s*\|\|\s*isCelestialToken\(selectedToken\.value\)\)\s*return/);
+  });
+
+  it('preserves empty color string in onTokenMoved for celestial tokens', () => {
+    const movedSection = content.slice(content.indexOf('async function onTokenMoved'));
+    expect(movedSection).toMatch(/const\s+isCelestial\s*=\s*isCelestialToken\(currentToken\)/);
+    expect(movedSection).toMatch(/const\s+color\s*=\s*isCelestial\s*\?\s*['"]['"]\s*:/);
+  });
+
+  it('hides token-color-badge in inspector header for celestial tokens', () => {
+    const headerSection = content.slice(content.indexOf('class="token-title-row"'), content.indexOf('class="celestial-badge"'));
+    expect(headerSection).toMatch(/v-if="!isCelestialToken\(selectedToken\)"/);
+  });
+
+  it('hides speed/rotation and displays celestial icon in token-list for celestial tokens', () => {
+    const listSection = content.slice(content.indexOf('class="token-list"'), content.indexOf('No tokens on map'));
+    expect(listSection).toMatch(/!isCelestialToken\(t\)/);
+    expect(listSection).toContain('token-list-celestial');
+  });
 });
