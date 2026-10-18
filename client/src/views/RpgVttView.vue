@@ -848,6 +848,7 @@ async function clearRollLog() {
     });
     if (res.ok) {
       rollLog.value = [];
+      clearDice();
     }
   } catch (err) {
     console.error('Failed to clear RPG roll log on server:', err);
@@ -938,8 +939,23 @@ async function rollDamage() {
 
 function clearDice() {
   if (diceBoxInstance) {
-    diceBoxInstance.clear();
+    try {
+      diceBoxInstance.clear();
+    } catch (err) {
+      console.warn('Failed to clear dice box:', err);
+    }
   }
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  if (percentileHudTimeout) {
+    clearTimeout(percentileHudTimeout);
+    percentileHudTimeout = null;
+  }
+  if (damageHudTimeout) {
+    clearTimeout(damageHudTimeout);
+    damageHudTimeout = null;
+  }
+  showDmgMenu.value = false;
 }
 
 function onDocClick(e) {
@@ -1943,6 +1959,7 @@ function setupSocketListeners() {
   socket.on('roll:cleared', ({ mode }) => {
     if (mode === 'rpg') {
       rollLog.value = [];
+      clearDice();
     }
   });
 }
@@ -1958,6 +1975,14 @@ function cleanupSocketListeners() {
   socket.off('token:deleted');
   socket.off('roll:created');
   socket.off('roll:cleared');
+}
+
+function onKeyDown(e) {
+  if (e.key === 'Escape') {
+    if (showPercentileHud.value || showDamageHud.value || showDmgMenu.value) {
+      clearDice();
+    }
+  }
 }
 
 onMounted(() => {
@@ -1982,6 +2007,7 @@ onMounted(() => {
 
   setupSocketListeners();
   document.addEventListener('click', onDocClick);
+  window.addEventListener('keydown', onKeyDown);
 });
 
 onBeforeUnmount(() => {
@@ -1997,6 +2023,7 @@ onBeforeUnmount(() => {
   }
   cleanupSocketListeners();
   document.removeEventListener('click', onDocClick);
+  window.removeEventListener('keydown', onKeyDown);
   if (damageHudTimeout) clearTimeout(damageHudTimeout);
   if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 });

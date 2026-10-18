@@ -894,6 +894,7 @@ async function clearRollLog() {
     });
     if (res.ok) {
       rollLog.value = [];
+      clearDice();
     }
   } catch (err) {
     console.error('Failed to clear Space roll log on server:', err);
@@ -984,8 +985,23 @@ async function rollDamage() {
 
 function clearDice() {
   if (diceBoxInstance) {
-    diceBoxInstance.clear();
+    try {
+      diceBoxInstance.clear();
+    } catch (err) {
+      console.warn('Failed to clear dice box:', err);
+    }
   }
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  if (percentileHudTimeout) {
+    clearTimeout(percentileHudTimeout);
+    percentileHudTimeout = null;
+  }
+  if (damageHudTimeout) {
+    clearTimeout(damageHudTimeout);
+    damageHudTimeout = null;
+  }
+  showDmgMenu.value = false;
 }
 
 function onDocClick(e) {
@@ -1162,6 +1178,13 @@ function onKeyDown(e) {
 
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (showCreateMapModal.value || showAddTokenModal.value) return;
+
+  if (e.key === 'Escape') {
+    if (showPercentileHud.value || showDamageHud.value || showDmgMenu.value) {
+      clearDice();
+      return;
+    }
+  }
 
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
 
@@ -1795,6 +1818,7 @@ function setupSocketListeners() {
   socket.on('roll:cleared', ({ mode }) => {
     if (mode === 'space') {
       rollLog.value = [];
+      clearDice();
     }
   });
 }
