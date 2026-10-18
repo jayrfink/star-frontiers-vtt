@@ -449,6 +449,59 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(iconStr, px + tokenPx - 2, py + 2);
   }
+
+  // Vehicle Token Overlays (Speed badge & Damage condition icon)
+  if (token.vehicle_data) {
+    // Damage Condition Indicator (🔥 Burning, ⚠️ Damaged)
+    const conditions = Array.isArray(token.vehicle_data.damage_conditions)
+      ? token.vehicle_data.damage_conditions
+      : [];
+    if (conditions.length > 0) {
+      const isBurning = conditions.some(
+        c => typeof c === 'string' && (c.toLowerCase().includes('burn') || c.includes('🔥'))
+      );
+      const icon = isBurning ? '🔥' : '⚠️';
+      ctx.save();
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(icon, px + 2, py + 2);
+      ctx.restore();
+    }
+
+    // Speed Pill Badge (e.g. "60 m/t")
+    const currentSpeed = Number(token.vehicle_data.current_speed) || 0;
+    if (currentSpeed > 0) {
+      ctx.save();
+      const speedText = `${currentSpeed} m/t`;
+      const fontSize = Math.max(9, Math.min(12, Math.round(gSize * 0.22)));
+      ctx.font = `bold ${fontSize}px monospace`;
+      const textMetrics = ctx.measureText(speedText);
+      const textWidth = textMetrics.width;
+      const badgeH = fontSize + 4;
+      const badgeW = textWidth + 8;
+      const badgeX = cx - badgeW / 2;
+      const badgeY = py + tokenPx - badgeH - 2;
+
+      ctx.fillStyle = 'rgba(11, 19, 32, 0.85)';
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+      } else {
+        ctx.rect(badgeX, badgeY, badgeW, badgeH);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(speedText, cx, badgeY + badgeH / 2);
+      ctx.restore();
+    }
+  }
 }
 
 function drawInitials(ctx, name, cx, cy, radius) {

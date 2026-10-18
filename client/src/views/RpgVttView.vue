@@ -28,6 +28,10 @@
         <button v-if="isGm" class="btn-gm btn-stock-encounter" @click="showStockAdversaryModal = true" title="Stock Adversaries on Active Map">
           ⚔️ Stock Adversary
         </button>
+        <!-- Deploy Vehicle Button -->
+        <button v-if="isGm" class="btn-gm btn-deploy-vehicle" @click="showDeployVehicleModal = true" title="Deploy Vehicle on Active Map">
+          🚗 Deploy Vehicle
+        </button>
         <!-- Token Inspector Toggle -->
         <button class="btn-sidebar" @click="showTokenSidebar = !showTokenSidebar">
           🎯 Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
@@ -260,12 +264,22 @@
 
         <!-- Click-to-Open Adversary Token HUD -->
         <AdversaryTokenHud
-          v-if="selectedToken && (selectedToken.template || selectedToken.template_id)"
+          v-if="selectedToken && (selectedToken.template || selectedToken.template_id) && !selectedToken.vehicle_data"
           :token="selectedToken"
           @close="selectedTokenId = null"
           @update:token="onAdversaryTokenUpdate"
           @roll-attack="onAdversaryRollAttack"
           @roll-damage="onAdversaryRollDamage"
+        />
+
+        <!-- Click-to-Open Vehicle Token HUD -->
+        <VehicleTokenHud
+          v-if="selectedToken && selectedToken.vehicle_data"
+          :token="selectedToken"
+          @close="selectedTokenId = null"
+          @update:token="onVehicleTokenUpdate"
+          @roll-control="onVehicleRollControl"
+          @roll-damage="onVehicleRollDamage"
         />
 
         <!-- No Active Map Overlay -->
@@ -446,6 +460,7 @@
           <!-- Token Creation Button -->
           <button class="primary full-width btn-add-token" @click="openAddTokenModal">+ Add New Token</button>
           <button v-if="isGm" class="secondary full-width btn-stock-adversary-alt" @click="showStockAdversaryModal = true" style="margin-top: 8px;">⚔️ Stock Adversary Encounter</button>
+          <button v-if="isGm" class="secondary full-width btn-deploy-vehicle-alt" @click="showDeployVehicleModal = true" style="margin-top: 8px;">🚗 Deploy Vehicle</button>
 
           <!-- Selected Token Details -->
           <div v-if="selectedToken" class="section-box token-inspector">
@@ -697,6 +712,14 @@
       @spawned="onAdversariesSpawned"
     />
 
+    <!-- Deploy Vehicle Modal -->
+    <DeployVehicleModal
+      v-model="showDeployVehicleModal"
+      :active-map="activeMap"
+      :is-gm="isGm"
+      @deploy="onDeployVehicle"
+    />
+
     <!-- Image Browser Modal -->
     <ImageBrowserModal
       v-model="showImageBrowser"
@@ -713,6 +736,8 @@ import VttCanvas from '../components/VttCanvas.vue';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import AdversaryTokenHud from '../components/AdversaryTokenHud.vue';
 import StockAdversaryModal from '../components/StockAdversaryModal.vue';
+import VehicleTokenHud from '../components/VehicleTokenHud.vue';
+import DeployVehicleModal from '../components/DeployVehicleModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import DiceBox from '@3d-dice/dice-box';
@@ -967,6 +992,7 @@ const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const showAddTokenModal = ref(false);
 const showStockAdversaryModal = ref(false);
+const showDeployVehicleModal = ref(false);
 const adversaryImageSelectedUrl = ref('');
 const showImageBrowser = ref(false);
 const imageBrowserTarget = ref('token');
@@ -1636,6 +1662,152 @@ async function onAdversaryRollDamage({ action, token }) {
       label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
       total,
       breakdown: flatBonus ? `[${rolls.join(', ')}] + ${flatBonus}` : `[${rolls.join(', ')}]`,
+    });
+  }
+}
+
+async function onDeployVehicle(payload) {
+  if (!activeMap.value) return;
+  try {
+    const res = await fetch('/api/tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        map_id: activeMap.value.id,
+        name: payload.name,
+        color: payload.color,
+        size: payload.size,
+        x: payload.x,
+        y: payload.y,
+        avatar_url: payload.avatar_url,
+        vehicle_data: payload.vehicle_data,
+      }),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      showDeployVehicleModal.value = false;
+      const exists = tokens.value.some((t) => t.id === created.id);
+      if (!exists) tokens.value.push(created);
+      selectedTokenId.value = created.id;
+    }
+  } catch (err) {
+    console.error('Failed to deploy vehicle token:', err);
+  }
+}
+
+async function onVehicleTokenUpdate(updatedToken) {
+  if (!updatedToken || !updatedToken.id) return;
+  const idx = tokens.value.findIndex((t) => t.id === updatedToken.id);
+  if (idx !== -1) {
+    tokens.value[idx] = { ...tokens.value[idx], ...updatedToken };
+  }
+
+  try {
+    const res = await fetch(`/api/tokens/${updatedToken.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        vehicle_data: updatedToken.vehicle_data,
+      }),
+    });
+    if (res.ok) {
+      const serverToken = await res.json();
+      if (idx !== -1) tokens.value[idx] = serverToken;
+    }
+  } catch (err) {
+    console.error('Failed to update vehicle token:', err);
+  }
+}
+
+async function onVehicleRollControl({ token } = {}) {
+  playDiceSound({ isRemote: false });
+  if (diceBoxInstance) {
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-ones', themeColor: '#38bdf8', qty: 1 },
+        { sides: 10, theme: 'custom-tens', themeColor: '#0369a1', qty: 1 }
+      ]);
+      const rollSummary = calculatePercentileRoll(results);
+      if (rollSummary.valid) {
+        lastPercentileRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
+        showPercentileHud.value = true;
+        sendRollToServer({
+          type: 'percentile',
+          label: `${token?.name || 'Vehicle'}: Control Check (d100)`,
+          total: rollSummary.total,
+          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] Control Table check`,
+          rollSummary
+        });
+        percentileHudTimeout = setTimeout(() => {
+          showPercentileHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Vehicle control roll failed:', err);
+    }
+  } else {
+    const roll = Math.floor(Math.random() * 100) + 1;
+    sendRollToServer({
+      type: 'percentile',
+      label: `${token?.name || 'Vehicle'}: Control Check (d100)`,
+      total: roll,
+      breakdown: `Roll: ${roll} (Control Table check)`,
+    });
+  }
+}
+
+async function onVehicleRollDamage({ token } = {}) {
+  playDiceSound({ isRemote: false });
+  if (diceBoxInstance) {
+    showDamageHud.value = false;
+    showPercentileHud.value = false;
+    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-dmg', themeColor: '#f97316', qty: 2 }
+      ]);
+      const rollSummary = calculateDamageRoll(results);
+      if (rollSummary.count > 0) {
+        lastDamageRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
+        showDamageHud.value = true;
+        sendRollToServer({
+          type: 'damage',
+          label: `${token?.name || 'Vehicle'}: Vehicle Damage Table (2d10)`,
+          total: rollSummary.total,
+          breakdown: `[${rollSummary.dice.join(', ')}]`,
+          rollSummary
+        });
+        damageHudTimeout = setTimeout(() => {
+          showDamageHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Vehicle damage roll failed:', err);
+    }
+  } else {
+    const d1 = Math.floor(Math.random() * 10) + 1;
+    const d2 = Math.floor(Math.random() * 10) + 1;
+    const total = d1 + d2;
+    sendRollToServer({
+      type: 'damage',
+      label: `${token?.name || 'Vehicle'}: Vehicle Damage Table (2d10)`,
+      total,
+      breakdown: `[${d1}, ${d2}]`,
     });
   }
 }
