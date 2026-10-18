@@ -1667,6 +1667,8 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .weapon-title-container {
@@ -1684,6 +1686,10 @@ export default {
   -webkit-text-fill-color: #00ffff !important;
   letter-spacing: 0.4px;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
 }
 
 .weapon-title-name:hover {
@@ -1702,6 +1708,7 @@ export default {
   border: 1px solid #30363d;
   color: #8b949e;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .weapon-category-tag.beam {
@@ -1731,6 +1738,7 @@ export default {
   opacity: 0.5;
   transition: opacity 0.15s ease, transform 0.1s ease;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .btn-rename-weapon:hover {
@@ -1801,7 +1809,9 @@ export default {
 }
 
 .status-select {
-  padding: 4px 6px;
+  width: auto !important;
+  flex: 0 0 auto;
+  padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -1874,6 +1884,7 @@ export default {
 }
 
 .btn-remove {
+  flex: 0 0 auto;
   background-color: #000000 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #8b949e !important;
