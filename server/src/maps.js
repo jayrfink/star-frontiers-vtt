@@ -35,6 +35,7 @@ export function formatToken(row, db = null) {
     conditions: safeJsonParse(row.conditions, []),
     template_id: row.template_id || null,
     seu_current: row.seu_current !== undefined ? row.seu_current : null,
+    vehicle_data: safeJsonParse(row.vehicle_data, null),
   };
 
   if (db && row.template_id) {
@@ -309,7 +310,7 @@ export function createTokenRouter(db, io) {
       } else {
         rows = db.prepare('SELECT * FROM tokens ORDER BY id ASC').all();
       }
-      res.json(rows.map(formatToken));
+      res.json(rows.map(r => formatToken(r, db)));
     } catch (err) {
       console.error('Error listing tokens:', err);
       res.status(500).json({ error: 'Failed to list tokens' });
@@ -323,7 +324,7 @@ export function createTokenRouter(db, io) {
       if (!row) {
         return res.status(404).json({ error: 'Token not found' });
       }
-      res.json(formatToken(row));
+      res.json(formatToken(row, db));
     } catch (err) {
       console.error('Error fetching token:', err);
       res.status(500).json({ error: 'Failed to fetch token' });
@@ -351,6 +352,7 @@ export function createTokenRouter(db, io) {
         layer = 'character',
         rotation = 0,
         current_speed = 0,
+        vehicle_data = null,
       } = req.body;
 
       if (!map_id || !name) {
@@ -364,23 +366,24 @@ export function createTokenRouter(db, io) {
 
       const statusEffectsStr = typeof status_effects === 'string' ? status_effects : JSON.stringify(status_effects);
       const conditionsStr = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
+      const vehicleDataStr = vehicle_data ? (typeof vehicle_data === 'string' ? vehicle_data : JSON.stringify(vehicle_data)) : null;
 
       const stmt = db.prepare(`
         INSERT INTO tokens (
           map_id, character_id, template_id, name, color, avatar_url,
           x, y, size, current_hp, max_hp, seu_current, conditions, status_effects, layer,
-          rotation, current_speed
+          rotation, current_speed, vehicle_data
         ) VALUES (
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?
+          ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         map_id, character_id, template_id, name, color, avatar_url,
         x, y, size, current_hp, max_hp, seu_current, conditionsStr, statusEffectsStr, layer,
-        rotation, current_speed
+        rotation, current_speed, vehicleDataStr
       );
 
       const created = db.prepare('SELECT * FROM tokens WHERE id = ?').get(result.lastInsertRowid);
@@ -423,6 +426,7 @@ export function createTokenRouter(db, io) {
         layer = existing.layer,
         rotation = existing.rotation ?? 0,
         current_speed = existing.current_speed ?? 0,
+        vehicle_data = safeJsonParse(existing.vehicle_data, null),
       } = req.body;
 
       const positionChanged = (req.body.x !== undefined && req.body.x !== existing.x) ||
@@ -430,19 +434,20 @@ export function createTokenRouter(db, io) {
 
       const statusEffectsStr = typeof status_effects === 'string' ? status_effects : JSON.stringify(status_effects);
       const conditionsStr = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
+      const vehicleDataStr = vehicle_data ? (typeof vehicle_data === 'string' ? vehicle_data : JSON.stringify(vehicle_data)) : null;
 
       const stmt = db.prepare(`
         UPDATE tokens SET
           map_id = ?, character_id = ?, template_id = ?, name = ?, color = ?, avatar_url = ?,
           x = ?, y = ?, size = ?, current_hp = ?, max_hp = ?, seu_current = ?, conditions = ?, status_effects = ?,
-          layer = ?, rotation = ?, current_speed = ?, updated_at = CURRENT_TIMESTAMP
+          layer = ?, rotation = ?, current_speed = ?, vehicle_data = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         map_id, character_id, template_id, name, color, avatar_url,
         x, y, size, current_hp, max_hp, seu_current, conditionsStr, statusEffectsStr,
-        layer, rotation, current_speed, req.params.id
+        layer, rotation, current_speed, vehicleDataStr, req.params.id
       );
 
       const updated = db.prepare('SELECT * FROM tokens WHERE id = ?').get(req.params.id);

@@ -104,10 +104,36 @@ function migrate(db) {
       template_id TEXT,
       conditions TEXT DEFAULT '[]',
       seu_current INTEGER,
+      vehicle_data TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
       FOREIGN KEY (template_id) REFERENCES adversary_templates(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS vehicle_templates (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'Ground',
+      cost INTEGER NOT NULL DEFAULT 5000,
+      top_speed_kph INTEGER NOT NULL DEFAULT 100,
+      top_speed_m_turn INTEGER NOT NULL DEFAULT 175,
+      cruise_speed_kph INTEGER NOT NULL DEFAULT 60,
+      accel INTEGER NOT NULL DEFAULT 60,
+      decel INTEGER NOT NULL DEFAULT 40,
+      turn_speed INTEGER NOT NULL DEFAULT 80,
+      passengers INTEGER NOT NULL DEFAULT 4,
+      cargo_kg INTEGER NOT NULL DEFAULT 150,
+      cargo_m3 REAL NOT NULL DEFAULT 1.0,
+      battery_type TEXT NOT NULL DEFAULT 'Type 2 (100 SEU)',
+      max_seu INTEGER NOT NULL DEFAULT 100,
+      token_size INTEGER NOT NULL DEFAULT 2,
+      avatar_url TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS adversary_templates (
@@ -235,6 +261,9 @@ if (!mapCols.includes('map_type')) {
   }
   if (!tokenCols.includes('seu_current')) {
     db.exec('ALTER TABLE tokens ADD COLUMN seu_current INTEGER');
+  }
+  if (!tokenCols.includes('vehicle_data')) {
+    db.exec('ALTER TABLE tokens ADD COLUMN vehicle_data TEXT DEFAULT NULL');
   }
 }
 
