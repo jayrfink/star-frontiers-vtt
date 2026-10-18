@@ -110,6 +110,8 @@ export function createWeaponInstance(template = {}, overrides = {}) {
     id: `w_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name,
     type: overrides.type || name,
+    category: overrides.category || template.category || '',
+    description: overrides.description || template.description || '',
     damage: overrides.damage || template.damage || '1d10',
     range: overrides.range !== undefined ? Number(overrides.range) : (template.range !== undefined ? Number(template.range) : 5),
     ammo_max: ammoMax,

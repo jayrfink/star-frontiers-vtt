@@ -227,6 +227,81 @@ describe('ShipSheetsView - Weapon Selection & Renaming', () => {
     ShipSheetsView.methods.handleKeydown.call(vm, { key: 'Enter' });
     expect(vm.showAddWeaponModal).toBe(true);
   });
+
+  it('determines weapon category and limitation explanation accurately', () => {
+    const vm = {
+      getWeaponCategory: ShipSheetsView.methods.getWeaponCategory,
+      getCategoryExplanation: ShipSheetsView.methods.getCategoryExplanation,
+      getWeaponTooltip: ShipSheetsView.methods.getWeaponTooltip,
+    };
+
+    // Beams
+    expect(vm.getWeaponCategory({ name: 'Laser Cannon', type: 'Laser Cannon' })).toBe('Beam');
+    expect(vm.getWeaponCategory({ name: 'Laser Battery', type: 'Laser Battery' })).toBe('Beam');
+    expect(vm.getWeaponCategory({ name: 'Laser Batteries (x2)', type: 'Laser Batteries (x2)' })).toBe('Beam');
+    expect(vm.getCategoryExplanation({ name: 'Laser Battery' })).toContain('damage halved by Reflective Hull');
+
+    // Ordnance
+    expect(vm.getWeaponCategory({ name: 'Assault Rockets', type: 'Assault Rockets' })).toBe('Ordnance');
+    expect(vm.getWeaponCategory({ name: 'Torpedoes', type: 'Torpedoes' })).toBe('Ordnance');
+    expect(vm.getWeaponCategory({ name: 'Rocket Battery', type: 'Rocket Battery' })).toBe('Ordnance');
+    expect(vm.getCategoryExplanation({ name: 'Torpedoes' })).toContain('intercepted by ICMs');
+
+    // Energy
+    expect(vm.getWeaponCategory({ name: 'Disruptor Cannon', type: 'Disruptor Cannon' })).toBe('Energy');
+    expect(vm.getCategoryExplanation({ name: 'Disruptor Cannon' })).toContain('ignores Reflective Hull');
+
+    // Tooltip formatting
+    const tip = vm.getWeaponTooltip({ name: 'Torpedoes', type: 'Torpedoes' });
+    expect(tip).toContain('Torpedoes (Ordnance)');
+  });
+
+  it('manages weapon rename edit state', () => {
+    let focusCalled = false;
+    let selectCalled = false;
+    const vm = {
+      editingWeaponIndex: null,
+      $nextTick(cb) {
+        cb();
+      },
+      $refs: {
+        weaponRenameInput: {
+          focus() {
+            focusCalled = true;
+          },
+          select() {
+            selectCalled = true;
+          },
+        },
+      },
+      onWeaponNameChangeCalled: false,
+      onWeaponNameChange() {
+        this.onWeaponNameChangeCalled = true;
+      },
+    };
+
+    ShipSheetsView.methods.startEditWeapon.call(vm, 2, { name: 'Assault Rockets' });
+    expect(vm.editingWeaponIndex).toBe(2);
+    expect(focusCalled).toBe(true);
+    expect(selectCalled).toBe(true);
+
+    ShipSheetsView.methods.stopEditWeapon.call(vm, { name: 'Assault Rockets' });
+    expect(vm.editingWeaponIndex).toBeNull();
+    expect(vm.onWeaponNameChangeCalled).toBe(true);
+  });
+
+  it('normalizeWeapons guarantees both name and type are defined', () => {
+    const rawWeapons = [
+      { id: 'w1', type: 'Assault Rockets', damage: '2d10+4', range: 4 },
+      { id: 'w2', name: 'Laser Battery', damage: '1d10', range: 9 },
+    ];
+
+    const normalized = ShipSheetsView.methods.normalizeWeapons(rawWeapons);
+    expect(normalized[0].name).toBe('Assault Rockets');
+    expect(normalized[0].type).toBe('Assault Rockets');
+    expect(normalized[1].name).toBe('Laser Battery');
+    expect(normalized[1].type).toBe('Laser Battery');
+  });
 });
 
 

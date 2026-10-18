@@ -250,14 +250,45 @@
             <div v-else class="weapons-wrapper">
               <div v-for="(wpn, index) in selectedShip.weapons" :key="wpn.id || index" class="weapon-card">
                 <div class="weapon-main-row">
-                  <input
-                    type="text"
-                    v-model="wpn.name"
-                    @change="onWeaponNameChange(wpn)"
-                    class="weapon-title-input"
-                    :placeholder="wpn.type || 'Weapon Name'"
-                    title="Click to rename weapon"
-                  />
+                  <div class="weapon-title-container">
+                    <template v-if="editingWeaponIndex === index">
+                      <input
+                        type="text"
+                        v-model="wpn.name"
+                        @blur="stopEditWeapon(wpn)"
+                        @keyup.enter="stopEditWeapon(wpn)"
+                        @change="onWeaponNameChange(wpn)"
+                        class="weapon-title-input"
+                        :placeholder="wpn.type || 'Weapon Name'"
+                        ref="weaponRenameInput"
+                        title="Press Enter or click outside to save"
+                      />
+                    </template>
+                    <template v-else>
+                      <span
+                        class="weapon-title-name"
+                        @dblclick="startEditWeapon(index, wpn)"
+                        :title="getWeaponTooltip(wpn)"
+                      >
+                        {{ wpn.name || wpn.type || 'Laser Battery' }}
+                      </span>
+                      <span
+                        v-if="getWeaponCategory(wpn)"
+                        :class="['weapon-category-tag', getWeaponCategory(wpn).toLowerCase()]"
+                        :title="getCategoryExplanation(wpn)"
+                      >
+                        {{ getWeaponCategory(wpn) }}
+                      </span>
+                      <button
+                        type="button"
+                        class="btn-rename-weapon"
+                        title="Rename weapon"
+                        @click="startEditWeapon(index, wpn)"
+                      >
+                        ✏️
+                      </button>
+                    </template>
+                  </div>
                   <select
                     v-model="wpn.status"
                     @change="updateShip"
@@ -290,6 +321,7 @@
                       class="item-num-input"
                       min="0"
                     />
+                    <span class="range-unit">hex</span>
                   </div>
                   <div class="detail-field ammo-field" v-if="wpn.ammo_max > 0 || wpn.ammo_current > 0">
                     <label>Ammo:</label>
@@ -564,6 +596,7 @@ export default {
       showImageBrowser: false,
       imageBrowserTarget: 'sheet',
       showAddWeaponModal: false,
+      editingWeaponIndex: null,
       weaponCatalog: SHIP_WEAPONS_CATALOG,
       weaponCategoryFilter: 'All',
       customWeaponForm: {
@@ -690,12 +723,13 @@ export default {
     normalizeWeapons(weapons) {
       if (!Array.isArray(weapons)) return [];
       return weapons.map((w, idx) => {
-        const weaponName = (w.type && w.type.trim()) || (w.name && w.name.trim()) || 'Laser Battery';
+        const weaponName = (w.name && w.name.trim()) || (w.type && w.type.trim()) || 'Laser Battery';
         return {
           ...w,
           id: w.id || `w_${Date.now()}_${idx}`,
           name: weaponName,
-          type: weaponName,
+          type: (w.type && w.type.trim()) || weaponName,
+          category: w.category || '',
           damage: w.damage || '1d10',
           range: w.range !== undefined ? w.range : 9,
           ammo_max: w.ammo_max !== undefined ? w.ammo_max : 0,
@@ -767,7 +801,7 @@ export default {
       this.newShipForm.dcr = preset.dcr;
       this.newShipForm.max_hull_points = preset.hull_points;
       this.newShipForm.current_hull_points = preset.hull_points;
-      this.newShipForm.weapons = JSON.parse(JSON.stringify(preset.weapons));
+      this.newShipForm.weapons = this.normalizeWeapons(preset.weapons);
       this.newShipForm.defenses = JSON.parse(JSON.stringify(preset.defenses));
     },
     openCreateModal() {
@@ -803,7 +837,7 @@ export default {
         this.selectedShip.hull_points = preset.hull_points;
         this.selectedShip.current_hull_points = preset.hull_points;
         this.selectedShip.current_hp = preset.hull_points;
-        this.selectedShip.weapons = JSON.parse(JSON.stringify(preset.weapons));
+        this.selectedShip.weapons = this.normalizeWeapons(preset.weapons);
         this.selectedShip.defenses = JSON.parse(JSON.stringify(preset.defenses));
       }
       this.updateShip();
@@ -1020,12 +1054,52 @@ export default {
       wpn.type = wpn.name;
       this.updateShip();
     },
+    getWeaponCategory(wpn) {
+      if (!wpn) return '';
+      if (wpn.category) return wpn.category;
+      const str = `${wpn.name || ''} ${wpn.type || ''}`.toLowerCase();
+      if (str.includes('laser') || str.includes('electron') || str.includes('proton')) return 'Beam';
+      if (str.includes('disruptor')) return 'Energy';
+      if (str.includes('rocket') || str.includes('torpedo') || str.includes('mine') || str.includes('missile')) return 'Ordnance';
+      const match = SHIP_WEAPONS_CATALOG.find(
+        (c) => c.name.toLowerCase() === (wpn.name || '').toLowerCase() || c.name.toLowerCase() === (wpn.type || '').toLowerCase()
+      );
+      return match?.category || '';
+    },
+    getCategoryExplanation(wpn) {
+      const cat = this.getWeaponCategory(wpn);
+      if (cat === 'Beam') return 'Beam weapon: damage halved by Reflective Hull. Attenuated in gas clouds.';
+      if (cat === 'Ordnance') return 'Ordnance: ignores Reflective Hull. Can be intercepted by ICMs.';
+      if (cat === 'Energy') return 'Energy weapon: ignores Reflective Hull.';
+      return '';
+    },
+    getWeaponTooltip(wpn) {
+      const cat = this.getWeaponCategory(wpn);
+      const expl = this.getCategoryExplanation(wpn);
+      return `${wpn.name || wpn.type || 'Weapon'}${cat ? ` (${cat})` : ''}${expl ? ` - ${expl}` : ''}`;
+    },
+    startEditWeapon(index, wpn) {
+      this.editingWeaponIndex = index;
+      this.$nextTick(() => {
+        const input = this.$refs.weaponRenameInput;
+        const el = Array.isArray(input) ? input[0] : input;
+        if (el && typeof el.focus === 'function') {
+          el.focus();
+          if (typeof el.select === 'function') el.select();
+        }
+      });
+    },
+    stopEditWeapon(wpn) {
+      this.editingWeaponIndex = null;
+      this.onWeaponNameChange(wpn);
+    },
     addWeapon() {
       if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
       this.selectedShip.weapons.push({
         id: `w_${Date.now()}`,
-        name: 'New Weapon',
-        type: 'New Weapon',
+        name: 'Laser Battery',
+        type: 'Laser Battery',
+        category: 'Beam',
         damage: '1d10',
         range: 9,
         ammo_max: 0,
@@ -1595,13 +1669,79 @@ export default {
   gap: 8px;
 }
 
-.weapon-title-name {
+.weapon-title-container {
   flex: 1;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #e0e0e0 !important;
-  -webkit-text-fill-color: #e0e0e0 !important;
-  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.weapon-title-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff !important;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+
+.weapon-title-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.weapon-category-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.weapon-category-tag.beam {
+  border-color: rgba(0, 255, 255, 0.4);
+  color: #00ffff;
+  background-color: rgba(0, 40, 40, 0.5);
+}
+
+.weapon-category-tag.ordnance {
+  border-color: rgba(255, 152, 0, 0.4);
+  color: #ffa726;
+  background-color: rgba(60, 30, 0, 0.5);
+}
+
+.weapon-category-tag.energy {
+  border-color: rgba(171, 71, 188, 0.4);
+  color: #ba68c8;
+  background-color: rgba(45, 15, 50, 0.5);
+}
+
+.btn-rename-weapon {
+  background: transparent;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+  line-height: 1;
+}
+
+.btn-rename-weapon:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.range-unit {
+  color: #8b949e;
+  font-size: 0.75rem;
+  margin-left: 2px;
 }
 
 .weapon-details-row {
@@ -2113,12 +2253,18 @@ export default {
   font-weight: 600;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff !important;
-  background: transparent;
-  border: 1px dashed rgba(0, 128, 128, 0.4);
+  background: rgba(0, 20, 20, 0.6);
+  border: 1px dashed rgba(0, 255, 255, 0.6);
   border-radius: 4px;
   padding: 2px 6px;
   font-family: inherit;
   transition: all 0.15s ease-in-out;
+}
+
+.weapon-title-input::placeholder {
+  color: rgba(0, 255, 255, 0.6) !important;
+  -webkit-text-fill-color: rgba(0, 255, 255, 0.6) !important;
+  opacity: 1;
 }
 
 .weapon-title-input:hover {
