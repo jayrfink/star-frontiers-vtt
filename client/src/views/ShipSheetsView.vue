@@ -1496,7 +1496,8 @@ export default {
 
 .stat-label {
   font-weight: 700;
-  color: #f0f6fc;
+  color: #d0d0d0 !important;
+  -webkit-text-fill-color: #d0d0d0;
 }
 
 .stat-sublabel {
@@ -1555,8 +1556,8 @@ export default {
 .defense-label {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #e0e0e0 !important;
-  -webkit-text-fill-color: #e0e0e0;
+  color: #d0d0d0 !important;
+  -webkit-text-fill-color: #d0d0d0;
 }
 
 .toggle-btn {
@@ -1680,10 +1681,10 @@ export default {
 }
 
 .weapon-title-name {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #e6e6e6 !important;
-  -webkit-text-fill-color: #e6e6e6 !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #d0d0d0 !important;
+  -webkit-text-fill-color: #d0d0d0 !important;
   letter-spacing: 0.4px;
   cursor: pointer;
   white-space: nowrap;
@@ -2260,10 +2261,10 @@ export default {
 
 .weapon-title-input {
   flex: 1;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #e6e6e6 !important;
-  -webkit-text-fill-color: #e6e6e6 !important;
+  color: #d0d0d0 !important;
+  -webkit-text-fill-color: #d0d0d0 !important;
   background: rgba(0, 20, 20, 0.6);
   border: 1px dashed rgba(0, 255, 255, 0.6);
   border-radius: 4px;
