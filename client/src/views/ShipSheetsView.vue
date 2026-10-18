@@ -2240,7 +2240,7 @@ export default {
 }
 
 .notes-section .section-header {
-  padding-bottom: 5%;
+  padding-bottom: 2%;
 }
 
 .notes-section h4 {
