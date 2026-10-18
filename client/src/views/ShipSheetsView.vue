@@ -341,15 +341,6 @@
                       min="0"
                     />
                   </div>
-                  <div class="detail-field fire-field">
-                    <button
-                      class="btn-fire"
-                      :disabled="wpn.status !== 'Online' || (wpn.ammo_max > 0 && wpn.ammo_current <= 0)"
-                      @click="fireWeapon(index)"
-                    >
-                      Fire
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1112,18 +1103,6 @@ export default {
       this.selectedShip.weapons.splice(index, 1);
       this.updateShip();
     },
-    fireWeapon(index) {
-      const wpn = this.selectedShip.weapons[index];
-      if (!wpn || wpn.status !== 'Online') return;
-      if (wpn.ammo_max > 0) {
-        if (wpn.ammo_current > 0) {
-          wpn.ammo_current -= 1;
-          this.updateShip();
-        }
-      } else {
-        this.updateShip();
-      }
-    },
     setupSocketListeners() {
       socket.on('sheet:created', this.handleSheetCreated);
       socket.on('sheet:updated', this.handleSheetUpdated);
@@ -1840,32 +1819,6 @@ export default {
   color: #f85149 !important;
   -webkit-text-fill-color: #f85149;
   border-color: #f8514988 !important;
-}
-
-.btn-fire {
-  background: #340c0e;
-  color: #f85149;
-  border: 1px solid #da3633;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(218, 54, 51, 0.25);
-  transition: all 0.15s ease-in-out;
-}
-.btn-fire:hover:not(:disabled) {
-  background: #4a1316;
-  border-color: #ff6b6b;
-  color: #ff8585;
-  box-shadow: 0 0 10px rgba(248, 81, 73, 0.45);
-}
-.btn-fire:disabled {
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: #8b949e;
-  cursor: not-allowed;
-  box-shadow: none;
 }
 
 .item-level-input {
