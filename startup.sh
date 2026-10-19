@@ -1,0 +1,2 @@
+#!/bin/bash
+agy --conversation=ea4d1d9d-d5b4-4293-8bae-06adf0148def
