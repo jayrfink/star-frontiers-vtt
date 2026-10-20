@@ -5,6 +5,7 @@ data/*
 dist/
 .env
 *.db
+*.sqlite
 .DS_Store
 __MACOSX/
 scratch/
