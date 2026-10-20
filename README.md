@@ -18,18 +18,17 @@ A full-stack, real-time multiplayer Virtual Tabletop (VTT) and digital character
 | ![Character Sheet](docs/screenshots/character_sheet.png) | ![Ship Sheet](docs/screenshots/ship_sheet.png) |
 | *Interactive character sheet with canonical equipment catalog (117 items) and live stat tracking.* | *Full starship management with ADF/MR/DCR ratings, defensive screens, and weapon systems.* |
 
-### 3. Equipment & Starship Armament
-| Equip Ship Weapon Modal | GM Tools & Encounter Stocking |
+### 3. Starship Armament & GM Tools
+| Equip Ship Weapon Modal | GM Tactical Tools |
 |:---:|:---:|
 | ![Equip Ship Weapon](docs/screenshots/create_ship.png) | ![GM Screen](docs/screenshots/gm_screen.png) |
-| *Canonical 10-weapon Knight Hawks catalog with limitation badges and custom weapon builder.* | *GM Map Manager, procedural adversary stocking, vehicle deployment, and live tokens.* |
+| *Canonical 10-weapon Knight Hawks catalog with limitation badges and custom weapon builder.* | *GM Map Manager, battle map controls, vehicle deployment, and live tokens.* |
 
-### 4. Integrated Asset Management
-<p align="center">
-  <img src="docs/screenshots/select_image.png" alt="Integrated Image Browser" width="850" />
-  <br />
-  <em>Integrated visual asset explorer for map backgrounds, token portraits, and custom uploads.</em>
-</p>
+### 4. Adversary Encounters & Asset Explorer
+| Stock Adversary Generator | Integrated Image Browser |
+|:---:|:---:|
+| ![Stock Adversary Encounter](docs/screenshots/autogenerate_adversary.png) | ![Integrated Image Browser](docs/screenshots/select_image.png) |
+| *Procedural NPC/creature stocking with Threat Tier scaling (1–5) and AI circular token art.* | *Visual asset explorer for map backgrounds, token portraits, and custom uploads.* |
 
 ---
 
