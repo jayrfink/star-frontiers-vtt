@@ -7,10 +7,23 @@ import { validateAdversaryTemplate, generateNpcStats, generateCreatureStats } fr
 import { spawnAdversaries } from './adversarySpawner.js';
 import { generateTokenRingImage } from './tokenImagePipeline.js';
 import { generateTokenArtFromDescription } from './imageGeneratorService.js';
+import { formatToken } from './maps.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, '../../data');
+
+function resolveUploadDiskPath(urlStr) {
+  if (!urlStr || typeof urlStr !== 'string') return null;
+  const cleanUrl = urlStr.split('?')[0];
+  const rel = cleanUrl.startsWith('/uploads/')
+    ? cleanUrl.replace(/^\/uploads\//, '')
+    : cleanUrl.replace(/^\//, '');
+  const candidate = path.resolve(DATA_DIR, 'uploads', rel);
+  const uploadsRoot = path.resolve(DATA_DIR, 'uploads');
+  if (!candidate.startsWith(uploadsRoot)) return null;
+  return fs.existsSync(candidate) ? candidate : null;
+}
 
 function safeJsonParse(val, fallback) {
   if (!val) return fallback;
@@ -100,7 +113,19 @@ export function createAdversariesRouter(db, io) {
   // POST /api/adversaries - Register / create template
   router.post('/', (req, res) => {
     try {
-      const validation = validateAdversaryTemplate(req.body);
+      const templatePayload = {
+        token_image_path: '',
+        token_size: 1,
+        defense_summary: '',
+        movement: '12 m/s',
+        initiative_mod: 0,
+        actions: [],
+        traits: [],
+        system_data: {},
+        ...req.body,
+      };
+
+      const validation = validateAdversaryTemplate(templatePayload);
       if (!validation.valid) {
         return res.status(400).json({ error: 'Invalid template payload', details: validation.errors });
       }
@@ -110,16 +135,16 @@ export function createAdversariesRouter(db, io) {
         name,
         category,
         threat_tier,
-        token_image_path = '',
-        token_size = 1,
+        token_image_path,
+        token_size,
         hp_max,
-        defense_summary = '',
-        movement = '12 m/s',
-        initiative_mod = 0,
-        actions = [],
-        traits = [],
-        system_data = {},
-      } = req.body;
+        defense_summary,
+        movement,
+        initiative_mod,
+        actions,
+        traits,
+        system_data,
+      } = templatePayload;
 
       const actionsStr = JSON.stringify(actions);
       const traitsStr = JSON.stringify(traits);
@@ -239,20 +264,15 @@ export function createAdversariesRouter(db, io) {
       const tokenFileName = `${templateObj.template_id}.png`;
       const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
 
-      let sourceDiskPath = null;
-      if (source_image_url) {
-        const rel = source_image_url.startsWith('/uploads/')
-          ? source_image_url.replace(/^\/uploads\//, '')
-          : source_image_url.replace(/^\//, '');
-        const candidate = path.join(DATA_DIR, 'uploads', rel);
-        if (fs.existsSync(candidate)) {
-          sourceDiskPath = candidate;
-        }
-      }
+      let sourceDiskPath = resolveUploadDiskPath(source_image_url);
+      const existingTokenDiskPath = resolveUploadDiskPath(templateObj.token_image_path);
 
       if (sourceDiskPath) {
-        if (source_image_url.includes('/tokens/')) {
-          fs.copyFileSync(sourceDiskPath, tokenOutputPath);
+        const cleanSource = source_image_url.split('?')[0];
+        if (cleanSource.includes('/tokens/')) {
+          if (path.resolve(sourceDiskPath) !== path.resolve(tokenOutputPath)) {
+            fs.copyFileSync(sourceDiskPath, tokenOutputPath);
+          }
           templateObj.token_image_path = `/uploads/tokens/${tokenFileName}`;
         } else {
           await generateTokenRingImage({
@@ -265,7 +285,7 @@ export function createAdversariesRouter(db, io) {
           });
           templateObj.token_image_path = `/uploads/tokens/${tokenFileName}`;
         }
-      } else if (!fs.existsSync(tokenOutputPath) || !templateObj.token_image_path) {
+      } else if (!existingTokenDiskPath || !fs.existsSync(tokenOutputPath) || !templateObj.token_image_path) {
         await generateTokenRingImage({
           outputPath: tokenOutputPath,
           threatTier: templateObj.threat_tier,
@@ -288,6 +308,92 @@ export function createAdversariesRouter(db, io) {
     } catch (err) {
       console.error('Error spawning adversaries:', err);
       res.status(500).json({ error: 'Failed to spawn adversaries', message: err.message });
+    }
+  });
+
+  // PATCH /api/adversaries/:id/token - Update template token image and sync active map tokens
+  router.patch('/:id/token', async (req, res) => {
+    try {
+      const templateId = req.params.id;
+      const row = db.prepare('SELECT * FROM adversary_templates WHERE id = ?').get(templateId);
+      if (!row) {
+        return res.status(404).json({ error: 'Adversary template not found' });
+      }
+
+      const { source_image_url } = req.body || {};
+      const tokensUploadDir = path.join(DATA_DIR, 'uploads/tokens');
+      if (!fs.existsSync(tokensUploadDir)) {
+        fs.mkdirSync(tokensUploadDir, { recursive: true });
+      }
+
+      const tokenFileName = `${templateId}.png`;
+      const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
+
+      if (source_image_url) {
+        const sourceDiskPath = resolveUploadDiskPath(source_image_url);
+        if (!sourceDiskPath) {
+          return res.status(400).json({ error: 'Source image file not found on disk' });
+        }
+        const cleanSource = source_image_url.split('?')[0];
+        if (cleanSource.includes('/tokens/')) {
+          if (path.resolve(sourceDiskPath) !== path.resolve(tokenOutputPath)) {
+            fs.copyFileSync(sourceDiskPath, tokenOutputPath);
+          }
+        } else {
+          await generateTokenRingImage({
+            sourceImagePath: sourceDiskPath,
+            outputPath: tokenOutputPath,
+            threatTier: row.threat_tier,
+            category: row.category,
+            label: row.name,
+            size: 256,
+          });
+        }
+      } else {
+        await generateTokenRingImage({
+          outputPath: tokenOutputPath,
+          threatTier: row.threat_tier,
+          category: row.category,
+          label: row.name,
+          size: 256,
+        });
+      }
+
+      const newTokenPath = `/uploads/tokens/${tokenFileName}?v=${Date.now()}`;
+      db.prepare(`
+        UPDATE adversary_templates
+        SET token_image_path = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(newTokenPath, templateId);
+
+      const updatedRow = db.prepare('SELECT * FROM adversary_templates WHERE id = ?').get(templateId);
+      const formattedTemplate = formatAdversary(updatedRow);
+
+      if (io) {
+        io.emit('adversary:saved', { template: formattedTemplate });
+      }
+
+      // Sync any tokens on maps spawned from this template
+      const updateTokensResult = db.prepare(`
+        UPDATE tokens
+        SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE template_id = ?
+      `).run(newTokenPath, templateId);
+
+      if (io && updateTokensResult.changes > 0) {
+        const affectedTokens = db.prepare('SELECT * FROM tokens WHERE template_id = ?').all(templateId);
+        for (const tRow of affectedTokens) {
+          io.emit('token:updated', { token: formatToken(tRow, db) });
+        }
+      }
+
+      res.json({
+        template: formattedTemplate,
+        updatedTokensCount: updateTokensResult.changes,
+      });
+    } catch (err) {
+      console.error('Error updating adversary token:', err);
+      res.status(500).json({ error: 'Failed to update adversary token', message: err.message });
     }
   });
 
