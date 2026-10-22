@@ -43,7 +43,18 @@
           </div>
           <div v-else class="existing-picker-layout">
             <div class="form-group">
-              <label>Select Blueprint / Template</label>
+              <div class="template-select-header">
+                <label>Select Blueprint / Template</label>
+                <button
+                  v-if="currentSelectedTemplate"
+                  type="button"
+                  class="btn-delete-template"
+                  title="Delete selected template"
+                  @click="deleteSelectedTemplate"
+                >
+                  🗑️ Delete Template
+                </button>
+              </div>
               <select v-model="selectedTemplateId" class="template-select">
                 <option v-for="tpl in templates" :key="tpl.template_id" :value="tpl.template_id">
                   Tier {{ tpl.threat_tier }} • {{ tpl.name }} ({{ tpl.category === 'creature' ? 'Creature' : 'NPC' }})
@@ -56,20 +67,63 @@
               <div class="preview-header">
                 <div class="preview-avatar-circle" :style="{ borderColor: getTierColor(currentSelectedTemplate.threat_tier) }">
                   <img
-                    v-if="currentSelectedTemplate.token_image_path"
+                    v-if="currentSelectedTemplate.token_image_path && !existingTokenImageError"
                     :src="currentSelectedTemplate.token_image_path"
                     alt="Token"
+                    @error="existingTokenImageError = true"
                   />
-                  <span v-else class="preview-placeholder">👤</span>
+                  <span v-else class="preview-placeholder">
+                    {{ currentSelectedTemplate.category === 'creature' ? '🐾' : '👤' }}
+                  </span>
                 </div>
                 <div class="preview-meta">
                   <h4>{{ currentSelectedTemplate.name }}</h4>
-                  <span
-                    class="tier-badge"
-                    :style="{ backgroundColor: getTierColor(currentSelectedTemplate.threat_tier) }"
+                  <div class="preview-badges-row">
+                    <span
+                      class="tier-badge"
+                      :style="{ backgroundColor: getTierColor(currentSelectedTemplate.threat_tier) }"
+                    >
+                      Tier {{ currentSelectedTemplate.threat_tier }} {{ currentSelectedTemplate.category.toUpperCase() }}
+                    </span>
+                    <span v-if="existingTokenImageError" class="missing-token-badge" title="The token image file could not be found. Upload or browse a new image below.">
+                      ⚠️ Missing Token Image
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Change / Upload Token Artwork Controls for Existing Template -->
+              <div class="existing-token-controls">
+                <span class="token-controls-label">Token Art:</span>
+                <div class="art-buttons-row">
+                  <label class="btn-upload-file" :class="{ disabled: isUpdatingToken }">
+                    {{ isUpdatingToken ? '⏳ Updating...' : '⬆️ Upload Token' }}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      :disabled="isUpdatingToken"
+                      @change="handleExistingTokenFileUpload"
+                      style="display: none;"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    class="btn-browse-art"
+                    :disabled="isUpdatingToken"
+                    @click="$emit('browse-image')"
                   >
-                    Tier {{ currentSelectedTemplate.threat_tier }} {{ currentSelectedTemplate.category.toUpperCase() }}
-                  </span>
+                    📁 Browse Uploads
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-generate-ai-art"
+                    :disabled="isGeneratingArt || isUpdatingToken || cooldownSeconds > 0"
+                    @click="generateExistingTemplateAiArt"
+                  >
+                    <span v-if="isGeneratingArt">⏳ Generating...</span>
+                    <span v-else-if="cooldownSeconds > 0">⏳ Cooldown ({{ cooldownSeconds }}s)</span>
+                    <span v-else>✨ AI Token Art</span>
+                  </button>
                 </div>
               </div>
 
@@ -372,6 +426,8 @@ export default {
       customCount: 1,
       isSpawning: false,
       isGeneratingArt: false,
+      isUpdatingToken: false,
+      existingTokenImageError: false,
       cooldownSeconds: 0,
       artCooldownTimer: null,
       errorMessage: null,
@@ -404,8 +460,14 @@ export default {
         this.fetchTemplates();
       }
     },
+    selectedTemplateId() {
+      this.existingTokenImageError = false;
+    },
     selectedImageUrl(newVal) {
-      if (newVal) {
+      if (!newVal) return;
+      if (this.mode === 'existing' && this.selectedTemplateId) {
+        this.updateExistingTemplateToken(newVal);
+      } else {
         this.customForm.source_image_url = newVal;
       }
     },
@@ -585,6 +647,131 @@ export default {
         this.errorMessage = err.message || 'Failed to spawn adversaries.';
       } finally {
         this.isSpawning = false;
+      }
+    },
+    async deleteSelectedTemplate() {
+      const tpl = this.currentSelectedTemplate;
+      if (!tpl) return;
+      if (typeof confirm === 'function' && !confirm(`Delete adversary template "${tpl.name}"?`)) {
+        return;
+      }
+      this.errorMessage = null;
+      try {
+        const res = await fetch(`/api/adversaries/${encodeURIComponent(tpl.template_id)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to delete adversary template');
+        }
+        this.templates = this.templates.filter((t) => t.template_id !== tpl.template_id);
+        this.selectedTemplateId = this.templates.length > 0 ? this.templates[0].template_id : null;
+        this.existingTokenImageError = false;
+      } catch (err) {
+        console.error('Failed to delete template:', err);
+        this.errorMessage = err.message || 'Failed to delete adversary template.';
+      }
+    },
+    async updateExistingTemplateToken(sourceImageUrl) {
+      if (!this.selectedTemplateId) return;
+      this.isUpdatingToken = true;
+      this.errorMessage = null;
+      try {
+        const res = await fetch(`/api/adversaries/${encodeURIComponent(this.selectedTemplateId)}/token`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ source_image_url: sourceImageUrl }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || errData.message || 'Failed to update template token');
+        }
+        const data = await res.json();
+        if (data.template) {
+          const idx = this.templates.findIndex((t) => t.template_id === data.template.template_id);
+          if (idx !== -1) {
+            this.templates.splice(idx, 1, data.template);
+          }
+          this.existingTokenImageError = false;
+        }
+      } catch (err) {
+        console.error('Failed to update template token:', err);
+        this.errorMessage = err.message || 'Failed to update template token.';
+      } finally {
+        this.isUpdatingToken = false;
+      }
+    },
+    async handleExistingTokenFileUpload(event) {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      this.errorMessage = null;
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to upload token image');
+        }
+        const data = await res.json();
+        if (data.url) {
+          await this.updateExistingTemplateToken(data.url);
+        }
+      } catch (err) {
+        console.error('Failed to upload token image:', err);
+        this.errorMessage = err.message || 'Failed to upload token image.';
+      } finally {
+        if (event.target) event.target.value = '';
+      }
+    },
+    async generateExistingTemplateAiArt() {
+      const tpl = this.currentSelectedTemplate;
+      if (!tpl || this.cooldownSeconds > 0) return;
+      this.isGeneratingArt = true;
+      this.errorMessage = null;
+      try {
+        const actionNames = Array.isArray(tpl.actions) ? tpl.actions.map((a) => a.name).join(', ') : '';
+        const payload = {
+          prompt: tpl.system_data?.description || '',
+          name: tpl.name,
+          species: tpl.system_data?.race || tpl.system_data?.species || tpl.name,
+          category: tpl.category,
+          threat_tier: tpl.threat_tier,
+          weapon: actionNames,
+          armor: tpl.defense_summary || '',
+          attacks: actionNames,
+        };
+        const res = await fetch('/api/adversaries/generate-token-art', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          if ((res.status === 429 || errData.retryAfter) && typeof this.startArtCooldown === 'function') {
+            this.startArtCooldown(errData.retryAfter || 45);
+          }
+          throw new Error(errData.message || errData.error || 'Failed to generate token art');
+        }
+        const data = await res.json();
+        if (data.token_image_url) {
+          await this.updateExistingTemplateToken(data.token_image_url);
+        }
+        if (typeof this.startArtCooldown === 'function') {
+          this.startArtCooldown(45);
+        }
+      } catch (err) {
+        console.error('Failed to generate AI token art for template:', err);
+        this.errorMessage = err.message;
+      } finally {
+        this.isGeneratingArt = false;
       }
     },
   },
@@ -882,6 +1069,69 @@ export default {
 .art-hint {
   font-size: 0.7rem;
   color: #64748b;
+}
+
+.template-select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-delete-template {
+  background-color: rgba(220, 38, 38, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-template:hover {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.preview-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.missing-token-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fcd34d;
+}
+
+.existing-token-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background-color: #0f172a;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #1e293b;
+}
+
+.token-controls-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.btn-upload-file.disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .template-preview-card {

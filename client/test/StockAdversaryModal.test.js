@@ -131,5 +131,185 @@ describe('StockAdversaryModal Component', () => {
         global.fetch = originalFetch;
       }
     });
+
+    it('deletes selected template via DELETE /api/adversaries/:id and selects next available template', async () => {
+      const originalFetch = global.fetch;
+      const originalConfirm = global.confirm;
+      global.confirm = () => true;
+      global.fetch = async (url, options) => {
+        expect(url).toBe('/api/adversaries/sathar-t2');
+        expect(options.method).toBe('DELETE');
+        return { ok: true, json: async () => ({ success: true }) };
+      };
+
+      try {
+        const ctx = {
+          selectedTemplateId: 'sathar-t2',
+          templates: [
+            { template_id: 'sathar-t2', name: 'Sathar Trooper', threat_tier: 2, category: 'npc' },
+            { template_id: 'pirate-t1', name: 'Pirate Raider', threat_tier: 1, category: 'npc' },
+          ],
+          get currentSelectedTemplate() {
+            return this.templates.find((t) => t.template_id === this.selectedTemplateId) || null;
+          },
+          errorMessage: null,
+        };
+
+        await StockAdversaryModal.methods.deleteSelectedTemplate.call(ctx);
+        expect(ctx.templates).toHaveLength(1);
+        expect(ctx.templates[0].template_id).toBe('pirate-t1');
+        expect(ctx.selectedTemplateId).toBe('pirate-t1');
+      } finally {
+        global.fetch = originalFetch;
+        global.confirm = originalConfirm;
+      }
+    });
+
+    it('updates existing template token via PATCH /api/adversaries/:id/token', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        expect(url).toBe('/api/adversaries/sathar-t2/token');
+        expect(options.method).toBe('PATCH');
+        const body = JSON.parse(options.body);
+        expect(body.source_image_url).toBe('/uploads/new_sathar.png');
+        return {
+          ok: true,
+          json: async () => ({
+            template: {
+              template_id: 'sathar-t2',
+              name: 'Sathar Trooper',
+              threat_tier: 2,
+              category: 'npc',
+              token_image_path: '/uploads/tokens/sathar-t2.png?v=12345',
+            },
+            updatedTokensCount: 2,
+          }),
+        };
+      };
+
+      try {
+        const ctx = {
+          selectedTemplateId: 'sathar-t2',
+          isUpdatingToken: false,
+          existingTokenImageError: true,
+          errorMessage: null,
+          templates: [
+            {
+              template_id: 'sathar-t2',
+              name: 'Sathar Trooper',
+              threat_tier: 2,
+              category: 'npc',
+              token_image_path: '/uploads/tokens/old.png',
+            },
+          ],
+        };
+
+        await StockAdversaryModal.methods.updateExistingTemplateToken.call(ctx, '/uploads/new_sathar.png');
+        expect(ctx.templates[0].token_image_path).toBe('/uploads/tokens/sathar-t2.png?v=12345');
+        expect(ctx.existingTokenImageError).toBe(false);
+        expect(ctx.isUpdatingToken).toBe(false);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('uploads a custom file on Existing Templates tab and calls updateExistingTemplateToken', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        expect(url).toBe('/api/upload');
+        expect(options.method).toBe('POST');
+        return {
+          ok: true,
+          json: async () => ({ url: '/uploads/uploaded_custom_token.png' }),
+        };
+      };
+
+      try {
+        let updatedWithUrl = null;
+        const ctx = {
+          selectedTemplateId: 'sathar-t2',
+          errorMessage: null,
+          async updateExistingTemplateToken(url) {
+            updatedWithUrl = url;
+          },
+        };
+
+        const fakeEvent = {
+          target: {
+            files: [new Blob(['fake-image'], { type: 'image/png' })],
+            value: 'C:\\fakepath\\token.png',
+          },
+        };
+
+        await StockAdversaryModal.methods.handleExistingTokenFileUpload.call(ctx, fakeEvent);
+        expect(updatedWithUrl).toBe('/uploads/uploaded_custom_token.png');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('routes selectedImageUrl watcher to updateExistingTemplateToken when mode is existing', async () => {
+      let calledUrl = null;
+      const ctx = {
+        mode: 'existing',
+        selectedTemplateId: 'sathar-t2',
+        customForm: { source_image_url: '' },
+        updateExistingTemplateToken(url) {
+          calledUrl = url;
+        },
+      };
+
+      StockAdversaryModal.watch.selectedImageUrl.call(ctx, '/uploads/from_library.png');
+      expect(calledUrl).toBe('/uploads/from_library.png');
+      expect(ctx.customForm.source_image_url).toBe('');
+    });
+
+    it('generates existing template AI token art and updates template token', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        expect(url).toBe('/api/adversaries/generate-token-art');
+        expect(options.method).toBe('POST');
+        const body = JSON.parse(options.body);
+        expect(body.name).toBe('Sathar Warrior');
+        expect(body.threat_tier).toBe(2);
+        return {
+          ok: true,
+          json: async () => ({
+            token_image_url: '/uploads/tokens/token_sathar_warrior.png',
+          }),
+        };
+      };
+
+      try {
+        let updatedWithUrl = null;
+        let cooldownSet = null;
+        const ctx = {
+          isGeneratingArt: false,
+          errorMessage: null,
+          cooldownSeconds: 0,
+          currentSelectedTemplate: {
+            name: 'Sathar Warrior',
+            category: 'npc',
+            threat_tier: 2,
+            actions: [{ name: 'Laser Rifle' }],
+            system_data: { description: 'A deadly Sathar warrior' },
+          },
+          startArtCooldown(s) {
+            cooldownSet = s;
+          },
+          async updateExistingTemplateToken(url) {
+            updatedWithUrl = url;
+          },
+        };
+
+        await StockAdversaryModal.methods.generateExistingTemplateAiArt.call(ctx);
+        expect(ctx.isGeneratingArt).toBe(false);
+        expect(updatedWithUrl).toBe('/uploads/tokens/token_sathar_warrior.png');
+        expect(cooldownSet).toBe(45);
+        expect(ctx.errorMessage).toBeNull();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });

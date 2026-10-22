@@ -1081,6 +1081,7 @@ function openTokenImageBrowser() {
 }
 
 function openAdversaryImageBrowser() {
+  adversaryImageSelectedUrl.value = '';
   imageBrowserTarget.value = 'adversary';
   showImageBrowser.value = true;
 }
