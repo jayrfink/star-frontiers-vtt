@@ -16,6 +16,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { socket } from '../services/socket.js';
+import { getTokenDamageOverlayState, drawTokenDamageOverlay } from '../utils/tokenDamageOverlay.js';
 
 const props = defineProps({
   map: {
@@ -421,6 +422,12 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
     }
   } else {
     drawInitials(ctx, token.name, cx, cy, radius);
+  }
+
+  // Damage / Wounded Red Overlay
+  const damageOverlayState = getTokenDamageOverlayState(token);
+  if (damageOverlayState) {
+    drawTokenDamageOverlay(ctx, damageOverlayState, cx, cy, radius);
   }
 
   // Token Colored Ring Border
