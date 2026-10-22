@@ -1,13 +1,13 @@
-export const FLIP_AND_BURN_MIN_MR = 4;
+export const FLIP_AND_BURN_MIN_MR = 3;
 
 /**
- * Any ship with an MR strictly higher than 3 (MR >= 4) can execute a Flip and Burn.
+ * Any ship with an MR of 3 or above (MR >= 3 / greater than 2) can execute a Flip and Burn.
  * @param {number|string} mr
  * @returns {boolean}
  */
 export function canFlipAndBurn(mr) {
   const n = Number(mr);
-  return Number.isFinite(n) && n > 3;
+  return Number.isFinite(n) && n >= 3;
 }
 
 /**

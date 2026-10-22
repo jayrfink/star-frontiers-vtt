@@ -137,15 +137,15 @@
 
           <div class="flip-burn-ship-banner" :class="{ capable: canFlipAndBurn(selectedShip.mr) }">
             <template v-if="canFlipAndBurn(selectedShip.mr)">
-              <span class="fb-badge capable">🔄 Flip &amp; Burn Capable (MR {{ selectedShip.mr }} &gt; 3)</span>
+              <span class="fb-badge capable">🔄 Flip &amp; Burn Capable (MR {{ selectedShip.mr }} &ge; 3)</span>
               <span class="fb-rule-text">
                 Can execute a 180° Flip &amp; Burn in combat. Any strapped-in PCs on board must pass a STA check or pass out for <strong>1d10 × 10 seconds</strong>.
               </span>
             </template>
             <template v-else>
-              <span class="fb-badge incapable">🚫 Flip &amp; Burn Unavailable (Requires MR &gt; 3)</span>
+              <span class="fb-badge incapable">🚫 Flip &amp; Burn Unavailable (Requires MR &ge; 3)</span>
               <span class="fb-rule-text">
-                Ships must have a Maneuver Rating (MR) higher than 3 to perform a Flip &amp; Burn maneuver.
+                Ships must have a Maneuver Rating (MR) of 3 or higher to perform a Flip &amp; Burn maneuver.
               </span>
             </template>
           </div>

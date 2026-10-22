@@ -8,16 +8,17 @@ import {
 
 describe('Space Combat: Flip and Burn Mechanics', () => {
   describe('canFlipAndBurn', () => {
-    it('returns false when MR is 3 or less', () => {
+    it('returns false when MR is less than 3 (2 or less)', () => {
       expect(canFlipAndBurn(0)).toBe(false);
       expect(canFlipAndBurn(1)).toBe(false);
       expect(canFlipAndBurn(2)).toBe(false);
-      expect(canFlipAndBurn(3)).toBe(false);
       expect(canFlipAndBurn(null)).toBe(false);
       expect(canFlipAndBurn(undefined)).toBe(false);
     });
 
-    it('returns true when MR is strictly greater than 3', () => {
+    it('returns true when MR is 3 or above (MR >= 3)', () => {
+      expect(canFlipAndBurn(3)).toBe(true);
+      expect(canFlipAndBurn('3')).toBe(true);
       expect(canFlipAndBurn(4)).toBe(true);
       expect(canFlipAndBurn(5)).toBe(true);
       expect(canFlipAndBurn('4')).toBe(true);

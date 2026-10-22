@@ -500,10 +500,10 @@
                 </div>
               </div>
 
-              <!-- Flip & Burn Maneuver (MR > 3) -->
+              <!-- Flip & Burn Maneuver (MR >= 3) -->
               <div class="flip-burn-box">
                 <div class="flip-burn-header">
-                  <label>🔄 Flip &amp; Burn (MR &gt; 3)</label>
+                  <label>🔄 Flip &amp; Burn (MR &ge; 3)</label>
                   <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanFlipAndBurn }">
                     MR {{ selectedTokenLinkedShip.mr }}
                   </span>
@@ -512,13 +512,13 @@
                   type="button"
                   class="btn-flip-burn full-width"
                   :disabled="!selectedTokenCanFlipAndBurn"
-                  :title="selectedTokenCanFlipAndBurn ? 'Reverse heading 180° and alert crew for STA check' : 'Requires ship with Maneuver Rating (MR) > 3'"
+                  :title="selectedTokenCanFlipAndBurn ? 'Reverse heading 180° and alert crew for STA check' : 'Requires ship with Maneuver Rating (MR) ≥ 3'"
                   @click="executeFlipAndBurn"
                 >
                   🔄 Execute Flip &amp; Burn (180°)
                 </button>
                 <small v-if="selectedTokenLinkedShip && !selectedTokenCanFlipAndBurn" class="flip-burn-ineligible">
-                  Requires MR &gt; 3 (Linked ship MR: {{ selectedTokenLinkedShip.mr }})
+                  Requires MR &ge; 3 (Linked ship MR: {{ selectedTokenLinkedShip.mr }})
                 </small>
                 <small v-else class="flip-burn-hint">
                   Strapped-in PCs must pass a STA check or pass out for 1d10×10s.
