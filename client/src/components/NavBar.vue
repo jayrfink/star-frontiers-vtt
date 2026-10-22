@@ -69,6 +69,7 @@ const tabs = computed(() => {
   if (auth.user?.role === 'GameMaster') {
     return [
       ...baseTabs,
+      { path: '/dashboard/gm-notes', label: 'GM Notes', icon: '📓' },
       { path: '/dashboard/admin', label: 'Admin', icon: '⚙️' },
     ];
   }

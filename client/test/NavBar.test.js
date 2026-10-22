@@ -39,6 +39,7 @@ describe('NavBar.vue', () => {
         { path: '/dashboard/character-sheets', component: { template: '<div />' } },
         { path: '/dashboard/ship-sheets', component: { template: '<div />' } },
         { path: '/dashboard/rulebooks', component: { template: '<div />' } },
+        { path: '/dashboard/gm-notes', component: { template: '<div />' } },
         { path: '/dashboard/admin', component: { template: '<div />' } },
         { path: '/login', component: { template: '<div />' } },
       ]
@@ -77,10 +78,22 @@ describe('NavBar.vue', () => {
     expect(html).not.toContain('/dashboard/admin');
   });
 
+  it('does not render GM Notes tab for non-GM users', async () => {
+    const html = await renderNavBar({ username: 'PlayerOne', role: 'Player' });
+    expect(html).not.toContain('GM Notes');
+    expect(html).not.toContain('/dashboard/gm-notes');
+  });
+
   it('renders Admin tab for GameMaster users', async () => {
     const html = await renderNavBar({ username: 'GMUser', role: 'GameMaster' });
     expect(html).toContain('Admin');
     expect(html).toContain('/dashboard/admin');
+  });
+
+  it('renders GM Notes tab for GameMaster users', async () => {
+    const html = await renderNavBar({ username: 'GMUser', role: 'GameMaster' });
+    expect(html).toContain('GM Notes');
+    expect(html).toContain('/dashboard/gm-notes');
   });
 
   it('renders user info, role badge, and logout button', async () => {

@@ -8,6 +8,7 @@ import SpaceVttView from './views/SpaceVttView.vue';
 import CharacterSheetsView from './views/CharacterSheetsView.vue';
 import ShipSheetsView from './views/ShipSheetsView.vue';
 import RulebooksView from './views/RulebooksView.vue';
+import GmNotesView from './views/GmNotesView.vue';
 import AdminView from './views/AdminView.vue';
 
 const ALLOWED_DASHBOARD_PATHS = [
@@ -16,6 +17,7 @@ const ALLOWED_DASHBOARD_PATHS = [
   '/dashboard/character-sheets',
   '/dashboard/ship-sheets',
   '/dashboard/rulebooks',
+  '/dashboard/gm-notes',
   '/dashboard/admin',
 ];
 
@@ -25,6 +27,7 @@ const ALLOWED_DASHBOARD_NAMES = [
   'CharacterSheets',
   'ShipSheets',
   'Rulebooks',
+  'GmNotes',
   'Admin',
 ];
 
@@ -35,7 +38,7 @@ function getSavedDashboardPath(user) {
   if (!lastPath || typeof lastPath !== 'string' || !ALLOWED_DASHBOARD_PATHS.includes(lastPath)) {
     return defaultPath;
   }
-  if (lastPath === '/dashboard/admin' && user.role !== 'GameMaster') {
+  if ((lastPath === '/dashboard/admin' || lastPath === '/dashboard/gm-notes') && user.role !== 'GameMaster') {
     return defaultPath;
   }
   return lastPath;
@@ -61,6 +64,7 @@ const routes = [
       { path: 'character-sheets', name: 'CharacterSheets', component: CharacterSheetsView, meta: { title: 'Character Sheets' } },
       { path: 'ship-sheets', name: 'ShipSheets', component: ShipSheetsView, meta: { title: 'Ship Sheets' } },
       { path: 'rulebooks', name: 'Rulebooks', component: RulebooksView, meta: { title: 'Rulebooks' } },
+      { path: 'gm-notes', name: 'GmNotes', component: GmNotesView, meta: { requiresAuth: true, requiresGm: true, title: 'GM Notes' } },
       { path: 'admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true, requiresGm: true, title: 'Admin' } },
     ],
   },
