@@ -7,6 +7,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 10,
     ammo_max: 0,
     ammo_current: 0,
+    restrictions: ['FF', 'RD'],
     description: 'Heavy long-range forward-mount or turret beam weapon',
   },
   {
@@ -17,6 +18,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 9,
     ammo_max: 0,
     ammo_current: 0,
+    restrictions: ['T', 'RD'],
     description: 'Standard light defensive and offensive beam turret',
   },
   {
@@ -27,6 +29,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 10,
     ammo_max: 0,
     ammo_current: 0,
+    restrictions: ['T', 'RD'],
     description: 'Medium beam weapon with high armor penetration',
   },
   {
@@ -37,6 +40,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 12,
     ammo_max: 0,
     ammo_current: 0,
+    restrictions: ['T', 'RD'],
     description: 'High-energy beam weapon with maximum effective beam range',
   },
   {
@@ -47,6 +51,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 9,
     ammo_max: 0,
     ammo_current: 0,
+    restrictions: ['FF', 'RD'],
     description: 'High-yield particle disruption cannon causing heavy hull damage',
   },
   {
@@ -57,6 +62,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 4,
     ammo_max: 2,
     ammo_current: 2,
+    restrictions: ['MPO', 'LTD'],
     description: 'Self-guided anti-ship torpedoes; target can intercept with ICMs',
   },
   {
@@ -67,6 +73,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 4,
     ammo_max: 4,
     ammo_current: 4,
+    restrictions: ['FF', 'MPO', 'LTD'],
     description: 'High-acceleration tactical rocket salvo; target can intercept with ICMs',
   },
   {
@@ -77,6 +84,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 3,
     ammo_max: 4,
     ammo_current: 4,
+    restrictions: ['LTD'],
     description: 'Multiple-launch rocket pods for close-range broadsides',
   },
   {
@@ -87,6 +95,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 0,
     ammo_max: 2,
     ammo_current: 2,
+    restrictions: ['LTD'],
     description: 'Stationary hex hazard; detonates upon ship entry',
   },
   {
@@ -97,6 +106,7 @@ export const SHIP_WEAPONS_CATALOG = [
     range: 99,
     ammo_max: 1,
     ammo_current: 1,
+    restrictions: ['LTD'],
     description: 'Autonomous extreme-range pursuit missile with massive explosive payload',
   },
 ];
@@ -105,6 +115,14 @@ export function createWeaponInstance(template = {}, overrides = {}) {
   const name = overrides.name || template.name || 'Custom Weapon';
   const ammoMax = overrides.ammo_max !== undefined ? Number(overrides.ammo_max) : (template.ammo_max || 0);
   const ammoCur = overrides.ammo_current !== undefined ? Number(overrides.ammo_current) : (template.ammo_current !== undefined ? template.ammo_current : ammoMax);
+
+  let restrictions = [];
+  const rawRestrictions = overrides.restrictions !== undefined ? overrides.restrictions : template.restrictions;
+  if (Array.isArray(rawRestrictions)) {
+    restrictions = rawRestrictions.map((r) => String(r).trim()).filter(Boolean);
+  } else if (typeof rawRestrictions === 'string' && rawRestrictions.trim()) {
+    restrictions = rawRestrictions.split(',').map((r) => r.trim()).filter(Boolean);
+  }
 
   return {
     id: `w_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -116,6 +134,7 @@ export function createWeaponInstance(template = {}, overrides = {}) {
     range: overrides.range !== undefined ? Number(overrides.range) : (template.range !== undefined ? Number(template.range) : 5),
     ammo_max: ammoMax,
     ammo_current: ammoCur,
+    restrictions,
     status: 'Online',
   };
 }

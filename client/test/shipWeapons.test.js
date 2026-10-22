@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../src/constants/shipWeapons.js';
+import { SHIP_PRESETS } from '../src/constants/shipPresets.js';
 
 describe('Knight Hawks Ship Weapons Catalog', () => {
   it('exports all 10 canonical Knight Hawks weapons', () => {
@@ -69,5 +70,37 @@ describe('Knight Hawks Ship Weapons Catalog', () => {
     expect(custom.ammo_max).toBe(10);
     expect(custom.ammo_current).toBe(10);
     expect(custom.status).toBe('Online');
+  });
+
+  it('includes restrictions on catalog weapons and normalizes restrictions in createWeaponInstance', () => {
+    for (const w of SHIP_WEAPONS_CATALOG) {
+      expect(Array.isArray(w.restrictions)).toBe(true);
+      expect(w.restrictions.length).toBeGreaterThan(0);
+    }
+
+    const lc = SHIP_WEAPONS_CATALOG.find((w) => w.id === 'laser_cannon');
+    expect(lc.restrictions).toContain('FF');
+    expect(lc.restrictions).toContain('RD');
+
+    // Test createWeaponInstance with array
+    const w1 = createWeaponInstance(lc, { restrictions: ['FF', 'MPO'] });
+    expect(w1.restrictions).toEqual(['FF', 'MPO']);
+
+    // Test createWeaponInstance with comma-separated string
+    const w2 = createWeaponInstance({}, { name: 'Plasma Gun', restrictions: 'FF, RD, Custom Aft' });
+    expect(w2.restrictions).toEqual(['FF', 'RD', 'Custom Aft']);
+
+    // Test createWeaponInstance fallback
+    const w3 = createWeaponInstance(lc);
+    expect(w3.restrictions).toEqual(['FF', 'RD']);
+  });
+
+  it('ensures all weapons in SHIP_PRESETS have restrictions arrays', () => {
+    for (const preset of SHIP_PRESETS) {
+      for (const weapon of preset.weapons) {
+        expect(Array.isArray(weapon.restrictions)).toBe(true);
+        expect(weapon.restrictions.length).toBeGreaterThan(0);
+      }
+    }
   });
 });
