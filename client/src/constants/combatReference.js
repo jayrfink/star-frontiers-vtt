@@ -3,6 +3,34 @@
  * Derived from Star Frontiers Alpha Dawn and Knight Hawks rulesets.
  */
 
+export const WEAPON_RESTRICTIONS_LEGEND = {
+  FF: {
+    code: 'FF',
+    name: 'Forward Firing',
+    description: 'Weapon can only fire into the forward 60° arc along the ship\'s facing hex direction.'
+  },
+  T: {
+    code: 'T',
+    name: 'Turret (360°)',
+    description: 'Weapon can fire in any direction (all 360° hex arcs). Standard for defensive and offensive beam batteries.'
+  },
+  MPO: {
+    code: 'MPO',
+    name: 'Moving Player Only',
+    description: 'Weapon can only be fired during the attacking ship\'s own combat phase (cannot fire defensive fire during enemy movement).'
+  },
+  RD: {
+    code: 'RD',
+    name: 'Range Diffusion',
+    description: 'Beam diffusion reduces accuracy by -5% per hex of distance to target.'
+  },
+  LTD: {
+    code: 'LTD',
+    name: 'Limited Supply',
+    description: 'Ammunition is finite and consumed upon firing (tracked on ship record sheet).'
+  }
+};
+
 export const SHIP_COMBAT_REF = {
   sequenceOfPlay: [
     {
@@ -40,7 +68,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 10,
       ammo: 'Unlimited',
       rof: 1,
-      notes: 'Heavy forward-mount or turret beam weapon'
+      notes: 'Heavy forward-mount or turret beam weapon',
+      restrictions: ['FF', 'RD']
     },
     {
       name: 'Laser Battery',
@@ -49,7 +78,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 9,
       ammo: 'Unlimited',
       rof: 1,
-      notes: 'Standard light defensive and offensive beam turret'
+      notes: 'Standard light defensive and offensive beam turret',
+      restrictions: ['T', 'RD']
     },
     {
       name: 'Electron Battery',
@@ -58,7 +88,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 6,
       ammo: 'Unlimited',
       rof: 1,
-      notes: 'Medium beam weapon with high armor penetration'
+      notes: 'Medium beam weapon with high armor penetration',
+      restrictions: ['T', 'RD']
     },
     {
       name: 'Proton Battery',
@@ -67,7 +98,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 5,
       ammo: 'Unlimited',
       rof: 1,
-      notes: 'Proton Screen / Battery weapon; effective against energy shields'
+      notes: 'Proton Screen / Battery weapon; effective against energy shields',
+      restrictions: ['T', 'RD']
     },
     {
       name: 'Disruptor Cannon',
@@ -76,7 +108,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 8,
       ammo: 'Unlimited',
       rof: 1,
-      notes: 'High-yield particle disruption beam'
+      notes: 'High-yield particle disruption beam',
+      restrictions: ['FF', 'RD']
     },
     {
       name: 'Torpedo',
@@ -85,7 +118,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 4,
       ammo: 'Limited',
       rof: 1,
-      notes: 'Self-guided heavy anti-ship projectile; target can intercept with ICMs'
+      notes: 'Self-guided heavy anti-ship projectile; target can intercept with ICMs',
+      restrictions: ['MPO', 'LTD']
     },
     {
       name: 'Assault Rocket',
@@ -94,7 +128,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 4,
       ammo: 'Limited',
       rof: 1,
-      notes: 'High acceleration tactical rocket'
+      notes: 'High acceleration tactical rocket',
+      restrictions: ['FF', 'MPO', 'LTD']
     },
     {
       name: 'Rocket Battery',
@@ -103,7 +138,8 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 3,
       ammo: 'Limited',
       rof: 1,
-      notes: 'Multiple-launch rocket pods'
+      notes: 'Multiple-launch rocket pods',
+      restrictions: ['LTD']
     },
     {
       name: 'Mine',
@@ -112,7 +148,18 @@ export const SHIP_COMBAT_REF = {
       rangeHexes: 0,
       ammo: 'Limited',
       rof: 1,
-      notes: 'Stationary hex hazard; detonates upon ship entry'
+      notes: 'Stationary hex hazard; detonates upon ship entry',
+      restrictions: ['LTD']
+    },
+    {
+      name: 'Seeker Missile',
+      type: 'Heavy Ordnance',
+      damage: '5d10',
+      rangeHexes: 99,
+      ammo: 'Limited',
+      rof: 1,
+      notes: 'Autonomous extreme-range pursuit missile with massive explosive payload',
+      restrictions: ['LTD']
     }
   ],
 

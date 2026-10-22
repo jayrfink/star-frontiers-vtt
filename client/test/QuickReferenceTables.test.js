@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { describe, it, expect } from 'vitest';
+import { mount } from '@vue/test-utils';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import QuickReferenceTables from '../src/components/QuickReferenceTables.vue';
@@ -49,6 +53,17 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toContain('Bridge');
       expect(html).toContain('Life Support');
       expect(html).toContain('Cargo / Hull Breach');
+    });
+
+    it('renders Arcs & Restrictions column and abbreviations legend in Ship-to-Ship tab', async () => {
+      const wrapper = mount(QuickReferenceTables, {
+        props: { initialCategory: 'ship' },
+      });
+      const html = wrapper.html();
+      expect(html).toContain('Arcs &amp; Restrictions');
+      expect(html).toContain('Weapon Restrictions &amp; Abbreviations');
+      expect(html).toContain('Forward Firing');
+      expect(html).toContain('Range Diffusion');
     });
   });
 

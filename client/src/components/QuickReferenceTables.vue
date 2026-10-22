@@ -86,6 +86,7 @@
                   <th>Range (Hexes)</th>
                   <th>Ammo</th>
                   <th>RoF</th>
+                  <th>Arcs &amp; Restrictions</th>
                   <th>Notes</th>
                 </tr>
               </thead>
@@ -97,10 +98,35 @@
                   <td class="font-mono text-center">{{ w.rangeHexes }}</td>
                   <td>{{ w.ammo }}</td>
                   <td class="font-mono text-center">{{ w.rof }}</td>
+                  <td class="col-restrictions">
+                    <span
+                      v-for="tag in (w.restrictions || [])"
+                      :key="tag"
+                      class="restriction-pill"
+                      :class="tag.toLowerCase()"
+                      :title="weaponLegend[tag]?.name || tag"
+                    >
+                      {{ tag }}
+                    </span>
+                  </td>
                   <td class="col-notes">{{ w.notes }}</td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Weapon Restrictions Legend -->
+          <div class="restrictions-legend-box">
+            <h3 class="legend-title">ℹ️ Weapon Restrictions &amp; Abbreviations</h3>
+            <div class="legend-grid">
+              <div v-for="(info, code) in weaponLegend" :key="code" class="legend-card">
+                <div class="legend-badge-row">
+                  <span class="restriction-pill" :class="code.toLowerCase()">{{ code }}</span>
+                  <strong class="legend-name">{{ info.name }}</strong>
+                </div>
+                <p class="legend-desc">{{ info.description }}</p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -383,9 +409,12 @@ import { ref, computed, watch } from 'vue';
 import {
   SHIP_COMBAT_REF,
   RANGED_COMBAT_REF,
-  MELEE_COMBAT_REF
+  MELEE_COMBAT_REF,
+  WEAPON_RESTRICTIONS_LEGEND
 } from '../constants/combatReference.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
+
+const weaponLegend = WEAPON_RESTRICTIONS_LEGEND;
 
 const props = defineProps({
   initialCategory: {
@@ -854,6 +883,111 @@ const noResults = computed(() => {
 .roll-cell {
   background: var(--bg-tertiary);
   color: var(--accent);
+}
+
+/* Weapon Restrictions & Legend */
+.col-restrictions {
+  white-space: nowrap;
+}
+
+.restriction-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  transition: transform 0.15s ease;
+}
+
+.restriction-pill.ff {
+  background: rgba(210, 153, 34, 0.15);
+  color: #e3b341;
+  border-color: rgba(210, 153, 34, 0.4);
+}
+
+.restriction-pill.t {
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.4);
+}
+
+.restriction-pill.mpo {
+  background: rgba(187, 128, 179, 0.15);
+  color: #bc8cff;
+  border-color: rgba(187, 128, 179, 0.4);
+}
+
+.restriction-pill.rd {
+  background: rgba(56, 139, 253, 0.15);
+  color: #79c0ff;
+  border-color: rgba(56, 139, 253, 0.4);
+}
+
+.restriction-pill.ltd {
+  background: rgba(248, 81, 73, 0.15);
+  color: #ff7b72;
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+.restrictions-legend-box {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.legend-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.legend-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.legend-desc {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* Modifier Pills */

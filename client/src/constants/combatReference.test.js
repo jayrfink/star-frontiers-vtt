@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { SHIP_COMBAT_REF, RANGED_COMBAT_REF, MELEE_COMBAT_REF } from './combatReference.js';
+import {
+  SHIP_COMBAT_REF,
+  RANGED_COMBAT_REF,
+  MELEE_COMBAT_REF,
+  WEAPON_RESTRICTIONS_LEGEND
+} from './combatReference.js';
 
 describe('combatReference', () => {
   describe('SHIP_COMBAT_REF', () => {
@@ -42,6 +47,26 @@ describe('combatReference', () => {
         expect(w).toHaveProperty('rof');
         expect(w).toHaveProperty('notes');
       });
+    });
+
+    it('defines restrictions for all ship weapons and exports WEAPON_RESTRICTIONS_LEGEND', () => {
+      expect(WEAPON_RESTRICTIONS_LEGEND).toBeDefined();
+      expect(WEAPON_RESTRICTIONS_LEGEND.FF).toBeDefined();
+      expect(WEAPON_RESTRICTIONS_LEGEND.T).toBeDefined();
+      expect(WEAPON_RESTRICTIONS_LEGEND.MPO).toBeDefined();
+      expect(WEAPON_RESTRICTIONS_LEGEND.RD).toBeDefined();
+      expect(WEAPON_RESTRICTIONS_LEGEND.LTD).toBeDefined();
+
+      for (const w of SHIP_COMBAT_REF.weapons) {
+        expect(Array.isArray(w.restrictions)).toBe(true);
+        expect(w.restrictions.length).toBeGreaterThan(0);
+      }
+
+      const lc = SHIP_COMBAT_REF.weapons.find((w) => w.name === 'Laser Cannon');
+      expect(lc.restrictions).toEqual(['FF', 'RD']);
+
+      const lb = SHIP_COMBAT_REF.weapons.find((w) => w.name === 'Laser Battery');
+      expect(lb.restrictions).toEqual(['T', 'RD']);
     });
 
     it('contains expected ship defenses and critical hit entries', () => {
