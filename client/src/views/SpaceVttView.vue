@@ -533,6 +533,28 @@
                 </div>
               </div>
 
+              <!-- Ship Weapons Section -->
+              <div v-if="selectedTokenLinkedShip && selectedTokenLinkedShip.weapons && selectedTokenLinkedShip.weapons.length > 0" class="token-weapons-section">
+                <label>Weapons ({{ selectedTokenLinkedShip.weapons.length }}):</label>
+                <div class="token-weapons-list">
+                  <div
+                    v-for="(wpn, wIdx) in selectedTokenLinkedShip.weapons"
+                    :key="wpn.id || wIdx"
+                    class="token-weapon-item"
+                  >
+                    <div class="token-wpn-header">
+                      <span class="token-wpn-name">{{ wpn.name || wpn.type }}</span>
+                      <span class="token-wpn-stats">{{ wpn.damage }} | Rng {{ wpn.range }}</span>
+                    </div>
+                    <div class="token-wpn-tags" v-if="wpn.restrictions && wpn.restrictions.length > 0">
+                      <span v-for="tag in (wpn.restrictions || [])" :key="tag" class="token-wpn-tag" :class="tag.toLowerCase()">
+                        {{ tag }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Tactical Status Effects -->
               <div class="status-section">
                 <label>Status Effects:</label>
@@ -3749,5 +3771,102 @@ onBeforeUnmount(() => {
   background: rgba(245, 158, 11, 0.25);
   border-color: #fbbf24;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Token Weapons Section */
+.token-weapons-section {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.token-weapons-section label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #38bdf8;
+  margin-bottom: 6px;
+}
+
+.token-weapons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.token-weapon-item {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.token-wpn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.token-wpn-stats {
+  font-size: 0.75rem;
+  color: #8b949e;
+  font-family: monospace;
+}
+
+.token-wpn-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.token-wpn-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.token-wpn-tag.ff {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #79c0ff;
+  background-color: rgba(56, 189, 248, 0.1);
+}
+
+.token-wpn-tag.t {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #7ee787;
+  background-color: rgba(74, 222, 128, 0.1);
+}
+
+.token-wpn-tag.mpo {
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #f6e05e;
+  background-color: rgba(251, 191, 36, 0.1);
+}
+
+.token-wpn-tag.rd {
+  border-color: rgba(244, 67, 54, 0.4);
+  color: #ff7b72;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.token-wpn-tag.ltd {
+  border-color: rgba(171, 71, 188, 0.4);
+  color: #ba68c8;
+  background-color: rgba(171, 71, 188, 0.1);
 }
 </style>

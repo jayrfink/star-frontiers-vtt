@@ -294,6 +294,14 @@
                       >
                         {{ getWeaponCategory(wpn) }}
                       </span>
+                      <span
+                        v-for="tag in (wpn.restrictions || [])"
+                        :key="tag"
+                        class="wpn-restriction-pill"
+                        :class="tag.toLowerCase()"
+                      >
+                        {{ tag }}
+                      </span>
                       <button
                         type="button"
                         class="btn-rename-weapon"
@@ -515,6 +523,16 @@
                   {{ weapon.ammo_max > 0 ? `🔋 Ammo: ${weapon.ammo_max}` : '♾️ Unlimited' }}
                 </span>
               </div>
+              <div v-if="weapon.restrictions && weapon.restrictions.length > 0" class="weapon-picker-restrictions">
+                <span
+                  v-for="tag in weapon.restrictions"
+                  :key="tag"
+                  class="wpn-restriction-pill"
+                  :class="tag.toLowerCase()"
+                >
+                  {{ tag }}
+                </span>
+              </div>
               <p class="weapon-picker-desc">{{ weapon.description }}</p>
             </div>
             <button type="button" class="btn-equip-weapon" @click="equipWeapon(weapon)">
@@ -565,6 +583,27 @@
                 />
               </div>
             </div>
+            <div class="form-group">
+              <label>Firing Arcs &amp; Limitations</label>
+              <div class="restriction-toggle-group">
+                <button
+                  v-for="tag in STANDARD_RESTRICTION_TAGS"
+                  :key="tag"
+                  type="button"
+                  class="btn-tag-chip"
+                  :class="{ active: customWeaponForm.selectedTags.includes(tag), [tag.toLowerCase()]: true }"
+                  @click="toggleRestrictionTag(tag)"
+                >
+                  {{ tag }}
+                </button>
+              </div>
+              <input
+                type="text"
+                v-model="customWeaponForm.customRestrictions"
+                placeholder="Custom / other restrictions (e.g. Aft, Port)"
+                class="custom-restrictions-input"
+              />
+            </div>
             <div class="modal-actions">
               <button type="button" class="btn-modal-cancel" @click="showAddWeaponModal = false">Cancel</button>
               <button type="submit" class="btn-modal-create" :disabled="!customWeaponForm.name?.trim()">
@@ -606,11 +645,14 @@ export default {
       editingWeaponIndex: null,
       weaponCatalog: SHIP_WEAPONS_CATALOG,
       weaponCategoryFilter: 'All',
+      STANDARD_RESTRICTION_TAGS: ['FF', 'T', 'MPO', 'RD', 'LTD'],
       customWeaponForm: {
         name: '',
         damage: '1d10',
         range: 5,
         ammo_max: 0,
+        selectedTags: [],
+        customRestrictions: '',
       },
       newShipForm: {
         name: '',
@@ -732,6 +774,12 @@ export default {
       if (!Array.isArray(weapons)) return [];
       return weapons.map((w, idx) => {
         const weaponName = (w.name && w.name.trim()) || (w.type && w.type.trim()) || 'Laser Battery';
+        let restrictions = [];
+        if (Array.isArray(w.restrictions)) {
+          restrictions = w.restrictions.map((r) => String(r).trim()).filter(Boolean);
+        } else if (typeof w.restrictions === 'string' && w.restrictions.trim()) {
+          restrictions = w.restrictions.split(',').map((r) => r.trim()).filter(Boolean);
+        }
         return {
           ...w,
           id: w.id || `w_${Date.now()}_${idx}`,
@@ -742,6 +790,7 @@ export default {
           range: w.range !== undefined ? w.range : 9,
           ammo_max: w.ammo_max !== undefined ? w.ammo_max : 0,
           ammo_current: w.ammo_current !== undefined ? w.ammo_current : 0,
+          restrictions,
           status: w.status || 'Online',
         };
       });
@@ -1025,8 +1074,21 @@ export default {
         damage: '1d10',
         range: 5,
         ammo_max: 0,
+        selectedTags: [],
+        customRestrictions: '',
       };
       this.weaponCategoryFilter = 'All';
+    },
+    toggleRestrictionTag(tag) {
+      if (!this.customWeaponForm.selectedTags) {
+        this.customWeaponForm.selectedTags = [];
+      }
+      const idx = this.customWeaponForm.selectedTags.indexOf(tag);
+      if (idx === -1) {
+        this.customWeaponForm.selectedTags.push(tag);
+      } else {
+        this.customWeaponForm.selectedTags.splice(idx, 1);
+      }
     },
     equipWeapon(weaponTemplate, ammoOverride = null) {
       if (!this.selectedShip) return;
@@ -1046,7 +1108,17 @@ export default {
       const name = (this.customWeaponForm.name || '').trim();
       if (!name) return;
       if (!this.selectedShip.weapons) this.selectedShip.weapons = [];
-      const instance = createWeaponInstance(this.customWeaponForm, { name });
+
+      const customParts = (this.customWeaponForm.customRestrictions || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const combinedRestrictions = Array.from(new Set([...(this.customWeaponForm.selectedTags || []), ...customParts]));
+
+      const instance = createWeaponInstance(this.customWeaponForm, {
+        name,
+        restrictions: combinedRestrictions,
+      });
       this.selectedShip.weapons.push(instance);
       this.showAddWeaponModal = false;
       this.updateShip();
@@ -2518,5 +2590,127 @@ export default {
   color: #00ffff;
   font-size: 0.95rem;
   text-transform: uppercase;
+}
+
+.wpn-restriction-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wpn-restriction-pill.ff {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #79c0ff;
+  background-color: rgba(56, 189, 248, 0.1);
+}
+
+.wpn-restriction-pill.t {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #7ee787;
+  background-color: rgba(74, 222, 128, 0.1);
+}
+
+.wpn-restriction-pill.mpo {
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #f6e05e;
+  background-color: rgba(251, 191, 36, 0.1);
+}
+
+.wpn-restriction-pill.rd {
+  border-color: rgba(244, 67, 54, 0.4);
+  color: #ff7b72;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.wpn-restriction-pill.ltd {
+  border-color: rgba(171, 71, 188, 0.4);
+  color: #ba68c8;
+  background-color: rgba(171, 71, 188, 0.1);
+}
+
+.weapon-picker-restrictions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.restriction-toggle-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.btn-tag-chip {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-tag-chip:hover {
+  border-color: #8b949e;
+  color: #f0f6fc;
+}
+
+.btn-tag-chip.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
+  color: #79c0ff;
+}
+
+.btn-tag-chip.active.ff {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.25);
+  color: #79c0ff;
+}
+
+.btn-tag-chip.active.t {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, 0.25);
+  color: #7ee787;
+}
+
+.btn-tag-chip.active.mpo {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.25);
+  color: #f6e05e;
+}
+
+.btn-tag-chip.active.rd {
+  border-color: #f43f5e;
+  background: rgba(244, 67, 54, 0.25);
+  color: #ff7b72;
+}
+
+.btn-tag-chip.active.ltd {
+  border-color: #ba68c8;
+  background: rgba(171, 71, 188, 0.25);
+  color: #ba68c8;
+}
+
+.custom-restrictions-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  font-size: 0.85rem;
+  box-sizing: border-box;
 }
 </style>

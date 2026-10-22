@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import ShipSheetsView from '../src/views/ShipSheetsView.vue';
 import ImageBrowserModal from '../src/components/ImageBrowserModal.vue';
 import { SHIP_WEAPONS_CATALOG } from '../src/constants/shipWeapons.js';
@@ -315,6 +317,109 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
     expect(ShipSheetsView.methods.canFlipAndBurn(0)).toBe(false);
   });
 });
+
+describe('ShipSheetsView - Custom Weapon Designer Restrictions', () => {
+  it('supports selecting restriction chips and custom restrictions in custom weapon modal', () => {
+    expect(ShipSheetsView.data().customWeaponForm.selectedTags).toBeDefined();
+    expect(ShipSheetsView.data().customWeaponForm.customRestrictions).toBeDefined();
+    expect(Array.isArray(ShipSheetsView.data().STANDARD_RESTRICTION_TAGS)).toBe(true);
+  });
+
+  it('toggles restriction tags correctly', () => {
+    const vm = {
+      customWeaponForm: {
+        selectedTags: [],
+      },
+    };
+
+    ShipSheetsView.methods.toggleRestrictionTag.call(vm, 'FF');
+    expect(vm.customWeaponForm.selectedTags).toEqual(['FF']);
+
+    ShipSheetsView.methods.toggleRestrictionTag.call(vm, 'MPO');
+    expect(vm.customWeaponForm.selectedTags).toEqual(['FF', 'MPO']);
+
+    ShipSheetsView.methods.toggleRestrictionTag.call(vm, 'FF');
+    expect(vm.customWeaponForm.selectedTags).toEqual(['MPO']);
+  });
+
+  it('resets custom weapon form tags and custom restrictions on openAddWeaponModal', () => {
+    const vm = {
+      showAddWeaponModal: false,
+      customWeaponForm: {
+        name: 'Old Weapon',
+        damage: '2d10',
+        range: 8,
+        ammo_max: 3,
+        selectedTags: ['FF', 'RD'],
+        customRestrictions: 'Port Arc',
+      },
+      weaponCategoryFilter: 'Custom',
+    };
+
+    ShipSheetsView.methods.openAddWeaponModal.call(vm);
+    expect(vm.showAddWeaponModal).toBe(true);
+    expect(vm.customWeaponForm.name).toBe('');
+    expect(vm.customWeaponForm.selectedTags).toEqual([]);
+    expect(vm.customWeaponForm.customRestrictions).toBe('');
+    expect(vm.weaponCategoryFilter).toBe('All');
+  });
+
+  it('equips custom weapon with combined selectedTags and customRestrictions', () => {
+    let updated = false;
+    const vm = {
+      showAddWeaponModal: true,
+      customWeaponForm: {
+        name: 'Twin Heavy Ion Cannon',
+        damage: '3d10',
+        range: 6,
+        ammo_max: 0,
+        selectedTags: ['FF', 'RD'],
+        customRestrictions: 'Starboard, Limited Traverse',
+      },
+      selectedShip: {
+        weapons: [],
+      },
+      updateShip() {
+        updated = true;
+      },
+    };
+
+    ShipSheetsView.methods.equipCustomWeapon.call(vm);
+
+    expect(vm.selectedShip.weapons.length).toBe(1);
+    const equipped = vm.selectedShip.weapons[0];
+    expect(equipped.name).toBe('Twin Heavy Ion Cannon');
+    expect(equipped.restrictions).toEqual(['FF', 'RD', 'Starboard', 'Limited Traverse']);
+    expect(vm.showAddWeaponModal).toBe(false);
+    expect(updated).toBe(true);
+  });
+
+  it('normalizes weapon restrictions when array or comma-separated string', () => {
+    const rawWeapons = [
+      { id: 'w1', name: 'Laser Cannon', restrictions: ['FF', 'RD'] },
+      { id: 'w2', name: 'Custom Beam', restrictions: 'FF,  MPO ' },
+      { id: 'w3', name: 'Old Weapon' },
+    ];
+
+    const normalized = ShipSheetsView.methods.normalizeWeapons(rawWeapons);
+    expect(normalized[0].restrictions).toEqual(['FF', 'RD']);
+    expect(normalized[1].restrictions).toEqual(['FF', 'MPO']);
+    expect(normalized[2].restrictions).toEqual([]);
+  });
+
+  it('template contains restriction chips, inputs, and pills', () => {
+    const shipSheetsContent = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf8');
+    expect(shipSheetsContent).toContain('STANDARD_RESTRICTION_TAGS');
+    expect(shipSheetsContent).toContain('btn-tag-chip');
+    expect(shipSheetsContent).toContain('custom-restrictions-input');
+    expect(shipSheetsContent).toContain('wpn-restriction-pill');
+
+    const spaceVttContent = fs.readFileSync(path.resolve(__dirname, '../src/views/SpaceVttView.vue'), 'utf8');
+    expect(spaceVttContent).toContain('token-wpn-tag');
+    expect(spaceVttContent).toContain('token-weapons-section');
+  });
+});
+
 
 
 
