@@ -50,6 +50,7 @@
                   type="button"
                   class="btn-delete-template"
                   title="Delete selected template"
+                  :disabled="isUpdatingToken || isGeneratingArt || isSpawning"
                   @click="deleteSelectedTemplate"
                 >
                   🗑️ Delete Template
@@ -1089,9 +1090,14 @@ export default {
   transition: all 0.15s ease;
 }
 
-.btn-delete-template:hover {
+.btn-delete-template:hover:not(:disabled) {
   background-color: #dc2626;
   color: #ffffff;
+}
+
+.btn-delete-template:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .preview-badges-row {

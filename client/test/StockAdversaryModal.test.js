@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { describe, it, expect } from 'vitest';
+import { mount } from '@vue/test-utils';
 import StockAdversaryModal from '../src/components/StockAdversaryModal.vue';
 
 describe('StockAdversaryModal Component', () => {
@@ -310,6 +314,44 @@ describe('StockAdversaryModal Component', () => {
       } finally {
         global.fetch = originalFetch;
       }
+    });
+  });
+
+  describe('Template Rendering & Controls', () => {
+    it('disables delete template button when operations are active', async () => {
+      const wrapper = mount(StockAdversaryModal, {
+        props: {
+          modelValue: true,
+          activeMap: { id: 1, name: 'Arena' },
+        },
+        data() {
+          return {
+            templates: [
+              { template_id: 'tpl-1', name: 'Sathar', category: 'npc', threat_tier: 2 },
+            ],
+            selectedTemplateId: 'tpl-1',
+            isUpdatingToken: false,
+            isGeneratingArt: false,
+            isSpawning: false,
+          };
+        },
+      });
+
+      const btn = wrapper.find('.btn-delete-template');
+      expect(btn.exists()).toBe(true);
+      expect(btn.element.disabled).toBe(false);
+
+      await wrapper.setData({ isUpdatingToken: true });
+      expect(btn.element.disabled).toBe(true);
+
+      await wrapper.setData({ isUpdatingToken: false, isGeneratingArt: true });
+      expect(btn.element.disabled).toBe(true);
+
+      await wrapper.setData({ isGeneratingArt: false, isSpawning: true });
+      expect(btn.element.disabled).toBe(true);
+
+      await wrapper.setData({ isSpawning: false });
+      expect(btn.element.disabled).toBe(false);
     });
   });
 });

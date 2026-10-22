@@ -21,8 +21,12 @@ function resolveUploadDiskPath(urlStr) {
     : cleanUrl.replace(/^\//, '');
   const candidate = path.resolve(DATA_DIR, 'uploads', rel);
   const uploadsRoot = path.resolve(DATA_DIR, 'uploads');
-  if (!candidate.startsWith(uploadsRoot)) return null;
-  return fs.existsSync(candidate) ? candidate : null;
+  if (!candidate.startsWith(uploadsRoot + path.sep)) return null;
+  try {
+    return fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
+  } catch {
+    return null;
+  }
 }
 
 function safeJsonParse(val, fallback) {
@@ -269,7 +273,7 @@ export function createAdversariesRouter(db, io) {
 
       if (sourceDiskPath) {
         const cleanSource = source_image_url.split('?')[0];
-        if (cleanSource.includes('/tokens/')) {
+        if (cleanSource.startsWith('/uploads/tokens/') || cleanSource.startsWith('tokens/')) {
           if (path.resolve(sourceDiskPath) !== path.resolve(tokenOutputPath)) {
             fs.copyFileSync(sourceDiskPath, tokenOutputPath);
           }
@@ -335,7 +339,7 @@ export function createAdversariesRouter(db, io) {
           return res.status(400).json({ error: 'Source image file not found on disk' });
         }
         const cleanSource = source_image_url.split('?')[0];
-        if (cleanSource.includes('/tokens/')) {
+        if (cleanSource.startsWith('/uploads/tokens/') || cleanSource.startsWith('tokens/')) {
           if (path.resolve(sourceDiskPath) !== path.resolve(tokenOutputPath)) {
             fs.copyFileSync(sourceDiskPath, tokenOutputPath);
           }
@@ -405,6 +409,7 @@ export function createAdversariesRouter(db, io) {
         return res.status(404).json({ error: 'Adversary template not found' });
       }
 
+      db.prepare('UPDATE tokens SET template_id = NULL WHERE template_id = ?').run(req.params.id);
       db.prepare('DELETE FROM adversary_templates WHERE id = ?').run(req.params.id);
 
       if (io) {
