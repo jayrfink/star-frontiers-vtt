@@ -500,6 +500,39 @@
                 </div>
               </div>
 
+              <!-- Flip & Burn Maneuver (MR > 3) -->
+              <div class="flip-burn-box">
+                <div class="flip-burn-header">
+                  <label>🔄 Flip &amp; Burn (MR &gt; 3)</label>
+                  <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanFlipAndBurn }">
+                    MR {{ selectedTokenLinkedShip.mr }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-flip-burn full-width"
+                  :disabled="!selectedTokenCanFlipAndBurn"
+                  :title="selectedTokenCanFlipAndBurn ? 'Reverse heading 180° and alert crew for STA check' : 'Requires ship with Maneuver Rating (MR) > 3'"
+                  @click="executeFlipAndBurn"
+                >
+                  🔄 Execute Flip &amp; Burn (180°)
+                </button>
+                <small v-if="selectedTokenLinkedShip && !selectedTokenCanFlipAndBurn" class="flip-burn-ineligible">
+                  Requires MR &gt; 3 (Linked ship MR: {{ selectedTokenLinkedShip.mr }})
+                </small>
+                <small v-else class="flip-burn-hint">
+                  Strapped-in PCs must pass a STA check or pass out for 1d10×10s.
+                </small>
+                <div class="flip-burn-roll-btns">
+                  <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll d% STA Check">
+                    🎲 STA Check (d%)
+                  </button>
+                  <button type="button" class="btn-fb-roll blackout" @click="rollFlipAndBurnBlackout" title="Roll 1d10 × 10 seconds blackout duration">
+                    💫 Blackout (1d10×10s)
+                  </button>
+                </div>
+              </div>
+
               <!-- Tactical Status Effects -->
               <div class="status-section">
                 <label>Status Effects:</label>
@@ -791,6 +824,12 @@ import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
 import { isCelestialToken, CELESTIAL_PRESET_NAMES } from '../utils/spaceTokens.js';
+import {
+  canFlipAndBurn,
+  calculateFlipHeading,
+  calculateBlackoutSeconds,
+  formatFlipAndBurnAlert,
+} from '../utils/flipAndBurn.js';
 
 
 const authStore = useAuthStore();
@@ -1136,6 +1175,21 @@ const selectedToken = computed(() => {
   return tokens.value.find((t) => t.id === selectedTokenId.value) || null;
 });
 
+const selectedTokenLinkedShip = computed(() => {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value) || !selectedToken.value.character_id) {
+    return null;
+  }
+  return ships.value.find((s) => s.id === selectedToken.value.character_id) || null;
+});
+
+const selectedTokenCanFlipAndBurn = computed(() => {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return false;
+  if (selectedTokenLinkedShip.value) {
+    return canFlipAndBurn(selectedTokenLinkedShip.value.mr);
+  }
+  return true;
+});
+
 // Watch selectedToken to sync reactive form
 watch(selectedToken, (newToken) => {
   if (newToken) {
@@ -1237,6 +1291,116 @@ function normalizeAndSaveRotation() {
 function adjustSelectedSpeed(delta) {
   selectedTokenForm.current_speed = Math.max(0, (selectedTokenForm.current_speed || 0) + delta);
   updateSelectedToken();
+}
+
+async function executeFlipAndBurn() {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
+  if (!selectedTokenCanFlipAndBurn.value) return;
+
+  const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
+  await rotateSelectedToken(180);
+
+  sendRollToServer({
+    type: 'percentile',
+    label: `${selectedToken.value.name}: 🔄 Flip & Burn (180°)`,
+    total: newRotation,
+    breakdown: formatFlipAndBurnAlert(selectedToken.value.name, newRotation),
+  });
+}
+
+async function rollFlipAndBurnStaCheck() {
+  const shipName = selectedToken.value?.name || 'Ship';
+  playDiceSound({ isRemote: false });
+  if (diceBoxInstance) {
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 },
+        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 },
+      ]);
+      const rollSummary = calculatePercentileRoll(results);
+      if (rollSummary.valid) {
+        lastPercentileRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role,
+        };
+        showPercentileHud.value = true;
+        sendRollToServer({
+          type: 'percentile',
+          label: `${shipName}: Flip & Burn STA Check (d%)`,
+          total: rollSummary.total,
+          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] Pass if <= STA, or pass out for 1d10×10s`,
+          rollSummary,
+        });
+        percentileHudTimeout = setTimeout(() => {
+          showPercentileHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Flip & Burn STA check roll failed:', err);
+    }
+  } else {
+    const roll = Math.floor(Math.random() * 100) + 1;
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: Flip & Burn STA Check (d%)`,
+      total: roll,
+      breakdown: `Roll: ${roll} (Pass if <= STA, or pass out for 1d10×10s)`,
+    });
+  }
+}
+
+async function rollFlipAndBurnBlackout() {
+  const shipName = selectedToken.value?.name || 'Ship';
+  playDiceSound({ isRemote: false });
+  if (diceBoxInstance) {
+    showDamageHud.value = false;
+    showPercentileHud.value = false;
+    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+
+    try {
+      const results = await diceBoxInstance.roll([
+        { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: 1 },
+      ]);
+      const rollSummary = calculateDamageRoll(results);
+      if (rollSummary.count > 0) {
+        const dieVal = rollSummary.total;
+        const seconds = calculateBlackoutSeconds(dieVal);
+        lastDamageRoll.value = {
+          ...rollSummary,
+          total: seconds,
+          username: authStore.user?.username,
+          role: authStore.user?.role,
+        };
+        showDamageHud.value = true;
+        sendRollToServer({
+          type: 'damage',
+          label: `${shipName}: Flip & Burn Blackout (1d10×10s)`,
+          total: seconds,
+          breakdown: `[Die: ${dieVal} × 10 = ${seconds} seconds passed out]`,
+          rollSummary: { ...rollSummary, total: seconds },
+        });
+        damageHudTimeout = setTimeout(() => {
+          showDamageHud.value = false;
+        }, 8000);
+      }
+    } catch (err) {
+      console.error('Flip & Burn blackout roll failed:', err);
+    }
+  } else {
+    const dieVal = Math.floor(Math.random() * 10) + 1;
+    const seconds = calculateBlackoutSeconds(dieVal);
+    sendRollToServer({
+      type: 'damage',
+      label: `${shipName}: Flip & Burn Blackout (1d10×10s)`,
+      total: seconds,
+      breakdown: `[Die: ${dieVal} × 10 = ${seconds} seconds passed out]`,
+    });
+  }
 }
 
 // API Calls
@@ -3461,5 +3625,129 @@ onBeforeUnmount(() => {
   margin-bottom: 12px;
   text-align: center;
   letter-spacing: 0.5px;
+}
+
+/* Flip & Burn Section */
+.flip-burn-box {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flip-burn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flip-burn-header label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #38bdf8;
+  margin: 0;
+}
+
+.mr-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.mr-pill.eligible {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.btn-flip-burn {
+  background: linear-gradient(135deg, #1e3a8a 0%, #0369a1 100%);
+  color: #e0f2fe;
+  border: 1px solid #38bdf8;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-flip-burn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  color: #ffffff;
+}
+
+.btn-flip-burn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #475569;
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+.flip-burn-ineligible {
+  font-size: 11px;
+  color: #f87171;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.flip-burn-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.flip-burn-roll-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.btn-fb-roll {
+  flex: 1;
+  padding: 5px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-fb-roll:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+}
+
+.btn-fb-roll.blackout {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+}
+
+.btn-fb-roll.blackout:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #fbbf24;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
 }
 </style>

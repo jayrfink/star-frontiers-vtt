@@ -134,6 +134,21 @@
               />
             </div>
           </div>
+
+          <div class="flip-burn-ship-banner" :class="{ capable: canFlipAndBurn(selectedShip.mr) }">
+            <template v-if="canFlipAndBurn(selectedShip.mr)">
+              <span class="fb-badge capable">🔄 Flip &amp; Burn Capable (MR {{ selectedShip.mr }} &gt; 3)</span>
+              <span class="fb-rule-text">
+                Can execute a 180° Flip &amp; Burn in combat. Any strapped-in PCs on board must pass a STA check or pass out for <strong>1d10 × 10 seconds</strong>.
+              </span>
+            </template>
+            <template v-else>
+              <span class="fb-badge incapable">🚫 Flip &amp; Burn Unavailable (Requires MR &gt; 3)</span>
+              <span class="fb-rule-text">
+                Ships must have a Maneuver Rating (MR) higher than 3 to perform a Flip &amp; Burn maneuver.
+              </span>
+            </template>
+          </div>
         </section>
 
         <!-- Defense & Armament Grid -->
@@ -569,6 +584,7 @@ import { SHIP_PRESETS } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../constants/shipWeapons.js';
+import { canFlipAndBurn } from '../utils/flipAndBurn.js';
 
 export default {
   name: 'ShipSheetsView',
@@ -650,6 +666,7 @@ export default {
     }
   },
   methods: {
+    canFlipAndBurn,
     handleKeydown(e) {
       if (e.key === 'Escape' && this.showAddWeaponModal) {
         this.showAddWeaponModal = false;
@@ -1496,6 +1513,57 @@ export default {
   border-radius: 4px;
   padding: 4px;
   margin-top: 4px;
+}
+
+/* Flip & Burn Banner */
+.flip-burn-ship-banner {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flip-burn-ship-banner.capable {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.fb-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.fb-badge.capable {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.fb-badge.incapable {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.fb-rule-text {
+  font-size: 0.8rem;
+  color: #8b949e;
+  line-height: 1.4;
+}
+
+.fb-rule-text strong {
+  color: #c9d1d9;
 }
 
 /* Defenses & Armament Grid */

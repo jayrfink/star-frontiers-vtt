@@ -304,4 +304,16 @@ describe('ShipSheetsView - Weapon Selection & Renaming', () => {
   });
 });
 
+describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
+  it('exposes canFlipAndBurn method returning true for MR > 3 and false for MR <= 3', () => {
+    expect(typeof ShipSheetsView.methods.canFlipAndBurn).toBe('function');
+    expect(ShipSheetsView.methods.canFlipAndBurn(4)).toBe(true);
+    expect(ShipSheetsView.methods.canFlipAndBurn(5)).toBe(true);
+    expect(ShipSheetsView.methods.canFlipAndBurn(3)).toBe(false);
+    expect(ShipSheetsView.methods.canFlipAndBurn(2)).toBe(false);
+    expect(ShipSheetsView.methods.canFlipAndBurn(0)).toBe(false);
+  });
+});
+
+
 
