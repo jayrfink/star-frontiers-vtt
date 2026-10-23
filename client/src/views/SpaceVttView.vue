@@ -189,11 +189,8 @@
                   <div class="roll-item-result">
                     <template v-if="item.type === 'initiative' && item.roll_summary">
                       <div class="init-log-pills">
-                        <span class="init-pill-player">P: {{ item.roll_summary.playerRoll }}</span>
-                        <span class="init-pill-opp">O: {{ item.roll_summary.oppRoll }}</span>
-                        <span class="init-pill-winner" :class="item.roll_summary.winner">
-                          {{ item.roll_summary.winner === 'players' ? 'Players' : (item.roll_summary.winner === 'opposition' ? 'Opposition' : 'Tie') }}
-                        </span>
+                        <span class="init-pill-player">Players: {{ item.roll_summary.playerRoll }}</span>
+                        <span class="init-pill-opp">Opposition: {{ item.roll_summary.oppRoll }}</span>
                       </div>
                     </template>
                     <template v-else>
@@ -279,17 +276,6 @@
                 <span class="init-label">OPPOSITION</span>
                 <span class="init-val">{{ lastInitiativeRoll.oppRoll }}</span>
               </div>
-            </div>
-            <div class="init-winner-banner" :class="lastInitiativeRoll.winner">
-              <template v-if="lastInitiativeRoll.winner === 'players'">
-                🎉 PLAYERS WIN INITIATIVE
-              </template>
-              <template v-else-if="lastInitiativeRoll.winner === 'opposition'">
-                💀 OPPOSITION WINS INITIATIVE
-              </template>
-              <template v-else>
-                ⚖️ TIE — REROLL INITIATIVE
-              </template>
             </div>
           </div>
         </transition>
@@ -1119,7 +1105,7 @@ async function rollInitiative() {
 
     try {
       const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-init-player', themeColor: '#17304a', qty: 1 },
+        { sides: 10, theme: 'custom-init-player', themeColor: '#0b222e', qty: 1 },
         { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
       ]);
       const initSummary = calculateInitiativeRoll(results);
@@ -1132,15 +1118,11 @@ async function rollInitiative() {
         lastInitiativeRoll.value = rollData;
         showInitiativeHud.value = true;
 
-        let winnerText = 'Tie — Reroll Required!';
-        if (initSummary.winner === 'players') winnerText = 'Players Win Initiative!';
-        if (initSummary.winner === 'opposition') winnerText = 'Opposition Wins Initiative!';
-
         sendRollToServer({
           type: 'initiative',
           label: '⚡ Combat Initiative',
           total: initSummary.playerRoll,
-          breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll} — ${winnerText}`,
+          breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll}`,
           rollSummary: rollData
         });
 
@@ -1169,15 +1151,11 @@ async function rollInitiative() {
     lastInitiativeRoll.value = rollData;
     showInitiativeHud.value = true;
 
-    let winnerText = 'Tie — Reroll Required!';
-    if (winner === 'players') winnerText = 'Players Win Initiative!';
-    if (winner === 'opposition') winnerText = 'Opposition Wins Initiative!';
-
     sendRollToServer({
       type: 'initiative',
       label: '⚡ Combat Initiative',
       total: playerRoll,
-      breakdown: `Players: ${playerRoll} vs Opposition: ${oppRoll} — ${winnerText}`,
+      breakdown: `Players: ${playerRoll} vs Opposition: ${oppRoll}`,
       rollSummary: rollData
     });
 
@@ -2450,9 +2428,9 @@ onBeforeUnmount(() => {
   top: 70px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(95, 159, 222, 0.5);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(95, 159, 222, 0.2);
+  background: rgba(11, 34, 46, 0.95);
+  border: 1px solid rgba(181, 238, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(181, 238, 255, 0.2);
   border-radius: 8px;
   padding: 12px 18px;
   min-width: 290px;
@@ -2478,9 +2456,9 @@ onBeforeUnmount(() => {
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .init-player-die {
-  background: #17304a;
-  border: 2px solid #5f9fde;
-  color: #5f9fde;
+  background: #0b222e;
+  border: 2px solid #b5eeff;
+  color: #b5eeff;
 }
 .init-opp-die {
   background: #400a22;
@@ -2504,43 +2482,19 @@ onBeforeUnmount(() => {
   font-weight: 900;
   color: #64748b;
 }
-.init-winner-banner {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  margin-top: 4px;
-}
-.init-winner-banner.players {
-  background: rgba(23, 48, 74, 0.8);
-  color: #5f9fde;
-  border: 1px solid #5f9fde;
-}
-.init-winner-banner.opposition {
-  background: rgba(64, 10, 34, 0.8);
-  color: #c9abb9;
-  border: 1px solid #c9abb9;
-}
-.init-winner-banner.tie {
-  background: rgba(100, 116, 139, 0.4);
-  color: #cbd5e1;
-  border: 1px solid #cbd5e1;
-}
 
 /* Roll Log Initiative Pills */
 .init-log-pills {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: 11px;
 }
 .init-pill-player {
-  background: #17304a;
-  color: #5f9fde;
-  border: 1px solid #5f9fde;
-  padding: 1px 4px;
+  background: #0b222e;
+  color: #b5eeff;
+  border: 1px solid #b5eeff;
+  padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
 }
@@ -2548,24 +2502,9 @@ onBeforeUnmount(() => {
   background: #400a22;
   color: #c9abb9;
   border: 1px solid #c9abb9;
-  padding: 1px 4px;
+  padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-}
-.init-pill-winner {
-  font-weight: 600;
-  font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 3px;
-}
-.init-pill-winner.players {
-  color: #5f9fde;
-}
-.init-pill-winner.opposition {
-  color: #c9abb9;
-}
-.init-pill-winner.tie {
-  color: #94a3b8;
 }
 
 /* Multi-Turn Flip & Burn */

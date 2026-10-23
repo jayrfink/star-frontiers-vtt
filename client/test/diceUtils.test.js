@@ -228,10 +228,10 @@ describe('calculateInitiativeRoll', () => {
   });
 
   it('identifies dice by themeColor when theme name is not present', () => {
-    // Reverse order input
+    // Reverse order input with new #0b222e player color
     const raw = [
       { value: 6, themeColor: '#400a22' },
-      { value: 9, themeColor: '#17304a' },
+      { value: 9, themeColor: '#0b222e' },
     ];
     const result = calculateInitiativeRoll(raw);
     expect(result).toEqual({

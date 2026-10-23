@@ -127,8 +127,8 @@ async function main() {
 
   const filesToCopy = ['default.json', 'package.json', 'specular.jpg', 'theme.config.json'];
 
-  // Player theme: #5f9fde
-  const playerDiffuse = await makeDiffuse(0x5f, 0x9f, 0xde);
+  // Player theme: #b5eeff
+  const playerDiffuse = await makeDiffuse(0xb5, 0xee, 0xff);
   const playerDir = path.join(root, 'public/assets/dice-box/themes/custom-init-player');
   if (!fs.existsSync(playerDir)) fs.mkdirSync(playerDir, { recursive: true });
   for (const f of filesToCopy) {
@@ -137,7 +137,7 @@ async function main() {
   fs.writeFileSync(path.join(playerDir, 'diffuse-light.png'), playerDiffuse);
   fs.writeFileSync(path.join(playerDir, 'diffuse-dark.png'), playerDiffuse);
   fs.writeFileSync(path.join(playerDir, 'normal.png'), normBuffer);
-  console.log('Generated custom-init-player theme (#5f9fde)');
+  console.log('Generated custom-init-player theme (#b5eeff)');
 
   // Opposition theme: #c9abb9
   const oppDiffuse = await makeDiffuse(0xc9, 0xab, 0xb9);
