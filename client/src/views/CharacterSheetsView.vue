@@ -122,15 +122,20 @@
         <section class="stamina-section card">
           <div class="stamina-header">
             <h4>Stamina Tracker</h4>
-            <div class="stamina-values">
-              <span class="current">{{ selectedChar.current_stamina }}</span> / 
-              <input
-                type="number"
-                v-model.number="selectedChar.max_stamina"
-                @change="onMaxStaminaChange"
-                class="input-max-sta"
-                min="1"
-              /> Max STA
+            <div class="stamina-header-right">
+              <button class="btn-action-reset" @click="resetCharacterStats" title="Full Rest: Restore STA and SEU to maximum">
+                🔄 Full Rest
+              </button>
+              <div class="stamina-values">
+                <span class="current">{{ selectedChar.current_stamina }}</span> / 
+                <input
+                  type="number"
+                  v-model.number="selectedChar.max_stamina"
+                  @change="onMaxStaminaChange"
+                  class="input-max-sta"
+                  min="1"
+                /> Max STA
+              </div>
             </div>
           </div>
           <div class="stamina-bar-bg">
@@ -140,10 +145,67 @@
             ></div>
           </div>
           <div class="stamina-controls">
-            <button class="btn-sta btn-sub" @click="adjustStamina(-5)">-5</button>
-            <button class="btn-sta btn-sub" @click="adjustStamina(-1)">-1</button>
-            <button class="btn-sta btn-add" @click="adjustStamina(+1)">+1</button>
-            <button class="btn-sta btn-add" @click="adjustStamina(+5)">+5</button>
+            <div class="stepper-group">
+              <button class="btn-sta btn-sub" @click="adjustStamina(-5)">-5</button>
+              <button class="btn-sta btn-sub" @click="adjustStamina(-1)">-1</button>
+              <button class="btn-sta btn-add" @click="adjustStamina(+1)">+1</button>
+              <button class="btn-sta btn-add" @click="adjustStamina(+5)">+5</button>
+            </div>
+            <div class="freeform-delta-group">
+              <input
+                type="number"
+                v-model.number="staminaDelta"
+                placeholder="Amt"
+                min="1"
+                class="input-delta"
+                @keydown.enter.prevent="applyStaminaDamage"
+              />
+              <button class="btn-delta btn-sub" @click="applyStaminaDamage" title="Subtract damage from Stamina">- Dmg</button>
+              <button class="btn-delta btn-add" @click="applyStaminaHeal" title="Add healing to Stamina">+ Heal</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SEU Energy Pool Tracker -->
+        <section class="seu-section card">
+          <div class="seu-header">
+            <h4>⚡ SEU Energy Pool</h4>
+            <div class="seu-values">
+              <span class="current">{{ selectedChar.current_seu ?? 50 }}</span> /
+              <input
+                type="number"
+                v-model.number="selectedChar.max_seu"
+                @change="onMaxSeuChange"
+                class="input-max-seu"
+                min="0"
+              /> Max SEU
+            </div>
+          </div>
+          <div class="seu-bar-bg">
+            <div
+              class="seu-bar-fill"
+              :style="{ width: seuPercentage + '%', backgroundColor: seuColor }"
+            ></div>
+          </div>
+          <div class="seu-controls">
+            <div class="stepper-group">
+              <button class="btn-seu btn-sub" @click="adjustSeu(-1)" title="Fire Laser Pistol / Stunner (-1 SEU)">-1</button>
+              <button class="btn-seu btn-sub" @click="adjustSeu(-2)" title="Fire Laser Rifle (-2 SEU)">-2</button>
+              <button class="btn-seu btn-sub" @click="adjustSeu(-5)" title="Heavy Laser / Screen Turn (-5 SEU)">-5</button>
+              <button class="btn-seu btn-add" @click="adjustSeu(+5)" title="Recharge / Add SEU (+5 SEU)">+5</button>
+            </div>
+            <div class="freeform-delta-group">
+              <input
+                type="number"
+                v-model.number="seuDelta"
+                placeholder="Amt"
+                min="1"
+                class="input-delta"
+                @keydown.enter.prevent="applySeuBurn"
+              />
+              <button class="btn-delta btn-sub" @click="applySeuBurn" title="Burn / Spend SEU">- Spend</button>
+              <button class="btn-delta btn-add" @click="applySeuRecharge" title="Recharge / Add SEU">+ Charge</button>
+            </div>
           </div>
         </section>
 
@@ -640,6 +702,8 @@ export default {
         max_stamina: 50,
         current_stamina: 50,
       },
+      staminaDelta: null,
+      seuDelta: null,
     };
   },
   computed: {
@@ -684,6 +748,17 @@ export default {
       if (this.staminaPercentage > 50) return '#4caf50';
       if (this.staminaPercentage > 25) return '#ff9800';
       return '#f44336';
+    },
+    seuPercentage() {
+      if (!this.selectedChar || !this.selectedChar.max_seu) return 0;
+      const pct = (this.selectedChar.current_seu / this.selectedChar.max_seu) * 100;
+      return Math.max(0, Math.min(100, pct));
+    },
+    seuColor() {
+      const pct = typeof this.seuPercentage === 'number' ? this.seuPercentage : (this.selectedChar?.max_seu ? (this.selectedChar.current_seu / this.selectedChar.max_seu) * 100 : 0);
+      if (pct > 50) return '#00e5ff';
+      if (pct > 25) return '#ffb700';
+      return '#ff5252';
     },
     derivedIM() {
       if (!this.selectedChar) return 5;
@@ -826,6 +901,8 @@ export default {
       if (c.sta === undefined) c.sta = c.max_stamina !== undefined ? c.max_stamina : (c.str_sta || 50);
       c.max_stamina = c.sta;
       c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : c.sta);
+      c.max_seu = c.max_seu !== undefined ? Number(c.max_seu) : 50;
+      c.current_seu = c.current_seu !== undefined ? Number(c.current_seu) : c.max_seu;
 
       if (c.dex === undefined) c.dex = c.dex_rs || 50;
       if (c.rs === undefined) c.rs = c.dex_rs || 50;
@@ -965,6 +1042,8 @@ export default {
           ldr: finalLdr,
           max_stamina: finalSta,
           current_stamina: finalSta,
+          max_seu: 50,
+          current_seu: 50,
           skills: [],
           inventory: [],
         };
@@ -1010,6 +1089,8 @@ export default {
           log_stat: this.selectedChar.log,
           sta: this.selectedChar.sta ?? this.selectedChar.max_stamina ?? 50,
           current_sta: this.selectedChar.current_stamina ?? 50,
+          max_seu: this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50,
+          current_seu: this.selectedChar.current_seu !== undefined ? this.selectedChar.current_seu : 50,
         };
         const res = await fetch(`/api/characters/${this.selectedChar.id}`, {
           method: 'PUT',
@@ -1071,6 +1152,65 @@ export default {
       let newSta = (this.selectedChar.current_stamina || 0) + amount;
       newSta = Math.max(0, Math.min(this.selectedChar.max_stamina || 100, newSta));
       this.selectedChar.current_stamina = newSta;
+      this.updateCharacter();
+    },
+    applyStaminaDamage() {
+      if (!this.selectedChar) return;
+      const delta = Number(this.staminaDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      this.selectedChar.current_stamina = Math.max(0, (this.selectedChar.current_stamina || 0) - delta);
+      this.staminaDelta = null;
+      this.updateCharacter();
+    },
+    applyStaminaHeal() {
+      if (!this.selectedChar) return;
+      const delta = Number(this.staminaDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const max = this.selectedChar.max_stamina || 100;
+      this.selectedChar.current_stamina = Math.min(max, (this.selectedChar.current_stamina || 0) + delta);
+      this.staminaDelta = null;
+      this.updateCharacter();
+    },
+    resetCharacterStats() {
+      if (!this.selectedChar) return;
+      this.selectedChar.current_stamina = this.selectedChar.max_stamina || 50;
+      this.selectedChar.current_seu = this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50;
+      this.updateCharacter();
+    },
+    adjustSeu(amount) {
+      if (!this.selectedChar) return;
+      const max = this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50;
+      let newSeu = (this.selectedChar.current_seu !== undefined ? this.selectedChar.current_seu : max) + amount;
+      newSeu = Math.max(0, Math.min(max, newSeu));
+      this.selectedChar.current_seu = newSeu;
+      this.updateCharacter();
+    },
+    applySeuBurn() {
+      if (!this.selectedChar) return;
+      const delta = Number(this.seuDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const max = this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50;
+      this.selectedChar.current_seu = Math.max(0, (this.selectedChar.current_seu !== undefined ? this.selectedChar.current_seu : max) - delta);
+      this.seuDelta = null;
+      this.updateCharacter();
+    },
+    applySeuRecharge() {
+      if (!this.selectedChar) return;
+      const delta = Number(this.seuDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const max = this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50;
+      this.selectedChar.current_seu = Math.min(max, (this.selectedChar.current_seu || 0) + delta);
+      this.seuDelta = null;
+      this.updateCharacter();
+    },
+    onMaxSeuChange() {
+      if (!this.selectedChar) return;
+      if (this.selectedChar.max_seu === undefined || this.selectedChar.max_seu < 0) {
+        this.selectedChar.max_seu = 0;
+      }
+      if ((this.selectedChar.current_seu || 0) > this.selectedChar.max_seu) {
+        this.selectedChar.current_seu = this.selectedChar.max_seu;
+      }
       this.updateCharacter();
     },
     async deleteCharacter(id) {
@@ -1559,24 +1699,33 @@ export default {
   font-weight: bold;
 }
 
-/* Stamina Section */
-.stamina-header {
+/* Stamina & SEU Sections */
+.stamina-header,
+.seu-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
-.stamina-header h4 {
+.stamina-header h4,
+.seu-header h4 {
   margin: 0;
   color: #3a859c;
 }
+.stamina-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-.stamina-values {
+.stamina-values,
+.seu-values {
   font-size: 1.1rem;
   font-weight: 700;
 }
 
-.input-max-sta {
+.input-max-sta,
+.input-max-seu {
   width: 60px;
   background: #0d1117;
   border: 1px solid #30363d;
@@ -1586,7 +1735,8 @@ export default {
   border-radius: 4px;
 }
 
-.stamina-bar-bg {
+.stamina-bar-bg,
+.seu-bar-bg {
   height: 14px;
   background: #21262d;
   border-radius: 7px;
@@ -1594,18 +1744,74 @@ export default {
   margin-bottom: 12px;
 }
 
-.stamina-bar-fill {
+.stamina-bar-fill,
+.seu-bar-fill {
   height: 100%;
   transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-.stamina-controls {
+.stamina-controls,
+.seu-controls {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.btn-sta {
+.stepper-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.freeform-delta-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.input-delta {
+  width: 54px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  text-align: center;
+  padding: 5px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-delta {
+  padding: 5px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-action-reset {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-action-reset:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.btn-sta,
+.btn-seu {
   padding: 6px 14px;
   border: none;
   border-radius: 4px;
@@ -1613,7 +1819,8 @@ export default {
   cursor: pointer;
   transition: all 0.15s ease-in-out;
 }
-.btn-sta:active {
+.btn-sta:active,
+.btn-seu:active {
   transform: translateY(1px);
 }
 .btn-sub {

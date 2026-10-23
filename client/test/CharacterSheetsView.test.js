@@ -514,6 +514,80 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       await CharacterSheetsView.methods.deleteCharacter.call(vm, 10);
       expect(vm.errorMessage).toBe('Database error');
     });
+
+    it('manages freeform stamina damage & healing with bounds clamping', () => {
+      const vm = {
+        selectedChar: { current_stamina: 40, max_stamina: 50 },
+        staminaDelta: 15,
+        updateCharacter: vi.fn(),
+      };
+
+      // Apply damage: 40 - 15 = 25
+      CharacterSheetsView.methods.applyStaminaDamage.call(vm);
+      expect(vm.selectedChar.current_stamina).toBe(25);
+      expect(vm.staminaDelta).toBeNull();
+      expect(vm.updateCharacter).toHaveBeenCalled();
+
+      // Apply damage that exceeds current stamina: clamped to 0
+      vm.staminaDelta = 50;
+      CharacterSheetsView.methods.applyStaminaDamage.call(vm);
+      expect(vm.selectedChar.current_stamina).toBe(0);
+
+      // Apply heal: 0 + 20 = 20
+      vm.staminaDelta = 20;
+      CharacterSheetsView.methods.applyStaminaHeal.call(vm);
+      expect(vm.selectedChar.current_stamina).toBe(20);
+
+      // Apply heal that exceeds max: clamped to max_stamina (50)
+      vm.staminaDelta = 100;
+      CharacterSheetsView.methods.applyStaminaHeal.call(vm);
+      expect(vm.selectedChar.current_stamina).toBe(50);
+    });
+
+    it('resets character stamina and SEU to maximum on Full Rest', () => {
+      const vm = {
+        selectedChar: { current_stamina: 10, max_stamina: 55, current_seu: 5, max_seu: 50 },
+        updateCharacter: vi.fn(),
+      };
+
+      CharacterSheetsView.methods.resetCharacterStats.call(vm);
+      expect(vm.selectedChar.current_stamina).toBe(55);
+      expect(vm.selectedChar.current_seu).toBe(50);
+      expect(vm.updateCharacter).toHaveBeenCalled();
+    });
+
+    it('tracks SEU energy pool adjustments and computes percentage & color', () => {
+      const vm = {
+        selectedChar: { current_seu: 40, max_seu: 50 },
+        seuDelta: 10,
+        updateCharacter: vi.fn(),
+      };
+
+      // Compute percentage: 40/50 = 80%
+      expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(80);
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#00e5ff');
+
+      // Adjust SEU: -5
+      CharacterSheetsView.methods.adjustSeu.call(vm, -5);
+      expect(vm.selectedChar.current_seu).toBe(35);
+      expect(vm.updateCharacter).toHaveBeenCalled();
+
+      // Freeform burn: 35 - 10 = 25 (50% -> gold/amber)
+      CharacterSheetsView.methods.applySeuBurn.call(vm);
+      expect(vm.selectedChar.current_seu).toBe(25);
+      expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(50);
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#ffb700');
+
+      // Critical low (< 25% -> red)
+      vm.selectedChar.current_seu = 5;
+      expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(10);
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#ff5252');
+
+      // Freeform recharge: 5 + 20 = 25
+      vm.seuDelta = 20;
+      CharacterSheetsView.methods.applySeuRecharge.call(vm);
+      expect(vm.selectedChar.current_seu).toBe(25);
+    });
   });
 });
 
