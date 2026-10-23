@@ -160,7 +160,7 @@ function migrate(db) {
       user_id INTEGER NOT NULL,
       username TEXT NOT NULL,
       role TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('percentile', 'damage')),
+      type TEXT NOT NULL CHECK(type IN ('percentile', 'damage', 'initiative')),
       label TEXT NOT NULL,
       total INTEGER NOT NULL,
       breakdown TEXT NOT NULL,
@@ -309,6 +309,36 @@ if (!mapCols.includes('map_type')) {
       `);
     });
     migrateTokens();
+    db.pragma('foreign_keys = ON');
+  }
+
+  const rollLogsTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='roll_logs'").get();
+  if (rollLogsTableInfo && rollLogsTableInfo.sql && !rollLogsTableInfo.sql.includes('initiative')) {
+    db.pragma('foreign_keys = OFF');
+    const migrateRollLogs = db.transaction(() => {
+      db.exec(`
+        CREATE TABLE roll_logs_dg_tmp (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          mode TEXT NOT NULL CHECK(mode IN ('rpg', 'space')),
+          user_id INTEGER NOT NULL,
+          username TEXT NOT NULL,
+          role TEXT NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('percentile', 'damage', 'initiative')),
+          label TEXT NOT NULL,
+          total INTEGER NOT NULL,
+          breakdown TEXT NOT NULL,
+          roll_summary TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO roll_logs_dg_tmp (id, mode, user_id, username, role, type, label, total, breakdown, roll_summary, created_at)
+        SELECT id, mode, user_id, username, role, type, label, total, breakdown, roll_summary, created_at
+        FROM roll_logs;
+        DROP TABLE roll_logs;
+        ALTER TABLE roll_logs_dg_tmp RENAME TO roll_logs;
+        CREATE INDEX IF NOT EXISTS idx_roll_logs_mode_created ON roll_logs(mode, created_at DESC);
+      `);
+    });
+    migrateRollLogs();
     db.pragma('foreign_keys = ON');
   }
 

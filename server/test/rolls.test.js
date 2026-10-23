@@ -309,5 +309,44 @@ describe('Rolls API & Sockets', () => {
       breakdown: '0'
     });
     expect(resValidDmg.status).toBe(201);
+
+    // Valid initiative roll accepted and retrievable
+    const resValidInit = await playerAgent.post('/api/rolls').send({
+      mode: 'space',
+      type: 'initiative',
+      label: '⚡ Combat Initiative',
+      total: 8,
+      breakdown: 'Players: 8 vs Opposition: 5',
+      rollSummary: {
+        playerRoll: 8,
+        oppRoll: 5,
+        winner: 'players',
+        valid: true
+      }
+    });
+    expect(resValidInit.status).toBe(201);
+    expect(resValidInit.body.type).toBe('initiative');
+    expect(resValidInit.body.rollSummary.playerRoll).toBe(8);
+    expect(resValidInit.body.rollSummary.oppRoll).toBe(5);
+
+    // Invalid initiative rolls rejected
+    const resInvalidInitTotal = await playerAgent.post('/api/rolls').send({
+      mode: 'space',
+      type: 'initiative',
+      label: '⚡ Combat Initiative',
+      total: 15,
+      breakdown: 'invalid'
+    });
+    expect(resInvalidInitTotal.status).toBe(400);
+
+    const resInvalidInitDie = await playerAgent.post('/api/rolls').send({
+      mode: 'space',
+      type: 'initiative',
+      label: '⚡ Combat Initiative',
+      total: 5,
+      breakdown: 'invalid',
+      rollSummary: { playerRoll: 15 }
+    });
+    expect(resInvalidInitDie.status).toBe(400);
   });
 });

@@ -65,8 +65,8 @@ export function createRollRouter(db, io) {
     if (mode !== 'rpg' && mode !== 'space') {
       return res.status(400).json({ error: 'Valid mode ("rpg" or "space") is required' });
     }
-    if (type !== 'percentile' && type !== 'damage') {
-      return res.status(400).json({ error: 'Valid type ("percentile" or "damage") is required' });
+    if (type !== 'percentile' && type !== 'damage' && type !== 'initiative') {
+      return res.status(400).json({ error: 'Valid type ("percentile", "damage", or "initiative") is required' });
     }
     if (typeof total !== 'number' || Number.isNaN(total) || !Number.isFinite(total)) {
       return res.status(400).json({ error: 'Invalid roll total: must be a finite number' });
@@ -77,7 +77,18 @@ export function createRollRouter(db, io) {
     if (type === 'damage' && (total < 0 || total > 100000)) {
       return res.status(400).json({ error: 'Damage roll total must be a non-negative finite number' });
     }
+    if (type === 'initiative' && (total < 1 || total > 10)) {
+      return res.status(400).json({ error: 'Initiative roll total must be between 1 and 10' });
+    }
     if (rollSummary && typeof rollSummary === 'object') {
+      if (type === 'initiative') {
+        if (rollSummary.playerRoll !== undefined && (!Number.isFinite(rollSummary.playerRoll) || rollSummary.playerRoll < 1 || rollSummary.playerRoll > 10)) {
+          return res.status(400).json({ error: 'Invalid initiative playerRoll parameter' });
+        }
+        if (rollSummary.oppRoll !== undefined && (!Number.isFinite(rollSummary.oppRoll) || rollSummary.oppRoll < 1 || rollSummary.oppRoll > 10)) {
+          return res.status(400).json({ error: 'Invalid initiative oppRoll parameter' });
+        }
+      }
       if (rollSummary.count !== undefined && (!Number.isFinite(rollSummary.count) || rollSummary.count < 0 || rollSummary.count > 1000)) {
         return res.status(400).json({ error: 'Invalid roll count parameter' });
       }

@@ -195,11 +195,12 @@
                     <span class="roll-item-badge">{{ item.label }}</span>
                   </div>
                   <div class="roll-item-result">
-                    <template v-if="item.type === 'initiative' && item.roll_summary">
-                      <div class="init-log-pills">
-                        <span class="init-pill-player">Players: {{ item.roll_summary.playerRoll }}</span>
-                        <span class="init-pill-opp">Opposition: {{ item.roll_summary.oppRoll }}</span>
+                    <template v-if="item.type === 'initiative'">
+                      <div class="init-log-pills" v-if="(item.rollSummary || item.roll_summary)?.playerRoll">
+                        <span class="init-pill-player">Players: {{ (item.rollSummary || item.roll_summary).playerRoll }}</span>
+                        <span class="init-pill-opp">Opposition: {{ (item.rollSummary || item.roll_summary).oppRoll }}</span>
                       </div>
+                      <span v-else class="roll-item-breakdown">{{ item.breakdown }}</span>
                     </template>
                     <template v-else>
                       <span class="roll-item-total">{{ item.total }}</span>
@@ -3727,6 +3728,10 @@ onBeforeUnmount(() => {
   border-left: 3px solid #f29249;
 }
 
+.roll-log-item.initiative {
+  border-left: 3px solid #b5eeff;
+}
+
 .roll-item-meta {
   display: flex;
   align-items: center;
@@ -3753,6 +3758,12 @@ onBeforeUnmount(() => {
   background: #140409;
   color: #f29249;
   border-color: rgba(242, 146, 73, 0.5);
+}
+
+.roll-log-item.initiative .roll-item-badge {
+  background: #0b222e;
+  color: #b5eeff;
+  border-color: rgba(181, 238, 255, 0.5);
 }
 
 .roll-item-result {
