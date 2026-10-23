@@ -21,6 +21,8 @@ function formatCharacterSheet(row) {
   if (!row) return null;
   return {
     ...row,
+    max_seu: row.max_seu !== undefined && row.max_seu !== null ? Number(row.max_seu) : 50,
+    current_seu: row.current_seu !== undefined && row.current_seu !== null ? Number(row.current_seu) : 50,
     psa: row.psa || 'Military',
     racial_abilities: safeJsonParse(row.racial_abilities, {}),
     skills: safeJsonParse(row.skills, []),
@@ -78,6 +80,8 @@ export function createCharacterRouter(db, io) {
         str = 50,
         sta = 50,
         current_sta = sta ?? 50,
+        max_seu = 50,
+        current_seu = max_seu ?? 50,
         dex = 50,
         rs = 50,
         int_stat = 50,
@@ -103,6 +107,8 @@ export function createCharacterRouter(db, io) {
       const strVal = clampStat(str, 50, 1, 200);
       const staVal = clampStat(sta, 50, 1, 200);
       const curStaVal = clampStat(current_sta, staVal, 0, 200);
+      const maxSeuVal = clampStat(max_seu, 50, 0, 100000);
+      const curSeuVal = clampStat(current_seu, maxSeuVal, 0, maxSeuVal);
       const dexVal = clampStat(dex, 50, 1, 200);
       const rsVal = clampStat(rs, 50, 1, 200);
       const intVal = clampStat(int_stat, 50, 1, 200);
@@ -117,18 +123,18 @@ export function createCharacterRouter(db, io) {
       const stmt = db.prepare(`
         INSERT INTO character_sheets (
           user_id, name, race, psa, gender, height, weight,
-          str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+          str, sta, current_sta, max_seu, current_seu, dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         req.session.userId, characterName, race, characterPsa, gender, height, weight,
-        strVal, staVal, curStaVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
+        strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || ''
       );
 
@@ -199,6 +205,10 @@ export function createCharacterRouter(db, io) {
       const strVal = clampStat(str, existing.str, 1, 200);
       const staVal = clampStat(sta, existing.sta, 1, 200);
       const curStaVal = clampStat(current_sta, existing.current_sta, 0, 200);
+      const max_seu = req.body.max_seu !== undefined ? req.body.max_seu : (existing.max_seu ?? 50);
+      const maxSeuVal = clampStat(max_seu, existing.max_seu ?? 50, 0, 100000);
+      const current_seu = req.body.current_seu !== undefined ? req.body.current_seu : (existing.current_seu ?? maxSeuVal);
+      const curSeuVal = clampStat(current_seu, existing.current_seu ?? maxSeuVal, 0, maxSeuVal);
       const dexVal = clampStat(dex, existing.dex, 1, 200);
       const rsVal = clampStat(rs, existing.rs, 1, 200);
       const intVal = clampStat(int_stat, existing.int_stat, 1, 200);
@@ -213,7 +223,7 @@ export function createCharacterRouter(db, io) {
       const stmt = db.prepare(`
         UPDATE character_sheets SET
           name = ?, race = ?, psa = ?, gender = ?, height = ?, weight = ?,
-          str = ?, sta = ?, current_sta = ?, dex = ?, rs = ?,
+          str = ?, sta = ?, current_sta = ?, max_seu = ?, current_seu = ?, dex = ?, rs = ?,
           int_stat = ?, log_stat = ?, per = ?, ldr = ?,
           racial_abilities = ?, skills = ?, inventory = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
@@ -224,11 +234,24 @@ export function createCharacterRouter(db, io) {
 
       stmt.run(
         name, race, characterPsa, gender, height, weight,
-        strVal, staVal, curStaVal, dexVal, rsVal,
+        strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal,
         intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, avatarUrl,
         req.params.id
       );
+
+      if (req.body.current_seu !== undefined) {
+        const linkedTokens = db.prepare('SELECT id FROM tokens WHERE character_id = ?').all(existing.id);
+        if (linkedTokens.length > 0) {
+          db.prepare('UPDATE tokens SET seu_current = ? WHERE character_id = ?').run(curSeuVal, existing.id);
+          if (io) {
+            for (const t of linkedTokens) {
+              const updatedToken = db.prepare('SELECT * FROM tokens WHERE id = ?').get(t.id);
+              io.emit('token:updated', { token: updatedToken });
+            }
+          }
+        }
+      }
 
       const updated = db.prepare('SELECT * FROM character_sheets WHERE id = ?').get(req.params.id);
       const sheet = formatCharacterSheet(updated);

@@ -140,6 +140,62 @@ describe('Sheets API & Socket.io', () => {
       expect(verifyRes.body.psa).toBe('Biosocial');
     });
 
+    it('manages max_seu and current_seu, clamps them, and cascades current_seu to active map tokens', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      // Default values when not specified
+      const res1 = await agent.post('/api/characters').send({ name: 'DefaultSEU', race: 'Human' });
+      expect(res1.status).toBe(201);
+      expect(res1.body.max_seu).toBe(50);
+      expect(res1.body.current_seu).toBe(50);
+
+      // Create with explicit SEU
+      const createRes = await agent.post('/api/characters').send({
+        name: 'Garth',
+        race: 'Dralasite',
+        max_seu: 100,
+        current_seu: 75,
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.max_seu).toBe(100);
+      expect(createRes.body.current_seu).toBe(75);
+      const charId = createRes.body.id;
+
+      // Create a map and token linked to Garth
+      const mapStmt = db.prepare("INSERT INTO maps (user_id, name, width, height) VALUES (1, 'Arena', 20, 20)");
+      const mapInfo = mapStmt.run();
+      const tokenStmt = db.prepare(`
+        INSERT INTO tokens (map_id, character_id, name, seu_current)
+        VALUES (?, ?, 'Garth Token', 75)
+      `);
+      const tokenInfo = tokenStmt.run(mapInfo.lastInsertRowid, charId);
+
+      const emitSpy = vi.spyOn(io, 'emit');
+
+      // Update current_seu (spend 15 SEU)
+      const updateRes = await agent.put(`/api/characters/${charId}`).send({
+        current_seu: 60,
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.current_seu).toBe(60);
+
+      // Verify token.seu_current was cascaded
+      const tokenAfter = db.prepare('SELECT seu_current FROM tokens WHERE id = ?').get(tokenInfo.lastInsertRowid);
+      expect(tokenAfter.seu_current).toBe(60);
+      expect(emitSpy).toHaveBeenCalledWith('token:updated', expect.objectContaining({
+        token: expect.objectContaining({ id: tokenInfo.lastInsertRowid, seu_current: 60 }),
+      }));
+
+      // Clamps current_seu between 0 and max_seu
+      const clampLow = await agent.put(`/api/characters/${charId}`).send({ current_seu: -10 });
+      expect(clampLow.body.current_seu).toBe(0);
+
+      const clampHigh = await agent.put(`/api/characters/${charId}`).send({ current_seu: 500 });
+      expect(clampHigh.body.current_seu).toBe(100);
+    });
+
     it('deletes character sheet and emits sheet:deleted', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });

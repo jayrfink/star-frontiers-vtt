@@ -29,6 +29,8 @@ function migrate(db) {
       str INTEGER NOT NULL DEFAULT 50,
       sta INTEGER NOT NULL DEFAULT 50,
       current_sta INTEGER NOT NULL DEFAULT 50,
+      max_seu INTEGER NOT NULL DEFAULT 50,
+      current_seu INTEGER NOT NULL DEFAULT 50,
       dex INTEGER NOT NULL DEFAULT 50,
       rs INTEGER NOT NULL DEFAULT 50,
       int_stat INTEGER NOT NULL DEFAULT 50,
@@ -213,6 +215,12 @@ if (!mapCols.includes('map_type')) {
   if (!charCols.includes('psa')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN psa TEXT NOT NULL DEFAULT "Military"');
   }
+  if (!charCols.includes('max_seu')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN max_seu INTEGER NOT NULL DEFAULT 50');
+  }
+  if (!charCols.includes('current_seu')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN current_seu INTEGER NOT NULL DEFAULT 50');
+  }
 
   const charTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='character_sheets'").get();
   if (charTableInfo && charTableInfo.sql && charTableInfo.sql.includes("CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian'))")) {
@@ -231,6 +239,8 @@ if (!mapCols.includes('map_type')) {
           str INTEGER NOT NULL DEFAULT 50,
           sta INTEGER NOT NULL DEFAULT 50,
           current_sta INTEGER NOT NULL DEFAULT 50,
+          max_seu INTEGER NOT NULL DEFAULT 50,
+          current_seu INTEGER NOT NULL DEFAULT 50,
           dex INTEGER NOT NULL DEFAULT 50,
           rs INTEGER NOT NULL DEFAULT 50,
           int_stat INTEGER NOT NULL DEFAULT 50,
@@ -248,12 +258,14 @@ if (!mapCols.includes('map_type')) {
         );
         INSERT INTO character_sheets_dg_tmp (
           id, user_id, name, race, psa, gender, height, weight,
-          str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+          str, sta, current_sta, max_seu, current_seu, dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
         )
         SELECT
           id, user_id, name, race, psa, gender, height, weight,
-          str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+          str, sta, current_sta,
+          COALESCE(max_seu, 50), COALESCE(current_seu, 50),
+          dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
         FROM character_sheets;
         DROP TABLE character_sheets;
