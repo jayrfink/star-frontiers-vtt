@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import ShipSheetsView from '../src/views/ShipSheetsView.vue';
@@ -417,6 +417,272 @@ describe('ShipSheetsView - Custom Weapon Designer Restrictions', () => {
     const spaceVttContent = fs.readFileSync(path.resolve(__dirname, '../src/views/SpaceVttView.vue'), 'utf8');
     expect(spaceVttContent).toContain('token-wpn-tag');
     expect(spaceVttContent).toContain('token-weapons-section');
+  });
+
+  it('guards stopEditWeapon against duplicate updates when editingWeaponIndex is null', () => {
+    let updateCount = 0;
+    const vm = {
+      editingWeaponIndex: null,
+      onWeaponNameChange: () => { updateCount++; },
+    };
+
+    ShipSheetsView.methods.stopEditWeapon.call(vm, { name: 'Laser Battery' });
+    expect(updateCount).toBe(0);
+
+    vm.editingWeaponIndex = 0;
+    ShipSheetsView.methods.stopEditWeapon.call(vm, { name: 'Laser Battery' });
+    expect(updateCount).toBe(1);
+    expect(vm.editingWeaponIndex).toBe(null);
+  });
+
+  it('normalizes defenses on preset selection in onEditPresetChange', () => {
+    let updateCalled = false;
+    const vm = {
+      presets: [
+        {
+          type: 'Frigate',
+          adf: 3,
+          mr: 3,
+          dcr: 50,
+          hull_points: 40,
+          weapons: [],
+          defenses: { reflect: true, masking: true, icm_count: 4 },
+        },
+      ],
+      selectedShip: {
+        type: 'Fighter',
+        weapons: [],
+        defenses: {},
+      },
+      normalizeWeapons: (w) => w,
+      normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+      updateShip: () => { updateCalled = true; },
+    };
+
+    // Mock confirm dialog
+    global.confirm = () => true;
+
+    ShipSheetsView.methods.onEditPresetChange.call(vm, 'Frigate');
+    expect(vm.selectedShip.type).toBe('Frigate');
+    expect(vm.selectedShip.defenses.reflective_hull).toBe(true);
+    expect(vm.selectedShip.defenses.masking_screens_max).toBe(1);
+    expect(vm.selectedShip.defenses.icm_max).toBe(4);
+    expect(updateCalled).toBe(true);
+  });
+});
+
+describe('ShipSheetsView - 0 Ammo Display & 0 Hull Point Calculations', () => {
+  it('isLimitedAmmoWeapon returns true for ordnance with 0 ammo remaining and false for beam weapons', () => {
+    const vm = {
+      getWeaponCategory: ShipSheetsView.methods.getWeaponCategory,
+      isLimitedAmmoWeapon: ShipSheetsView.methods.isLimitedAmmoWeapon,
+    };
+
+    // Ordnance weapon with 0 ammo remaining out of 4
+    const emptyTorpedoes = {
+      name: 'Torpedoes',
+      category: 'Ordnance',
+      ammo_current: 0,
+      ammo_max: 4,
+      restrictions: ['MPO', 'LTD'],
+    };
+    expect(vm.isLimitedAmmoWeapon(emptyTorpedoes)).toBe(true);
+
+    // Ordnance weapon with 0 current and 0 max (depleted / custom)
+    const depletedMines = {
+      name: 'Mines',
+      category: 'Ordnance',
+      ammo_current: 0,
+      ammo_max: 0,
+      restrictions: ['LTD'],
+    };
+    expect(vm.isLimitedAmmoWeapon(depletedMines)).toBe(true);
+
+    // Unlimited Beam weapon with 0 ammo
+    const laserBattery = {
+      name: 'Laser Battery',
+      category: 'Beam',
+      ammo_current: 0,
+      ammo_max: 0,
+      restrictions: ['T', 'RD'],
+    };
+    expect(vm.isLimitedAmmoWeapon(laserBattery)).toBe(false);
+  });
+
+  it('hullPercentage returns 0% when current_hull_points is 0', () => {
+    const vm = {
+      selectedShip: {
+        max_hull_points: 60,
+        current_hull_points: 0,
+      },
+    };
+    expect(ShipSheetsView.computed.hullPercentage.call(vm)).toBe(0);
+
+    // When max is 0
+    vm.selectedShip.max_hull_points = 0;
+    expect(ShipSheetsView.computed.hullPercentage.call(vm)).toBe(0);
+  });
+
+  it('adjustHullPoints calculates correctly from 0 hull points using nullish coalescing', () => {
+    let updated = false;
+    const vm = {
+      selectedShip: {
+        id: 1,
+        max_hull_points: 50,
+        current_hull_points: 0,
+        current_hp: 0,
+      },
+      updateShip() {
+        updated = true;
+      },
+    };
+
+    // Healing from 0 HP
+    ShipSheetsView.methods.adjustHullPoints.call(vm, 5);
+    expect(vm.selectedShip.current_hull_points).toBe(5);
+    expect(vm.selectedShip.current_hp).toBe(5);
+    expect(updated).toBe(true);
+
+    // Damage below 0 clamps at 0
+    ShipSheetsView.methods.adjustHullPoints.call(vm, -10);
+    expect(vm.selectedShip.current_hull_points).toBe(0);
+    expect(vm.selectedShip.current_hp).toBe(0);
+  });
+
+  it('normalizeShip preserves 0 hull points without reverting to 50', () => {
+    const vm = {
+      normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+      normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
+    };
+
+    const shipWithZero = {
+      name: 'Derelict Scout',
+      hull_points: 0,
+      current_hp: 0,
+    };
+
+    const normalized = ShipSheetsView.methods.normalizeShip.call(vm, shipWithZero);
+    expect(normalized.hull_points).toBe(0);
+    expect(normalized.max_hull_points).toBe(0);
+    expect(normalized.current_hp).toBe(0);
+    expect(normalized.current_hull_points).toBe(0);
+  });
+
+  it('updateShip preserves 0 hull points in PUT payload', async () => {
+    let sentBody = null;
+    const origFetch = global.fetch;
+    global.fetch = async (url, opts) => {
+      sentBody = JSON.parse(opts.body);
+      return { ok: true, json: async () => sentBody };
+    };
+
+    try {
+      const vm = {
+        selectedShip: {
+          id: 42,
+          name: 'Destroyed Fighter',
+          type: 'Fighter',
+          max_hull_points: 0,
+          current_hull_points: 0,
+        },
+        ships: [],
+        normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+        normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
+        normalizeShip: ShipSheetsView.methods.normalizeShip,
+      };
+
+      await ShipSheetsView.methods.updateShip.call(vm);
+      expect(sentBody).not.toBeNull();
+      expect(sentBody.hull_points).toBe(0);
+      expect(sentBody.current_hp).toBe(0);
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+
+  it('Bug 29 & Bug 36: displays errorMessage on create/update failure and replaces window.alert', async () => {
+    const origFetch = global.fetch;
+    const alertSpy = vi.fn();
+    global.alert = alertSpy;
+
+    try {
+      const vm = {
+        newShipForm: { name: 'Faulty Ship', type: 'Fighter' },
+        creating: false,
+        errorMessage: '',
+        normalizeShip: (s) => s,
+        normalizeWeapons: (w) => w,
+        normalizeDefenses: (d) => d,
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Ship name already in use' }),
+      });
+
+      await ShipSheetsView.methods.createShip.call(vm);
+      expect(vm.errorMessage).toBe('Ship name already in use');
+      expect(alertSpy).not.toHaveBeenCalled();
+
+      // Test updateShip failure
+      const vmUpdate = {
+        selectedShip: { id: 1, name: 'Ship' },
+        errorMessage: '',
+        normalizeShip: (s) => s,
+      };
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Server database error' }),
+      });
+
+      await ShipSheetsView.methods.updateShip.call(vmUpdate);
+      expect(vmUpdate.errorMessage).toBe('Server database error');
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+
+  it('Bug 36: opens reactive confirmation modal on delete and executes confirmed action', async () => {
+    const origFetch = global.fetch;
+    let deleteCalled = false;
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('/api/ships/10')) {
+        deleteCalled = true;
+        return { ok: true, json: async () => ({ success: true }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    try {
+      const vm = {
+        ships: [{ id: 10, name: 'Target Ship' }],
+        selectedShip: { id: 10, name: 'Target Ship' },
+        confirmModal: { show: false, message: '', onConfirm: null },
+        errorMessage: '',
+        openConfirmModal: ShipSheetsView.methods.openConfirmModal,
+        cancelConfirmModal: ShipSheetsView.methods.cancelConfirmModal,
+        executeConfirmModal: ShipSheetsView.methods.executeConfirmModal,
+      };
+
+      // Call deleteShip
+      ShipSheetsView.methods.deleteShip.call(vm, 10);
+      expect(vm.confirmModal.show).toBe(true);
+      expect(vm.confirmModal.message).toBe('Are you sure you want to delete this ship?');
+      expect(deleteCalled).toBe(false);
+
+      // Execute confirmation
+      vm.executeConfirmModal();
+      // Wait for async doDelete
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(deleteCalled).toBe(true);
+      expect(vm.ships.length).toBe(0);
+      expect(vm.confirmModal.show).toBe(false);
+    } finally {
+      global.fetch = origFetch;
+    }
   });
 });
 

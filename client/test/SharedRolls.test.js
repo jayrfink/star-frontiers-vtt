@@ -11,15 +11,15 @@ describe('Shared Rolls & Roll Log Integration', () => {
   it('RPG VTT registers socket listeners for roll:created and roll:cleared', () => {
     expect(rpgContent).toContain("socket.on('roll:created'");
     expect(rpgContent).toContain("socket.on('roll:cleared'");
-    expect(rpgContent).toContain("socket.off('roll:created')");
-    expect(rpgContent).toContain("socket.off('roll:cleared')");
+    expect(rpgContent).toContain("socket.off('roll:created', onSocketRollCreated)");
+    expect(rpgContent).toContain("socket.off('roll:cleared', onSocketRollCleared)");
   });
 
   it('Space VTT registers socket listeners for roll:created and roll:cleared', () => {
     expect(spaceContent).toContain("socket.on('roll:created'");
     expect(spaceContent).toContain("socket.on('roll:cleared'");
-    expect(spaceContent).toContain("socket.off('roll:created')");
-    expect(spaceContent).toContain("socket.off('roll:cleared')");
+    expect(spaceContent).toContain("socket.off('roll:created', onSocketRollCreated)");
+    expect(spaceContent).toContain("socket.off('roll:cleared', onSocketRollCleared)");
   });
 
   it('fetches roll history from /api/rolls on mount instead of relying solely on localStorage', () => {

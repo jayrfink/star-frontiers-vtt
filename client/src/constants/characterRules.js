@@ -53,11 +53,11 @@ export const SPACESHIP_SKILL_COSTS = {
 };
 
 export function calcIM(rs) {
-  return Math.ceil((rs || 50) / 10);
+  return Math.ceil((rs ?? 50) / 10);
 }
 
 export function calcPunchDamage(str) {
-  const val = str || 50;
+  const val = str ?? 50;
   if (val <= 20) return '1';
   if (val <= 40) return '2';
   if (val <= 60) return '3';
@@ -66,18 +66,18 @@ export function calcPunchDamage(str) {
 }
 
 export function calcMeleeHit(str, dex) {
-  return Math.max(Math.ceil((str || 50) / 2), Math.ceil((dex || 50) / 2));
+  return Math.max(Math.ceil((str ?? 50) / 2), Math.ceil((dex ?? 50) / 2));
 }
 
 export function calcMaxCarry(str) {
-  return str || 50; // kg
+  return str ?? 50; // kg
 }
 
 export function calcUnencumberedMax(str) {
-  return Math.floor((str || 50) / 2); // kg
+  return Math.ceil((str ?? 50) / 2); // kg
 }
 
-export function calcXPCost(skillName, nextLevel, charPSA) {
+export function calcXPCost(skillName, nextLevel, charPSA, skillPSA = null) {
   if (SPACESHIP_SKILL_COSTS[skillName]) {
     if (nextLevel >= 1 && nextLevel <= 6) {
       return SPACESHIP_SKILL_COSTS[skillName][nextLevel - 1];
@@ -85,7 +85,10 @@ export function calcXPCost(skillName, nextLevel, charPSA) {
     return 0;
   }
   const sk = OFFICIAL_SKILLS.find(s => s.name === skillName);
-  if (!sk) return nextLevel * 3;
+  if (!sk) {
+    const isOutOfPsa = Boolean(skillPSA && charPSA && skillPSA !== charPSA);
+    return isOutOfPsa ? nextLevel * 3 * 2 : nextLevel * 3;
+  }
   let baseMult = 3;
   if (sk.psa === 'Technological') baseMult = 4;
   if (sk.psa === 'Biosocial') baseMult = 5;

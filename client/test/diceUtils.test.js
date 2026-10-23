@@ -49,6 +49,21 @@ describe('calculateDamageRoll', () => {
 });
 
 describe('calculatePercentileRoll', () => {
+  it('correctly identifies tens and ones dice by theme name (Bug 3.5)', () => {
+    // Dice supplied in reverse order: ones first, then tens
+    const raw = [
+      { value: 3, theme: 'custom-ones' },
+      { value: 8, theme: 'custom-tens' }
+    ];
+    const result = calculatePercentileRoll(raw);
+    expect(result).toEqual({
+      total: 83,
+      tens: 8,
+      ones: 3,
+      valid: true
+    });
+  });
+
   it('calculates standard two-digit roll', () => {
     const raw = [
       { value: 4, themeColor: '#77d19e' },

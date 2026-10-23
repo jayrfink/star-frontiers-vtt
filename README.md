@@ -133,10 +133,10 @@ A full-stack, real-time multiplayer Virtual Tabletop (VTT) and digital character
 The test suite covers both frontend components and backend REST/Socket APIs:
 
 ```bash
-# Run server test suite (160+ tests)
+# Run server test suite (220+ tests)
 cd server && npm test
 
-# Run client test suite (330+ tests)
+# Run client test suite (430+ tests)
 cd client && npx vitest run
 ```
 

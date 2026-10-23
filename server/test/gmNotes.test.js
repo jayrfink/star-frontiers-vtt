@@ -91,4 +91,27 @@ describe('GM Notes API (/api/gm-notes)', () => {
     expect(deleteSessionRes.status).toBe(200);
     expect(deleteSessionRes.body.ok).toBe(true);
   });
+
+  it('does not coerce null title or null content to string "null"', async () => {
+    const sessionRes = await gmAgent.post('/api/gm-notes/sessions').send({ title: 'Null Test Session' });
+    const sessionId = sessionRes.body.id;
+
+    const panelRes = await gmAgent.post(`/api/gm-notes/sessions/${sessionId}/panels`).send({
+      title: 'Initial Title',
+      content: 'Initial Content',
+    });
+    const panelId = panelRes.body.id;
+
+    // Send null for title and null for content
+    const updateRes = await gmAgent.put(`/api/gm-notes/panels/${panelId}`).send({
+      title: null,
+      content: null,
+    });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.title).not.toBe('null');
+    expect(updateRes.body.title).toBe('Initial Title'); // keeps existing or fallback
+    expect(updateRes.body.content).not.toBe('null');
+    expect(updateRes.body.content).toBe(''); // cleared to empty string, never "null"
+  });
 });

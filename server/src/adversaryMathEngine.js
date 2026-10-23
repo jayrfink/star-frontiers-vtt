@@ -45,7 +45,7 @@ export function parseHpDelta(currentHp, maxHp, deltaStr) {
   if (raw.startsWith('-')) {
     const val = parseInt(raw.slice(1), 10);
     if (isNaN(val)) return cur;
-    return Math.min(max, Math.max(0, cur - val));
+    return Math.max(0, cur - val);
   }
 
   const direct = parseInt(raw, 10);
@@ -272,6 +272,10 @@ export function validateAdversaryTemplate(template) {
     return { valid: false, errors: ['Template must be an object'] };
   }
 
+  if (!template.template_id && template.id) {
+    template.template_id = template.id;
+  }
+
   const required = [
     'template_id',
     'name',
@@ -297,8 +301,11 @@ export function validateAdversaryTemplate(template) {
     errors.push(`Category must be 'npc' or 'creature'`);
   }
 
-  if (template.threat_tier && (template.threat_tier < 1 || template.threat_tier > 5)) {
-    errors.push(`Threat tier must be between 1 and 5`);
+  if (template.threat_tier !== undefined && template.threat_tier !== null) {
+    const tierNum = Number(template.threat_tier);
+    if (!Number.isInteger(tierNum) || tierNum < 1 || tierNum > 5) {
+      errors.push(`Threat tier must be between 1 and 5`);
+    }
   }
 
   if (template.actions && !Array.isArray(template.actions)) {

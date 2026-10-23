@@ -5,6 +5,7 @@ import path from 'path';
 import os from 'os';
 import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
+import { sanitizeUploadPath } from '../src/upload.js';
 
 describe('Upload API', () => {
   let db, app, server, io, tempUploadDir;
@@ -691,6 +692,205 @@ describe('Upload API', () => {
         oldUrl,
         newUrl,
       });
+    });
+  });
+
+  describe('Cascade Updates on Query-Busted Asset URLs (Bug 1.3)', () => {
+    it('renames file and cascades across tables containing query-busting parameters (?v=...)', async () => {
+      const gmAgent = request.agent(app);
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'gm_qb1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm_qb1', password: 'password123' });
+      const userId = regRes.body.id;
+
+      const subDir = path.join(tempUploadDir, 'tokens');
+      fs.mkdirSync(subDir, { recursive: true });
+      fs.writeFileSync(path.join(subDir, 'sathar_v1.png'), 'image content');
+
+      const oldBustedUrl = '/uploads/tokens/sathar_v1.png?v=1792169480777';
+      const newExpectedUrl = '/uploads/tokens/sathar_renamed.png?v=1792169480777';
+
+      db.prepare(`
+        INSERT INTO adversary_templates (id, name, category, threat_tier, token_image_path, hp_max)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('adv-qb-1', 'Sathar Trooper', 'npc', 2, oldBustedUrl, 60);
+
+      const mapRes = db.prepare('INSERT INTO maps (user_id, name, background_url) VALUES (?, ?, ?)').run(userId, 'Sathar Base', oldBustedUrl);
+      const tokenRes = db.prepare('INSERT INTO tokens (map_id, name, avatar_url) VALUES (?, ?, ?)').run(mapRes.lastInsertRowid, 'Sathar Token', oldBustedUrl);
+      db.prepare('INSERT INTO vehicle_templates (id, user_id, name, avatar_url) VALUES (?, ?, ?, ?)').run('veh-qb-1', userId, 'Hovertank', oldBustedUrl);
+
+      const res = await gmAgent
+        .put('/api/upload/rename')
+        .send({ oldPath: 'tokens/sathar_v1.png', newName: 'sathar_renamed.png' });
+
+      expect(res.status).toBe(200);
+
+      const adv = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-qb-1');
+      expect(adv.token_image_path).toBe(newExpectedUrl);
+
+      const token = db.prepare('SELECT avatar_url FROM tokens WHERE id = ?').get(tokenRes.lastInsertRowid);
+      expect(token.avatar_url).toBe(newExpectedUrl);
+
+      const veh = db.prepare('SELECT avatar_url FROM vehicle_templates WHERE id = ?').get('veh-qb-1');
+      expect(veh.avatar_url).toBe(newExpectedUrl);
+    });
+
+    it('deletes file and cascades clear across tables containing query-busting parameters (?v=...)', async () => {
+      const gmAgent = request.agent(app);
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'gm_qb2', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm_qb2', password: 'password123' });
+      const userId = regRes.body.id;
+
+      const subDir = path.join(tempUploadDir, 'tokens');
+      fs.mkdirSync(subDir, { recursive: true });
+      fs.writeFileSync(path.join(subDir, 'delete_me.png'), 'delete content');
+
+      const oldBustedUrl = '/uploads/tokens/delete_me.png?v=999999';
+
+      db.prepare(`
+        INSERT INTO adversary_templates (id, name, category, threat_tier, token_image_path, hp_max)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('adv-qb-2', 'Deleted Adv', 'npc', 1, oldBustedUrl, 30);
+
+      db.prepare('INSERT INTO vehicle_templates (id, user_id, name, avatar_url) VALUES (?, ?, ?, ?)').run('veh-qb-2', userId, 'Deleted Skimmer', oldBustedUrl);
+
+      const res = await gmAgent
+        .delete('/api/upload/file')
+        .query({ path: 'tokens/delete_me.png' });
+
+      expect(res.status).toBe(200);
+
+      const adv = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-qb-2');
+      expect(adv.token_image_path).toBe('');
+
+      const veh = db.prepare('SELECT avatar_url FROM vehicle_templates WHERE id = ?').get('veh-qb-2');
+      expect(veh.avatar_url).toBe('');
+    });
+
+    it('rejects malicious or invalid file uploads (.html, scriptable SVG, .js) and escapes LIKE wildcards', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'sec_tester', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'sec_tester', password: 'password123' });
+
+      // Reject .html file
+      const htmlRes = await agent
+        .post('/api/upload')
+        .attach('file', Buffer.from('<html><script>alert("xss")</script></html>'), 'xss.html');
+      expect(htmlRes.status).toBe(400);
+
+      // Reject .js file
+      const jsRes = await agent
+        .post('/api/upload')
+        .attach('file', Buffer.from('console.log("bad")'), 'payload.js');
+      expect(jsRes.status).toBe(400);
+
+      // Reject SVG containing <script>
+      const svgXssRes = await agent
+        .post('/api/upload')
+        .attach('file', Buffer.from('<svg><script>alert(1)</script></svg>'), 'evil.svg');
+      expect(svgXssRes.status).toBe(400);
+
+      // Reject SVG containing onload= handler
+      const svgOnloadRes = await agent
+        .post('/api/upload')
+        .attach('file', Buffer.from('<svg onload="alert(1)"></svg>'), 'onload.svg');
+      expect(svgOnloadRes.status).toBe(400);
+
+      // Clean SVG upload succeeds
+      const cleanSvgRes = await agent
+        .post('/api/upload')
+        .attach('file', Buffer.from('<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red" /></svg>'), 'clean.svg');
+      expect(cleanSvgRes.status).toBe(200);
+      expect(cleanSvgRes.body.url).toMatch(/\.svg$/);
+
+      // Test LIKE wildcard isolation: renaming "token_1.png" must NOT affect "token-1.png" or "tokenA1.png"
+      fs.writeFileSync(path.join(tempUploadDir, 'token_1.png'), 'target content');
+      fs.writeFileSync(path.join(tempUploadDir, 'token-1.png'), 'unrelated content');
+
+      db.prepare(`
+        INSERT INTO adversary_templates (id, name, category, threat_tier, token_image_path, hp_max)
+        VALUES ('adv-like-1', 'Target', 'npc', 1, '/uploads/token_1.png', 30),
+               ('adv-like-2', 'Unrelated', 'npc', 1, '/uploads/token-1.png', 30)
+      `).run();
+
+      const renameRes = await agent
+        .put('/api/upload/rename')
+        .send({ oldPath: 'token_1.png', newName: 'token_1_renamed.png' });
+      expect(renameRes.status).toBe(200);
+
+      const targetAdv = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-like-1');
+      const unrelatedAdv = db.prepare('SELECT token_image_path FROM adversary_templates WHERE id = ?').get('adv-like-2');
+      expect(targetAdv.token_image_path).toBe('/uploads/token_1_renamed.png');
+      expect(unrelatedAdv.token_image_path).toBe('/uploads/token-1.png'); // Unchanged!
+    });
+
+    it('enforces GM authorization on POST /api/upload (Player receives 403)', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmUser', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmUser', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'regularPlayer', password: 'password123', role: 'Player' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'regularPlayer', password: 'password123' });
+
+      const res = await playerAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from('player uploaded image'), 'player.png');
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('GameMaster');
+    });
+
+    it('sanitizeUploadPath strips query strings and hash fragments', () => {
+      expect(sanitizeUploadPath('/uploads/tokens/hero.png?v=12345')).toBe('tokens/hero.png');
+      expect(sanitizeUploadPath('/uploads/maps/grid.jpg?version=2#section')).toBe('maps/grid.jpg');
+      expect(sanitizeUploadPath('uploads/avatar.png#hash')).toBe('avatar.png');
+    });
+
+    it('rejects SVG files containing entity-encoded scripts, javascript: or data:text/html', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmSvg', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmSvg', password: 'password123' });
+
+      // Entity-encoded javascript: href
+      const encodedSvg = '<svg><a href="&#x6a;&#x61;vascript:alert(1)"><circle r="10"/></a></svg>';
+      const res1 = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(encodedSvg), 'encoded.svg');
+      expect(res1.status).toBe(400);
+
+      // SVG with data:text/html
+      const dataSvg = '<svg><image href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg=="/></svg>';
+      const res2 = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(dataSvg), 'data_html.svg');
+      expect(res2.status).toBe(400);
+
+      // SVG with numeric entity &#106;
+      const numericSvg = '<svg><a href="&#106;avascript:alert(1)"><circle r="10"/></a></svg>';
+      const res3 = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(numericSvg), 'numeric.svg');
+      expect(res3.status).toBe(400);
+
+      // Bug 17: SVG with <animate>
+      const animateSvg = '<svg><rect width="10"><animate attributeName="x" from="0" to="10" /></rect></svg>';
+      const resAnimate = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(animateSvg), 'animate.svg');
+      expect(resAnimate.status).toBe(400);
+
+      // Bug 17: SVG with <set>
+      const setSvg = '<svg><rect><set attributeName="fill" to="red" /></rect></svg>';
+      const resSet = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(setSvg), 'set.svg');
+      expect(resSet.status).toBe(400);
+
+      // Bug 17: SVG with <!ENTITY
+      const entitySvg = '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY xxe "hello">]><svg>&xxe;</svg>';
+      const resEntity = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(entitySvg), 'entity.svg');
+      expect(resEntity.status).toBe(400);
     });
   });
 });

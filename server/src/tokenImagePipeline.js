@@ -16,6 +16,15 @@ export function getTierRingColor(tier) {
   return map[tier] || '#95a5a6';
 }
 
+function escapeXml(str) {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 /**
  * Generates an SVG string for a circular masked sci-fi token with a Threat Tier border ring
  */
@@ -24,13 +33,14 @@ function buildTokenSvg({ label, threatTier, category, size, ringColor }) {
   const strokeWidth = Math.max(4, Math.round(size * 0.035));
   const innerRadius = radius - strokeWidth - 2;
 
-  const initials = (label || 'ADV')
+  const initialsRaw = (label || 'ADV')
     .split(' ')
     .filter(Boolean)
     .map((w) => w[0])
     .slice(0, 2)
     .join('')
     .toUpperCase();
+  const initials = escapeXml(initialsRaw);
 
   // Distinct category icon glyph
   const categoryIcon = category === 'creature' ? '🐾' : '👤';

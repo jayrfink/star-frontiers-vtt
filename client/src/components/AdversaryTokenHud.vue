@@ -33,11 +33,11 @@
               class="tracker-input"
               :value="token.current_hp"
               @change="onHpCommit($event.target.value)"
-              @keyup.enter="onHpCommit($event.target.value)"
+              @keyup.enter="$event.target.blur()"
               placeholder="HP"
             />
             <span class="tracker-slash">/</span>
-            <span class="tracker-max">{{ token.max_hp }}</span>
+            <span class="tracker-max">{{ maxHp }}</span>
 
             <!-- Quick Delta Chips -->
             <div class="quick-chips">
@@ -182,6 +182,9 @@ export default {
       const tier = this.template?.threat_tier || 1;
       return this.getTierColor(tier);
     },
+    maxHp() {
+      return this.token?.max_hp ?? this.token?.template?.hp_max ?? 50;
+    },
     hasSeuPool() {
       return (
         this.token?.seu_current !== null &&
@@ -226,7 +229,15 @@ export default {
       return Math.min(max, Math.max(0, direct));
     },
     toggleConditionItem(existingList, conditionName) {
-      const list = Array.isArray(existingList) ? [...existingList] : [];
+      let list = existingList;
+      if (typeof list === 'string') {
+        try {
+          list = JSON.parse(list);
+        } catch {
+          list = [];
+        }
+      }
+      list = Array.isArray(list) ? [...list] : [];
       const idx = list.indexOf(conditionName);
       if (idx !== -1) {
         list.splice(idx, 1);
@@ -237,7 +248,7 @@ export default {
     },
     onHpCommit(val) {
       if (!this.token) return;
-      const nextHp = this.calculateNewHp(this.token.current_hp, this.token.max_hp, val);
+      const nextHp = this.calculateNewHp(this.token.current_hp, this.maxHp, val);
       this.$emit('update:token', {
         ...this.token,
         current_hp: nextHp,
@@ -246,7 +257,7 @@ export default {
     applyDelta(delta) {
       if (!this.token) return;
       const prefix = delta >= 0 ? `+${delta}` : `${delta}`;
-      const nextHp = this.calculateNewHp(this.token.current_hp, this.token.max_hp, prefix);
+      const nextHp = this.calculateNewHp(this.token.current_hp, this.maxHp, prefix);
       this.$emit('update:token', {
         ...this.token,
         current_hp: nextHp,
@@ -270,7 +281,15 @@ export default {
       });
     },
     isConditionActive(name) {
-      return Array.isArray(this.token?.conditions) && this.token.conditions.includes(name);
+      let conditions = this.token?.conditions;
+      if (typeof conditions === 'string') {
+        try {
+          conditions = JSON.parse(conditions);
+        } catch {
+          conditions = [];
+        }
+      }
+      return Array.isArray(conditions) && conditions.includes(name);
     },
     toggleCondition(name) {
       if (!this.token) return;

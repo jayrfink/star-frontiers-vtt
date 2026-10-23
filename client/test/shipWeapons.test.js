@@ -43,6 +43,11 @@ describe('Knight Hawks Ship Weapons Catalog', () => {
     expect(sm.damage).toBe('5d10');
     expect(sm.range).toBe(99);
     expect(sm.ammo_max).toBe(1);
+
+    const mines = SHIP_WEAPONS_CATALOG.find((w) => w.name === 'Mines');
+    expect(mines.damage).toBe('3d10+5');
+    expect(mines.range).toBe(0);
+    expect(mines.ammo_max).toBe(2);
   });
 
   it('createWeaponInstance creates a ready-to-equip ship weapon object', () => {

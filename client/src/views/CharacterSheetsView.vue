@@ -29,6 +29,12 @@
 
     <!-- Main Content Area -->
     <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="onScrollSave">
+      <!-- Error Feedback Banner (Bug 29) -->
+      <div v-if="errorMessage" class="error-banner">
+        <span>⚠️ {{ errorMessage }}</span>
+        <button type="button" class="btn-dismiss-error" @click="errorMessage = ''">✕</button>
+      </div>
+
       <div v-if="!selectedChar" class="no-selection">
         <div class="stub-icon">📋</div>
         <h2>Select or Create a Character</h2>
@@ -121,7 +127,7 @@
               <input
                 type="number"
                 v-model.number="selectedChar.max_stamina"
-                @change="updateCharacter"
+                @change="onMaxStaminaChange"
                 class="input-max-sta"
                 min="1"
               /> Max STA
@@ -161,8 +167,8 @@
                   />
                 </div>
                 <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to STA" @click="shiftStat('str', 'sta', -1)">◄</button>
-                  <button class="btn-shift" title="Shift point to STR" @click="shiftStat('str', 'sta', 1)">►</button>
+                  <button class="btn-shift" title="Shift point to STR" @click="shiftStat('str', 'sta', 1)">◄</button>
+                  <button class="btn-shift" title="Shift point to STA" @click="shiftStat('str', 'sta', -1)">►</button>
                 </div>
                 <div class="sub-stat">
                   <label>STA</label>
@@ -194,8 +200,8 @@
                   />
                 </div>
                 <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to RS" @click="shiftStat('dex', 'rs', -1)">◄</button>
-                  <button class="btn-shift" title="Shift point to DEX" @click="shiftStat('dex', 'rs', 1)">►</button>
+                  <button class="btn-shift" title="Shift point to DEX" @click="shiftStat('dex', 'rs', 1)">◄</button>
+                  <button class="btn-shift" title="Shift point to RS" @click="shiftStat('dex', 'rs', -1)">►</button>
                 </div>
                 <div class="sub-stat">
                   <label>RS</label>
@@ -227,8 +233,8 @@
                   />
                 </div>
                 <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to LOG" @click="shiftStat('int', 'log', -1)">◄</button>
-                  <button class="btn-shift" title="Shift point to INT" @click="shiftStat('int', 'log', 1)">►</button>
+                  <button class="btn-shift" title="Shift point to INT" @click="shiftStat('int', 'log', 1)">◄</button>
+                  <button class="btn-shift" title="Shift point to LOG" @click="shiftStat('int', 'log', -1)">►</button>
                 </div>
                 <div class="sub-stat">
                   <label>LOG</label>
@@ -260,8 +266,8 @@
                   />
                 </div>
                 <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to LDR" @click="shiftStat('per', 'ldr', -1)">◄</button>
-                  <button class="btn-shift" title="Shift point to PER" @click="shiftStat('per', 'ldr', 1)">►</button>
+                  <button class="btn-shift" title="Shift point to PER" @click="shiftStat('per', 'ldr', 1)">◄</button>
+                  <button class="btn-shift" title="Shift point to LDR" @click="shiftStat('per', 'ldr', -1)">►</button>
                 </div>
                 <div class="sub-stat">
                   <label>LDR</label>
@@ -341,7 +347,7 @@
                     :title="`Upgrade to Level ${skill.level + 1}`"
                     @click="upgradeSkillLevel(index)"
                   >
-                    +Lvl ({{ getXPCost(skill.name, skill.level + 1) }} XP)
+                    +Lvl ({{ getXPCost(skill.name, skill.level + 1, skill.psa) }} XP)
                   </button>
                 </div>
                 <button class="btn-remove" @click="removeSkill(index)">✕</button>
@@ -608,6 +614,7 @@ export default {
       selectedChar: null,
       loading: true,
       creating: false,
+      errorMessage: '',
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'char',
@@ -703,8 +710,8 @@ export default {
       }, 0);
     },
     encumbrancePct() {
-      if (!this.unencumberedMaxWeight) return 0;
-      return Math.min(100, Math.round((this.totalInventoryWeight / this.unencumberedMaxWeight) * 100));
+      if (!this.maxCarryWeight) return 0;
+      return Math.min(100, Math.round((this.totalInventoryWeight / this.maxCarryWeight) * 100));
     },
     encumbranceColor() {
       if (this.totalInventoryWeight > this.maxCarryWeight) return '#f44336';
@@ -741,7 +748,7 @@ export default {
     },
     dralasiteLimbsLimit() {
       if (!this.selectedChar) return 5;
-      return Math.floor((this.selectedChar.dex || 50) / 10);
+      return Math.floor((this.selectedChar.dex ?? 50) / 10);
     },
     lieDetectionChance() {
       return 5;
@@ -914,27 +921,50 @@ export default {
     async createCharacter() {
       if (!this.newCharForm.name.trim()) return;
       this.creating = true;
+      this.errorMessage = '';
       try {
         const effectiveRace = this.newCharForm.race === 'Custom'
           ? (this.newCharForm.customRaceName?.trim() || 'Custom')
           : this.newCharForm.race;
+        const raceMods = RACES_DATA[this.newCharForm.race]?.modifiers || RACES_DATA[effectiveRace]?.modifiers || {
+          str: 0, sta: 0, dex: 0, rs: 0, int: 0, log: 0, per: 0, ldr: 0
+        };
+
+        const rawStr = this.newCharForm.str ?? this.newCharForm.str_sta ?? 50;
+        const rawSta = this.newCharForm.sta ?? this.newCharForm.str_sta ?? 50;
+        const rawDex = this.newCharForm.dex ?? this.newCharForm.dex_rs ?? 50;
+        const rawRs = this.newCharForm.rs ?? this.newCharForm.dex_rs ?? 50;
+        const rawInt = this.newCharForm.int ?? this.newCharForm.int_stat ?? this.newCharForm.int_log ?? 50;
+        const rawLog = this.newCharForm.log ?? this.newCharForm.log_stat ?? this.newCharForm.int_log ?? 50;
+        const rawPer = this.newCharForm.per ?? this.newCharForm.per_ldr ?? 50;
+        const rawLdr = this.newCharForm.ldr ?? this.newCharForm.per_ldr ?? 50;
+
+        const finalStr = rawStr + (raceMods.str ?? 0);
+        const finalSta = rawSta + (raceMods.sta ?? 0);
+        const finalDex = rawDex + (raceMods.dex ?? 0);
+        const finalRs = rawRs + (raceMods.rs ?? 0);
+        const finalInt = rawInt + (raceMods.int ?? 0);
+        const finalLog = rawLog + (raceMods.log ?? 0);
+        const finalPer = rawPer + (raceMods.per ?? 0);
+        const finalLdr = rawLdr + (raceMods.ldr ?? 0);
+
         const payload = {
           ...this.newCharForm,
           race: effectiveRace,
           avatar_url: this.newCharForm.avatar_url || '',
-          str: this.newCharForm.str_sta,
-          sta: this.newCharForm.max_stamina ?? this.newCharForm.str_sta,
-          current_sta: this.newCharForm.current_stamina ?? this.newCharForm.str_sta,
-          dex: this.newCharForm.dex_rs,
-          rs: this.newCharForm.dex_rs,
-          int: this.newCharForm.int_log,
-          log: this.newCharForm.int_log,
-          int_stat: this.newCharForm.int_log,
-          log_stat: this.newCharForm.int_log,
-          per: this.newCharForm.per_ldr,
-          ldr: this.newCharForm.per_ldr,
-          max_stamina: this.newCharForm.max_stamina ?? this.newCharForm.str_sta,
-          current_stamina: this.newCharForm.current_stamina ?? this.newCharForm.str_sta,
+          str: finalStr,
+          sta: finalSta,
+          current_sta: finalSta,
+          dex: finalDex,
+          rs: finalRs,
+          int: finalInt,
+          log: finalLog,
+          int_stat: finalInt,
+          log_stat: finalLog,
+          per: finalPer,
+          ldr: finalLdr,
+          max_stamina: finalSta,
+          current_stamina: finalSta,
           skills: [],
           inventory: [],
         };
@@ -956,18 +986,23 @@ export default {
             const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
             saveUserState(uid, 'characterSheets', { selectedCharId: this.selectedChar.id });
           }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          this.errorMessage = errData.error || `Failed to create character (HTTP ${res.status})`;
         }
       } catch (err) {
         console.error('Error creating character:', err);
+        this.errorMessage = err.message || 'Error creating character';
       } finally {
         this.creating = false;
       }
     },
     async updateCharacter() {
       if (!this.selectedChar || !this.selectedChar.id) return;
+      this.errorMessage = '';
       try {
-        if (this.selectedChar.sta !== undefined) {
-          this.selectedChar.max_stamina = this.selectedChar.sta;
+        if (this.selectedChar.max_stamina !== undefined) {
+          this.selectedChar.sta = this.selectedChar.max_stamina;
         }
         const payload = {
           ...this.selectedChar,
@@ -989,10 +1024,27 @@ export default {
           if (idx !== -1) {
             this.characters[idx] = { ...updated };
           }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          this.errorMessage = errData.error || `Failed to update character (HTTP ${res.status})`;
         }
       } catch (err) {
         console.error('Error updating character:', err);
+        this.errorMessage = err.message || 'Error updating character';
       }
+    },
+    onMaxStaminaChange() {
+      if (!this.selectedChar) return;
+      if (this.selectedChar.max_stamina !== undefined) {
+        if (this.selectedChar.max_stamina < 1) {
+          this.selectedChar.max_stamina = 1;
+        }
+        this.selectedChar.sta = this.selectedChar.max_stamina;
+        if ((this.selectedChar.current_stamina || 0) > this.selectedChar.max_stamina) {
+          this.selectedChar.current_stamina = this.selectedChar.max_stamina;
+        }
+      }
+      this.updateCharacter();
     },
     shiftStat(statA, statB, amount) {
       if (!this.selectedChar) return;
@@ -1003,6 +1055,9 @@ export default {
       this.selectedChar[statB] = newB;
       if (statA === 'sta') this.selectedChar.max_stamina = newA;
       if (statB === 'sta') this.selectedChar.max_stamina = newB;
+      if (this.selectedChar.current_stamina > this.selectedChar.max_stamina) {
+        this.selectedChar.current_stamina = this.selectedChar.max_stamina;
+      }
       this.updateCharacter();
     },
     onStatChange(statName) {
@@ -1020,6 +1075,7 @@ export default {
     },
     async deleteCharacter(id) {
       if (!confirm('Are you sure you want to delete this character?')) return;
+      this.errorMessage = '';
       try {
         const res = await fetch(`/api/characters/${id}`, {
           method: 'DELETE',
@@ -1030,9 +1086,13 @@ export default {
           if (this.selectedChar && this.selectedChar.id === id) {
             this.selectedChar = this.characters.length > 0 ? JSON.parse(JSON.stringify(this.characters[0])) : null;
           }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          this.errorMessage = errData.error || `Failed to delete character (HTTP ${res.status})`;
         }
       } catch (err) {
         console.error('Error deleting character:', err);
+        this.errorMessage = err.message || 'Error deleting character';
       }
     },
     addSkill() {
@@ -1052,23 +1112,37 @@ export default {
         this.updateCharacter();
       }
     },
-    getXPCost(skillName, targetLevel) {
+    getXPCost(skillName, targetLevel, skillPSA = null) {
       const charPSA = this.selectedChar ? this.selectedChar.psa || 'Military' : 'Military';
-      return calcXPCost(skillName, targetLevel, charPSA);
+      return calcXPCost(skillName, targetLevel, charPSA, skillPSA);
     },
     getSkillSuccessChance(skill) {
-      if (!this.selectedChar) return 0;
+      if (!this.selectedChar || !skill) return 0;
       const offSk = OFFICIAL_SKILLS.find((s) => s.name === skill.name);
       let baseVal = 50;
       if (offSk) {
-        if (offSk.baseChance === 'Dexterity') baseVal = this.selectedChar.dex || 50;
-        else if (offSk.baseChance === 'Reaction Speed') baseVal = this.selectedChar.rs || 50;
-        else if (offSk.baseChance === 'Logic') baseVal = this.selectedChar.log || 50;
-        else if (offSk.baseChance === 'Intuition') baseVal = this.selectedChar.int || 50;
-        else if (offSk.baseChance === 'Personality') baseVal = this.selectedChar.per || 50;
-        else if (offSk.baseChance.includes('Melee Base')) baseVal = this.derivedMeleeHit;
+        const isSpaceship = offSk.psa === 'Spaceship' || ['Piloting', 'Astrogation', 'Engineering', 'Gunnery'].includes(offSk.name);
+        if (offSk.baseChance === 'Dexterity') {
+          const stat = this.selectedChar.dex ?? 50;
+          baseVal = isSpaceship ? stat : Math.ceil(stat / 2);
+        } else if (offSk.baseChance === 'Reaction Speed') {
+          const stat = this.selectedChar.rs ?? 50;
+          baseVal = isSpaceship ? stat : Math.ceil(stat / 2);
+        } else if (offSk.baseChance === 'Logic') {
+          const stat = this.selectedChar.log ?? 50;
+          baseVal = isSpaceship ? stat : Math.ceil(stat / 2);
+        } else if (offSk.baseChance === 'Intuition') {
+          const stat = this.selectedChar.int ?? 50;
+          baseVal = isSpaceship ? stat : Math.ceil(stat / 2);
+        } else if (offSk.baseChance === 'Personality') {
+          const stat = this.selectedChar.per ?? 50;
+          baseVal = isSpaceship ? stat : Math.ceil(stat / 2);
+        } else if (offSk.baseChance.includes('Melee Base')) {
+          baseVal = this.derivedMeleeHit;
+        }
       }
-      const lvlBonus = (skill.level || 1) * 10;
+      const lvl = (typeof skill.level === 'number' && skill.level > 0) ? skill.level : 0;
+      const lvlBonus = lvl * 10;
       return baseVal + lvlBonus;
     },
     async uploadAvatar(e) {
@@ -2364,5 +2438,31 @@ export default {
 .notes-textarea:focus {
   outline: none;
   border-color: #4fc3f7;
+}
+
+.error-banner {
+  background-color: rgba(220, 53, 69, 0.2);
+  border: 1px solid #dc3545;
+  color: #ff8591;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+}
+
+.btn-dismiss-error {
+  background: transparent;
+  border: none;
+  color: #ff8591;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 0.25rem;
+}
+
+.btn-dismiss-error:hover {
+  color: #fff;
 }
 </style>

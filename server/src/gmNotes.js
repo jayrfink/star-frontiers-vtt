@@ -11,16 +11,19 @@ export function createGmNotesRouter(db) {
       let sessions = db.prepare('SELECT * FROM gm_sessions ORDER BY id ASC').all();
       if (sessions.length === 0) {
         const userId = req.session.userId ?? req.session.user?.id;
-        const info = db
-          .prepare('INSERT INTO gm_sessions (user_id, title) VALUES (?, ?)')
-          .run(userId, 'Session 1');
-        const sessionId = info.lastInsertRowid;
+        const seedSessionTx = db.transaction(() => {
+          const info = db
+            .prepare('INSERT INTO gm_sessions (user_id, title) VALUES (?, ?)')
+            .run(userId, 'Session 1');
+          const sessionId = info.lastInsertRowid;
 
-        const insertPanel = db.prepare(
-          'INSERT INTO gm_note_panels (session_id, title, content, sort_order) VALUES (?, ?, ?, ?)'
-        );
-        insertPanel.run(sessionId, 'Introduction', '', 0);
-        insertPanel.run(sessionId, 'Part 1', '', 1);
+          const insertPanel = db.prepare(
+            'INSERT INTO gm_note_panels (session_id, title, content, sort_order) VALUES (?, ?, ?, ?)'
+          );
+          insertPanel.run(sessionId, 'Introduction', '', 0);
+          insertPanel.run(sessionId, 'Part 1', '', 1);
+        });
+        seedSessionTx();
 
         sessions = db.prepare('SELECT * FROM gm_sessions ORDER BY id ASC').all();
       }
@@ -38,14 +41,20 @@ export function createGmNotesRouter(db) {
       const rawTitle = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
       const title = rawTitle || 'New Session';
 
-      const info = db
-        .prepare('INSERT INTO gm_sessions (user_id, title) VALUES (?, ?)')
-        .run(userId, title);
-      const sessionId = info.lastInsertRowid;
+      const createSessionTx = db.transaction(() => {
+        const info = db
+          .prepare('INSERT INTO gm_sessions (user_id, title) VALUES (?, ?)')
+          .run(userId, title);
+        const sessionId = info.lastInsertRowid;
 
-      db.prepare(
-        'INSERT INTO gm_note_panels (session_id, title, content, sort_order) VALUES (?, ?, ?, ?)'
-      ).run(sessionId, 'Introduction', '', 0);
+        db.prepare(
+          'INSERT INTO gm_note_panels (session_id, title, content, sort_order) VALUES (?, ?, ?, ?)'
+        ).run(sessionId, 'Introduction', '', 0);
+
+        return sessionId;
+      });
+
+      const sessionId = createSessionTx();
 
       const created = db.prepare('SELECT * FROM gm_sessions WHERE id = ?').get(sessionId);
       res.status(201).json(created);
@@ -149,10 +158,14 @@ export function createGmNotesRouter(db) {
         return res.status(404).json({ error: 'Note panel not found' });
       }
       const rawTitle =
-        req.body?.title !== undefined ? String(req.body.title).trim() : existing.title;
+        req.body?.title !== undefined && req.body?.title !== null
+          ? String(req.body.title).trim()
+          : existing.title;
       const title = rawTitle || existing.title;
       const content =
-        req.body?.content !== undefined ? String(req.body.content) : existing.content;
+        req.body?.content !== undefined
+          ? (req.body.content === null ? '' : String(req.body.content))
+          : existing.content;
 
       db.prepare(
         'UPDATE gm_note_panels SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'

@@ -129,6 +129,7 @@ const panels = ref([]);
 const loadingSessions = ref(false);
 const loadingPanels = ref(false);
 const savingPanelId = ref(null);
+let currentFetchSessionId = null;
 
 const panelPresets = ['Introduction', 'Part 1', 'Part 2', 'Readout', 'Adversaries'];
 
@@ -148,6 +149,7 @@ async function fetchSessions() {
     if (res.ok) {
       const data = await res.json();
       sessions.value = data || [];
+      loadingSessions.value = false;
       if (sessions.value.length > 0) {
         const savedId = getSavedSessionId();
         const found = sessions.value.find((s) => s.id === savedId) || sessions.value[0];
@@ -169,18 +171,28 @@ async function selectSession(sess) {
   persistSelectedSessionId(sess?.id ?? null);
   if (!sess) {
     panels.value = [];
+    currentFetchSessionId = null;
     return;
   }
+  const sessionId = sess.id;
+  currentFetchSessionId = sessionId;
   loadingPanels.value = true;
   try {
-    const res = await fetch(`/api/gm-notes/sessions/${sess.id}/panels`, { credentials: 'include' });
+    const res = await fetch(`/api/gm-notes/sessions/${sessionId}/panels`, { credentials: 'include' });
     if (res.ok) {
-      panels.value = await res.json();
+      const data = await res.json();
+      if (currentFetchSessionId === sessionId && selectedSession.value?.id === sessionId) {
+        panels.value = data || [];
+      }
     }
   } catch (err) {
-    console.error('Failed to load session note panels:', err);
+    if (currentFetchSessionId === sessionId) {
+      console.error('Failed to load session note panels:', err);
+    }
   } finally {
-    loadingPanels.value = false;
+    if (currentFetchSessionId === sessionId) {
+      loadingPanels.value = false;
+    }
   }
 }
 
@@ -357,7 +369,7 @@ onMounted(() => {
 }
 
 .session-list {
-  list-style: border-box;
+  box-sizing: border-box;
   list-style: none;
   margin: 0;
   padding: 8px;

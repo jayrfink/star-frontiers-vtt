@@ -47,9 +47,10 @@ describe('Adversary Math Engine & Validator', () => {
       expect(parseHpDelta(20, 60, '60')).toBe(60);
     });
 
-    it('subtracts delta with negative prefix', () => {
+    it('subtracts delta with negative prefix without capping temporary HP at maxHp', () => {
       expect(parseHpDelta(50, 60, '-12')).toBe(38);
       expect(parseHpDelta(15, 60, '-20')).toBe(0); // floored at 0
+      expect(parseHpDelta(70, 60, '-5')).toBe(65); // temporary HP preserved
     });
 
     it('adds delta with positive prefix', () => {
@@ -137,6 +138,13 @@ describe('Adversary Math Engine & Validator', () => {
       const result = validateAdversaryTemplate(invalid);
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
+    });
+
+    it('rejects threat_tier = 0 in AdversaryTemplate', () => {
+      const valid = generateNpcStats(2, { name: 'Test NPC' });
+      const result = validateAdversaryTemplate({ ...valid, threat_tier: 0 });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Threat tier must be between 1 and 5');
     });
 
     it('validates TokenInstance successfully', () => {

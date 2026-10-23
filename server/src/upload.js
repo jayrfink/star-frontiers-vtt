@@ -9,6 +9,41 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_UPLOADS_DIR = path.resolve(__dirname, '../../data/uploads');
 const VALID_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
 
+const ASSET_TABLE_COLUMNS = [
+  ['adversary_templates', 'token_image_path'],
+  ['tokens', 'avatar_url'],
+  ['maps', 'background_url'],
+  ['character_sheets', 'avatar_url'],
+  ['ship_sheets', 'avatar_url'],
+  ['vehicle_templates', 'avatar_url'],
+];
+
+function escapeLike(str) {
+  return (str || '').replace(/([%_\\])/g, '\\$1');
+}
+
+function cascadeUpdateAssetUrl(db, newUrl, oldUrl) {
+  const escapedOld = escapeLike(oldUrl);
+  for (const [table, col] of ASSET_TABLE_COLUMNS) {
+    db.prepare(`
+      UPDATE ${table}
+      SET ${col} = ? || substr(${col}, length(?) + 1)
+      WHERE ${col} = ? OR ${col} LIKE (? || '?%') ESCAPE '\\'
+    `).run(newUrl, oldUrl, oldUrl, escapedOld);
+  }
+}
+
+function cascadeClearAssetUrl(db, targetUrl) {
+  const escapedTarget = escapeLike(targetUrl);
+  for (const [table, col] of ASSET_TABLE_COLUMNS) {
+    db.prepare(`
+      UPDATE ${table}
+      SET ${col} = ''
+      WHERE ${col} = ? OR ${col} LIKE (? || '?%') ESCAPE '\\'
+    `).run(targetUrl, escapedTarget);
+  }
+}
+
 export function sanitizeFolder(folder) {
   if (!folder || typeof folder !== 'string') return '';
   const trimmed = folder.trim().replace(/\\/g, '/');
@@ -23,7 +58,8 @@ export function sanitizeFolder(folder) {
 
 export function sanitizeUploadPath(inputPath) {
   if (!inputPath || typeof inputPath !== 'string') return null;
-  let clean = inputPath.trim().replace(/\\/g, '/');
+  const cleanPath = inputPath.split('?')[0].split('#')[0];
+  let clean = cleanPath.trim().replace(/\\/g, '/');
   if (clean.startsWith('/uploads/')) {
     clean = clean.slice('/uploads/'.length);
   } else if (clean.startsWith('uploads/')) {
@@ -147,6 +183,13 @@ export function createUploadRouter(customUploadDir, db, io) {
   const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (!VALID_IMAGE_EXTENSIONS.has(ext)) {
+        return cb(new Error(`Invalid file type: ${ext}. Only image files (${Array.from(VALID_IMAGE_EXTENSIONS).join(', ')}) are allowed.`));
+      }
+      cb(null, true);
+    },
   });
 
   const router = Router();
@@ -161,14 +204,42 @@ export function createUploadRouter(customUploadDir, db, io) {
     }
   });
 
-  router.post('/', (req, res) => {
-    upload.any()(req, res, (err) => {
+  router.post('/', gmGuard, (req, res) => {
+    upload.single('file')(req, res, (err) => {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
-      const file = (req.files && req.files[0]) || req.file;
+      const file = req.file;
       if (!file) {
         return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      if (path.extname(file.path).toLowerCase() === '.svg') {
+        try {
+          const content = fs.readFileSync(file.path, 'utf8');
+          const decoded = content
+            .replace(/&#(\d+);?/g, (_, dec) => String.fromCharCode(dec))
+            .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+          
+          const dangerousPatterns = [
+            /<\s*(script|animate|set)\b/i,
+            /<!ENTITY\b/i,
+            /\bon\w+\s*=/i,
+            /javascript\s*:/i,
+            /data\s*:/i,
+            /&#/
+          ];
+
+          const isMalicious = dangerousPatterns.some(pat => pat.test(content) || pat.test(decoded));
+
+          if (isMalicious) {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            return res.status(400).json({ error: 'SVG contains malicious scripts or event handlers' });
+          }
+        } catch {
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+          return res.status(400).json({ error: 'Failed to process SVG file' });
+        }
       }
 
       try {
@@ -257,11 +328,7 @@ export function createUploadRouter(customUploadDir, db, io) {
 
       if (db) {
         const cascadeRename = db.transaction((toUrl, fromUrl) => {
-          db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE maps SET background_url = ? WHERE background_url = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE character_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE ship_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          cascadeUpdateAssetUrl(db, toUrl, fromUrl);
         });
         cascadeRename(newUrl, oldUrl);
       }
@@ -333,11 +400,7 @@ export function createUploadRouter(customUploadDir, db, io) {
 
       if (db) {
         const cascadeMove = db.transaction((toUrl, fromUrl) => {
-          db.prepare('UPDATE adversary_templates SET token_image_path = ? WHERE token_image_path = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE tokens SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE maps SET background_url = ? WHERE background_url = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE character_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
-          db.prepare('UPDATE ship_sheets SET avatar_url = ? WHERE avatar_url = ?').run(toUrl, fromUrl);
+          cascadeUpdateAssetUrl(db, toUrl, fromUrl);
         });
         cascadeMove(newUrl, oldUrl);
       }
@@ -454,11 +517,7 @@ export function createUploadRouter(customUploadDir, db, io) {
 
       if (db) {
         const cascadeDelete = db.transaction((toClear) => {
-          db.prepare("UPDATE adversary_templates SET token_image_path = '' WHERE token_image_path = ?").run(toClear);
-          db.prepare("UPDATE tokens SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
-          db.prepare("UPDATE maps SET background_url = '' WHERE background_url = ?").run(toClear);
-          db.prepare("UPDATE character_sheets SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
-          db.prepare("UPDATE ship_sheets SET avatar_url = '' WHERE avatar_url = ?").run(toClear);
+          cascadeClearAssetUrl(db, toClear);
         });
         cascadeDelete(targetUrl);
       }

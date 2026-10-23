@@ -54,4 +54,22 @@ describe('Rulebooks API', () => {
     const res = await agent.get('/api/rulebooks/pdf/invalid-book');
     expect(res.status).toBe(404);
   });
+
+  it('Bug 28: legacy page endpoints return clean responses without crashing', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/register').send({ username: 'gmLegacy', password: 'password123' });
+    await agent.post('/api/auth/login').send({ username: 'gmLegacy', password: 'password123' });
+
+    // Requesting nonexistent page ID returns 404 cleanly
+    const resPageNotFound = await agent.get('/api/rulebooks/page/nonexistent-id');
+    expect(resPageNotFound.status).toBe(404);
+
+    // Requesting valid book returns 200 or 404 without unhandled rejection
+    const resBook = await agent.get('/api/rulebooks/ad-basic');
+    expect([200, 404]).toContain(resBook.status);
+
+    // Requesting page by book and number
+    const resBookPage = await agent.get('/api/rulebooks/ad-basic/page/99999');
+    expect(resBookPage.status).toBe(404);
+  });
 });

@@ -29,6 +29,12 @@
 
     <!-- Main Content Area -->
     <main ref="mainScroll" class="sheet-main sheet-detail" @scroll="onScrollSave">
+      <!-- Error Feedback Banner (Bug 29) -->
+      <div v-if="errorMessage" class="error-banner">
+        <span>⚠️ {{ errorMessage }}</span>
+        <button type="button" class="btn-dismiss-error" @click="errorMessage = ''">✕</button>
+      </div>
+
       <div v-if="!selectedShip" class="no-selection">
         <div class="stub-icon">🛸</div>
         <h2>Select or Create a Knight Hawks Ship</h2>
@@ -69,7 +75,7 @@
           <div class="hull-header">
             <h4>Hull Points (HP)</h4>
             <div class="hull-values">
-              <span class="current">{{ selectedShip.current_hull_points }}</span> / 
+              <span class="current">{{ selectedShip.current_hull_points ?? selectedShip.current_hp ?? 0 }}</span> / 
               <input
                 type="number"
                 v-model.number="selectedShip.max_hull_points"
@@ -271,8 +277,7 @@
                         type="text"
                         v-model="wpn.name"
                         @blur="stopEditWeapon(wpn)"
-                        @keyup.enter="stopEditWeapon(wpn)"
-                        @change="onWeaponNameChange(wpn)"
+                        @keyup.enter="$event.target.blur()"
                         class="weapon-title-input"
                         :placeholder="wpn.type || 'Weapon Name'"
                         ref="weaponRenameInput"
@@ -346,7 +351,7 @@
                     />
                     <span class="range-unit">hex</span>
                   </div>
-                  <div class="detail-field ammo-field" v-if="wpn.ammo_max > 0 || wpn.ammo_current > 0">
+                  <div class="detail-field ammo-field" v-if="isLimitedAmmoWeapon(wpn)">
                     <label>Ammo:</label>
                     <input
                       type="number"
@@ -520,7 +525,7 @@
                 <span class="stat-pill dmg">💥 {{ weapon.damage }}</span>
                 <span class="stat-pill rng">🎯 {{ weapon.range }} hexes</span>
                 <span class="stat-pill ammo">
-                  {{ weapon.ammo_max > 0 ? `🔋 Ammo: ${weapon.ammo_max}` : '♾️ Unlimited' }}
+                  {{ weapon.ammo_max > 0 ? `🔋 Ammo: ${weapon.ammo_max}` : (weapon.category === 'Ordnance' || (weapon.restrictions && weapon.restrictions.includes('LTD')) ? '🔋 Ammo: 0' : '♾️ Unlimited') }}
                 </span>
               </div>
               <div v-if="weapon.restrictions && weapon.restrictions.length > 0" class="weapon-picker-restrictions">
@@ -614,6 +619,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirmation Modal (Bug 36) -->
+    <div v-if="confirmModal.show" class="modal-backdrop" @click.self="cancelConfirmModal">
+      <div class="modal-card modal-confirm">
+        <div class="modal-header">
+          <h3>Confirmation</h3>
+          <button type="button" class="btn-close-modal" @click="cancelConfirmModal">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1rem 0;">
+          <p>{{ confirmModal.message }}</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" @click="cancelConfirmModal">Cancel</button>
+          <button type="button" class="btn-modal-confirm" @click="executeConfirmModal">Confirm</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -638,6 +660,12 @@ export default {
       selectedShip: null,
       loading: true,
       creating: false,
+      errorMessage: '',
+      confirmModal: {
+        show: false,
+        message: '',
+        onConfirm: null,
+      },
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'sheet',
@@ -679,8 +707,11 @@ export default {
       return this.imageBrowserTarget === 'sheet' ? 'Select Ship Token Image' : 'Select Ship Avatar';
     },
     hullPercentage() {
-      if (!this.selectedShip || !this.selectedShip.max_hull_points) return 0;
-      const pct = (this.selectedShip.current_hull_points / this.selectedShip.max_hull_points) * 100;
+      if (!this.selectedShip) return 0;
+      const max = this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 0;
+      if (max <= 0) return 0;
+      const cur = this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0;
+      const pct = (cur / max) * 100;
       return Math.max(0, Math.min(100, pct));
     },
     hullColor() {
@@ -801,7 +832,7 @@ export default {
       copy.avatar_url = copy.avatar_url || '';
       copy.ship_type = copy.ship_type || copy.type || 'Fighter';
       copy.type = copy.ship_type;
-      copy.hull_points = copy.hull_points !== undefined ? copy.hull_points : (copy.max_hull_points || 50);
+      copy.hull_points = copy.hull_points !== undefined ? copy.hull_points : (copy.max_hull_points ?? 50);
       copy.max_hull_points = copy.hull_points;
       copy.current_hp = copy.current_hp !== undefined ? copy.current_hp : (copy.current_hull_points !== undefined ? copy.current_hull_points : copy.hull_points);
       copy.current_hull_points = copy.current_hp;
@@ -882,11 +913,38 @@ export default {
         this.newShipForm.avatar_url = url;
       }
     },
+    openConfirmModal(message, onConfirm) {
+      this.confirmModal = {
+        show: true,
+        message,
+        onConfirm,
+      };
+    },
+    cancelConfirmModal() {
+      this.confirmModal.show = false;
+      this.confirmModal.onConfirm = null;
+    },
+    executeConfirmModal() {
+      if (typeof this.confirmModal.onConfirm === 'function') {
+        const fn = this.confirmModal.onConfirm;
+        this.confirmModal.show = false;
+        this.confirmModal.onConfirm = null;
+        fn();
+      } else {
+        this.confirmModal.show = false;
+      }
+    },
     onEditPresetChange(newType) {
-      const preset = this.presets.find((p) => p.type === newType);
+      const preset = Array.isArray(this.presets)
+        ? this.presets.find((p) => p.type === newType)
+        : (this.presets ? this.presets[newType] : null);
       this.selectedShip.type = newType;
       this.selectedShip.ship_type = newType;
-      if (preset && confirm(`Load stats, weapons, and defenses for ${newType}?`)) {
+      if (!preset) {
+        this.updateShip();
+        return;
+      }
+      const applyPreset = () => {
         this.selectedShip.adf = preset.adf;
         this.selectedShip.mr = preset.mr;
         this.selectedShip.dcr = preset.dcr;
@@ -894,14 +952,27 @@ export default {
         this.selectedShip.hull_points = preset.hull_points;
         this.selectedShip.current_hull_points = preset.hull_points;
         this.selectedShip.current_hp = preset.hull_points;
-        this.selectedShip.weapons = this.normalizeWeapons(preset.weapons);
-        this.selectedShip.defenses = JSON.parse(JSON.stringify(preset.defenses));
+        this.selectedShip.weapons = this.normalizeWeapons(JSON.parse(JSON.stringify(preset.weapons || [])));
+        this.selectedShip.defenses = this.normalizeDefenses(preset.defenses);
+        this.updateShip();
+      };
+
+      if (typeof this.openConfirmModal === 'function') {
+        this.openConfirmModal(`Load stats, weapons, and defenses for ${newType}?`, applyPreset);
+      } else if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+        if (window.confirm(`Load stats, weapons, and defenses for ${newType}?`)) {
+          applyPreset();
+        } else {
+          this.updateShip();
+        }
+      } else {
+        applyPreset();
       }
-      this.updateShip();
     },
     async createShip() {
       if (!this.newShipForm.name || !this.newShipForm.name.trim()) return;
       this.creating = true;
+      this.errorMessage = '';
       try {
         const payload = {
           name: this.newShipForm.name.trim(),
@@ -910,8 +981,8 @@ export default {
           adf: this.newShipForm.adf || 2,
           mr: this.newShipForm.mr || 2,
           dcr: this.newShipForm.dcr || 50,
-          hull_points: this.newShipForm.max_hull_points || 50,
-          current_hp: this.newShipForm.max_hull_points || 50,
+          hull_points: this.newShipForm.max_hull_points ?? 50,
+          current_hp: this.newShipForm.current_hull_points ?? this.newShipForm.max_hull_points ?? 50,
           defenses: this.normalizeDefenses(this.newShipForm.defenses),
           weapons: this.normalizeWeapons(this.newShipForm.weapons),
         };
@@ -930,25 +1001,27 @@ export default {
           }
           this.selectShip(created);
         } else {
-          const errData = await res.json();
+          const errData = await res.json().catch(() => ({}));
           console.error('Error creating ship response:', res.status, errData);
-          alert(errData.error || 'Failed to create ship');
+          this.errorMessage = errData.error || `Failed to create ship (HTTP ${res.status})`;
         }
       } catch (err) {
         console.error('Error creating ship:', err);
+        this.errorMessage = err.message || 'Error creating ship';
       } finally {
         this.creating = false;
       }
     },
     async updateShip() {
       if (!this.selectedShip || !this.selectedShip.id) return;
+      this.errorMessage = '';
       try {
         const payload = {
           ...this.selectedShip,
           avatar_url: this.selectedShip.avatar_url || '',
           ship_type: this.selectedShip.type || this.selectedShip.ship_type || 'Fighter',
-          hull_points: this.selectedShip.max_hull_points || this.selectedShip.hull_points || 50,
-          current_hp: this.selectedShip.current_hull_points !== undefined ? this.selectedShip.current_hull_points : (this.selectedShip.current_hp || 50),
+          hull_points: this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 50,
+          current_hp: this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0,
           notes: this.selectedShip.notes || '',
         };
         const res = await fetch(`/api/ships/${this.selectedShip.id}`, {
@@ -964,9 +1037,13 @@ export default {
           if (idx !== -1) {
             this.ships[idx] = updated;
           }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          this.errorMessage = errData.error || `Failed to update ship (HTTP ${res.status})`;
         }
       } catch (err) {
         console.error('Error updating ship:', err);
+        this.errorMessage = err.message || 'Error updating ship';
       }
     },
     async uploadAvatar(e) {
@@ -1018,28 +1095,44 @@ export default {
     },
     adjustHullPoints(amount) {
       if (!this.selectedShip) return;
-      let newHp = (this.selectedShip.current_hull_points || this.selectedShip.current_hp || 0) + amount;
-      const maxHp = this.selectedShip.max_hull_points || this.selectedShip.hull_points || 100;
+      let newHp = (this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0) + amount;
+      const maxHp = this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 100;
       newHp = Math.max(0, Math.min(maxHp, newHp));
       this.selectedShip.current_hull_points = newHp;
       this.selectedShip.current_hp = newHp;
       this.updateShip();
     },
-    async deleteShip(id) {
-      if (!confirm('Are you sure you want to delete this ship?')) return;
-      try {
-        const res = await fetch(`/api/ships/${id}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
-        if (res.ok) {
-          this.ships = this.ships.filter((s) => s.id !== id);
-          if (this.selectedShip && this.selectedShip.id === id) {
-            this.selectedShip = this.ships.length > 0 ? { ...this.ships[0] } : null;
+    deleteShip(id) {
+      const doDelete = async () => {
+        this.errorMessage = '';
+        try {
+          const res = await fetch(`/api/ships/${id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          if (res.ok) {
+            this.ships = this.ships.filter((s) => s.id !== id);
+            if (this.selectedShip && this.selectedShip.id === id) {
+              this.selectedShip = this.ships.length > 0 ? { ...this.ships[0] } : null;
+            }
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            this.errorMessage = errData.error || `Failed to delete ship (HTTP ${res.status})`;
           }
+        } catch (err) {
+          console.error('Error deleting ship:', err);
+          this.errorMessage = err.message || 'Error deleting ship';
         }
-      } catch (err) {
-        console.error('Error deleting ship:', err);
+      };
+
+      if (typeof this.openConfirmModal === 'function') {
+        this.openConfirmModal('Are you sure you want to delete this ship?', doDelete);
+      } else if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+        if (window.confirm('Are you sure you want to delete this ship?')) {
+          doDelete();
+        }
+      } else {
+        doDelete();
       }
     },
     getDefenseVal(key) {
@@ -1158,6 +1251,15 @@ export default {
       const expl = this.getCategoryExplanation(wpn);
       return `${wpn.name || wpn.type || 'Weapon'}${cat ? ` (${cat})` : ''}${expl ? ` - ${expl}` : ''}`;
     },
+    isLimitedAmmoWeapon(wpn) {
+      if (!wpn) return false;
+      return (
+        (wpn.ammo_max !== undefined && wpn.ammo_max > 0) ||
+        (wpn.ammo_current !== undefined && wpn.ammo_current > 0) ||
+        this.getWeaponCategory(wpn) === 'Ordnance' ||
+        (Array.isArray(wpn.restrictions) && wpn.restrictions.includes('LTD'))
+      );
+    },
     startEditWeapon(index, wpn) {
       this.editingWeaponIndex = index;
       this.$nextTick(() => {
@@ -1170,6 +1272,7 @@ export default {
       });
     },
     stopEditWeapon(wpn) {
+      if (this.editingWeaponIndex === null) return;
       this.editingWeaponIndex = null;
       this.onWeaponNameChange(wpn);
     },
@@ -2712,5 +2815,49 @@ export default {
   color: #f0f6fc;
   font-size: 0.85rem;
   box-sizing: border-box;
+}
+
+.error-banner {
+  background-color: rgba(220, 53, 69, 0.2);
+  border: 1px solid #dc3545;
+  color: #ff8591;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+}
+
+.btn-dismiss-error {
+  background: transparent;
+  border: none;
+  color: #ff8591;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 0.25rem;
+}
+
+.btn-dismiss-error:hover {
+  color: #fff;
+}
+
+.modal-confirm {
+  max-width: 420px;
+}
+
+.btn-modal-confirm {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-modal-confirm:hover {
+  background-color: #bd2130;
 }
 </style>

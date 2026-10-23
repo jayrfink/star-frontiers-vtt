@@ -2,7 +2,7 @@ import { Router } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { requireAuth } from './middleware.js';
+import { requireAuth, requireGM } from './middleware.js';
 import { validateAdversaryTemplate, generateNpcStats, generateCreatureStats } from './adversaryMathEngine.js';
 import { spawnAdversaries } from './adversarySpawner.js';
 import { generateTokenRingImage } from './tokenImagePipeline.js';
@@ -13,14 +13,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, '../../data');
 
-function resolveUploadDiskPath(urlStr) {
+function resolveUploadDiskPath(urlStr, baseUploadsDir = path.join(DATA_DIR, 'uploads')) {
   if (!urlStr || typeof urlStr !== 'string') return null;
   const cleanUrl = urlStr.split('?')[0];
   const rel = cleanUrl.startsWith('/uploads/')
     ? cleanUrl.replace(/^\/uploads\//, '')
     : cleanUrl.replace(/^\//, '');
-  const candidate = path.resolve(DATA_DIR, 'uploads', rel);
-  const uploadsRoot = path.resolve(DATA_DIR, 'uploads');
+  const candidate = path.resolve(baseUploadsDir, rel);
+  const uploadsRoot = path.resolve(baseUploadsDir);
   if (!candidate.startsWith(uploadsRoot + path.sep)) return null;
   try {
     return fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
@@ -59,9 +59,10 @@ export function formatAdversary(row) {
   };
 }
 
-export function createAdversariesRouter(db, io) {
+export function createAdversariesRouter(db, io, uploadDir = null) {
   const router = Router();
   router.use(requireAuth);
+  const effectiveUploadsDir = uploadDir || path.join(DATA_DIR, 'uploads');
 
   // GET /api/adversaries - List all templates
   router.get('/', (req, res) => {
@@ -89,7 +90,7 @@ export function createAdversariesRouter(db, io) {
   });
 
   // POST /api/adversaries/generate-token-art - Generate AI token portrait & masked ring
-  router.post('/generate-token-art', async (req, res) => {
+  router.post('/generate-token-art', requireGM(db), async (req, res) => {
     try {
       const { prompt, name, species, category, threat_tier, weapon, armor, attacks } = req.body;
       const result = await generateTokenArtFromDescription({
@@ -101,6 +102,7 @@ export function createAdversariesRouter(db, io) {
         weapon,
         armor,
         attacks,
+        uploadDir: effectiveUploadsDir,
       });
       res.json(result);
     } catch (err) {
@@ -115,7 +117,7 @@ export function createAdversariesRouter(db, io) {
   });
 
   // POST /api/adversaries - Register / create template
-  router.post('/', (req, res) => {
+  router.post('/', requireGM(db), (req, res) => {
     try {
       const templatePayload = {
         token_image_path: '',
@@ -128,6 +130,10 @@ export function createAdversariesRouter(db, io) {
         system_data: {},
         ...req.body,
       };
+
+      if (!templatePayload.template_id && templatePayload.id) {
+        templatePayload.template_id = templatePayload.id;
+      }
 
       const validation = validateAdversaryTemplate(templatePayload);
       if (!validation.valid) {
@@ -201,7 +207,7 @@ export function createAdversariesRouter(db, io) {
   });
 
   // POST /api/adversaries/spawn - Spawn N tokens on a map
-  router.post('/spawn', async (req, res) => {
+  router.post('/spawn', requireGM(db), async (req, res) => {
     try {
       const { mapId, templateId, template: templateInput, count = 1, source_image_url } = req.body;
       if (!mapId) {
@@ -259,17 +265,29 @@ export function createAdversariesRouter(db, io) {
         templateObj.id = templateObj.template_id;
       }
 
+      const rawTemplateId = String(templateObj.template_id || '');
+      if (
+        !rawTemplateId ||
+        !/^[a-zA-Z0-9_-]+$/.test(rawTemplateId) ||
+        rawTemplateId.includes('..') ||
+        rawTemplateId.includes('/') ||
+        rawTemplateId.includes('\\')
+      ) {
+        return res.status(400).json({ error: 'Invalid template_id: invalid characters or path traversal rejected' });
+      }
+
       // Handle token image generation / circular masking
-      const tokensUploadDir = path.join(DATA_DIR, 'uploads/tokens');
+      const tokensUploadDir = path.join(effectiveUploadsDir, 'tokens');
       if (!fs.existsSync(tokensUploadDir)) {
         fs.mkdirSync(tokensUploadDir, { recursive: true });
       }
 
-      const tokenFileName = `${templateObj.template_id}.png`;
+      const safeTemplateId = path.basename(rawTemplateId);
+      const tokenFileName = `${safeTemplateId}.png`;
       const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
 
-      let sourceDiskPath = resolveUploadDiskPath(source_image_url);
-      const existingTokenDiskPath = resolveUploadDiskPath(templateObj.token_image_path);
+      let sourceDiskPath = resolveUploadDiskPath(source_image_url, effectiveUploadsDir);
+      const existingTokenDiskPath = resolveUploadDiskPath(templateObj.token_image_path, effectiveUploadsDir);
 
       if (sourceDiskPath) {
         const cleanSource = source_image_url.split('?')[0];
@@ -305,7 +323,7 @@ export function createAdversariesRouter(db, io) {
         io,
         mapId: Number(mapId),
         template: templateObj,
-        count: Math.max(1, parseInt(count, 10) || 1),
+        count: Math.min(50, Math.max(1, parseInt(count, 10) || 1)),
       });
 
       res.status(201).json(result);
@@ -316,25 +334,36 @@ export function createAdversariesRouter(db, io) {
   });
 
   // PATCH /api/adversaries/:id/token - Update template token image and sync active map tokens
-  router.patch('/:id/token', async (req, res) => {
+  router.patch('/:id/token', requireGM(db), async (req, res) => {
     try {
       const templateId = req.params.id;
+      if (
+        !templateId ||
+        !/^[a-zA-Z0-9_-]+$/.test(templateId) ||
+        templateId.includes('..') ||
+        templateId.includes('/') ||
+        templateId.includes('\\')
+      ) {
+        return res.status(400).json({ error: 'Invalid template id: invalid characters or path traversal rejected' });
+      }
+
       const row = db.prepare('SELECT * FROM adversary_templates WHERE id = ?').get(templateId);
       if (!row) {
         return res.status(404).json({ error: 'Adversary template not found' });
       }
 
       const { source_image_url } = req.body || {};
-      const tokensUploadDir = path.join(DATA_DIR, 'uploads/tokens');
+      const tokensUploadDir = path.join(effectiveUploadsDir, 'tokens');
       if (!fs.existsSync(tokensUploadDir)) {
         fs.mkdirSync(tokensUploadDir, { recursive: true });
       }
 
-      const tokenFileName = `${templateId}.png`;
+      const safeTemplateId = path.basename(templateId);
+      const tokenFileName = `${safeTemplateId}.png`;
       const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
 
       if (source_image_url) {
-        const sourceDiskPath = resolveUploadDiskPath(source_image_url);
+        const sourceDiskPath = resolveUploadDiskPath(source_image_url, effectiveUploadsDir);
         if (!sourceDiskPath) {
           return res.status(400).json({ error: 'Source image file not found on disk' });
         }
@@ -364,25 +393,33 @@ export function createAdversariesRouter(db, io) {
       }
 
       const newTokenPath = `/uploads/tokens/${tokenFileName}?v=${Date.now()}`;
-      db.prepare(`
-        UPDATE adversary_templates
-        SET token_image_path = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(newTokenPath, templateId);
+      let updateTokensResult;
+      let updatedRow;
 
-      const updatedRow = db.prepare('SELECT * FROM adversary_templates WHERE id = ?').get(templateId);
+      const updateAdversaryTokenTx = db.transaction(() => {
+        db.prepare(`
+          UPDATE adversary_templates
+          SET token_image_path = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(newTokenPath, templateId);
+
+        updatedRow = db.prepare('SELECT * FROM adversary_templates WHERE id = ?').get(templateId);
+
+        // Sync any tokens on maps spawned from this template
+        updateTokensResult = db.prepare(`
+          UPDATE tokens
+          SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE template_id = ?
+        `).run(newTokenPath, templateId);
+      });
+
+      updateAdversaryTokenTx();
+
       const formattedTemplate = formatAdversary(updatedRow);
 
       if (io) {
         io.emit('adversary:saved', { template: formattedTemplate });
       }
-
-      // Sync any tokens on maps spawned from this template
-      const updateTokensResult = db.prepare(`
-        UPDATE tokens
-        SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE template_id = ?
-      `).run(newTokenPath, templateId);
 
       if (io && updateTokensResult.changes > 0) {
         const affectedTokens = db.prepare('SELECT * FROM tokens WHERE template_id = ?').all(templateId);
@@ -402,15 +439,18 @@ export function createAdversariesRouter(db, io) {
   });
 
   // DELETE /api/adversaries/:id
-  router.delete('/:id', (req, res) => {
+  router.delete('/:id', requireGM(db), (req, res) => {
     try {
       const existing = db.prepare('SELECT id FROM adversary_templates WHERE id = ?').get(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: 'Adversary template not found' });
       }
 
-      db.prepare('UPDATE tokens SET template_id = NULL WHERE template_id = ?').run(req.params.id);
-      db.prepare('DELETE FROM adversary_templates WHERE id = ?').run(req.params.id);
+      const deleteAdversaryTx = db.transaction((id) => {
+        db.prepare('UPDATE tokens SET template_id = NULL WHERE template_id = ?').run(id);
+        db.prepare('DELETE FROM adversary_templates WHERE id = ?').run(id);
+      });
+      deleteAdversaryTx(req.params.id);
 
       if (io) {
         io.emit('adversary:deleted', { id: req.params.id });

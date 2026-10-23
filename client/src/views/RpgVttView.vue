@@ -241,7 +241,7 @@
             </div>
             <div class="hud-body">
               <span class="hud-total">{{ lastPercentileRoll.total }}</span>
-              <span class="hud-dice">(Tens: {{ lastPercentileRoll.tens }}, Ones: {{ lastPercentileRoll.ones }})</span>
+              <span class="hud-dice">(<span class="hud-tens-val">Tens: {{ lastPercentileRoll.tens }}</span>, <span class="hud-ones-val">Ones: {{ lastPercentileRoll.ones }}</span>)</span>
             </div>
           </div>
         </transition>
@@ -260,6 +260,8 @@
           :selected-token-id="selectedTokenId"
           @token-moved="onTokenMoved"
           @token-selected="onTokenSelected"
+          @tokens-updated="tokens = $event"
+          @map-updated="activeMap = $event"
         />
 
         <!-- Click-to-Open Adversary Token HUD -->
@@ -561,6 +563,7 @@
     <div v-if="showCreateMapModal" class="modal-backdrop" @click.self="showCreateMapModal = false">
       <div class="modal-card">
         <h3>Create New Tactical Map</h3>
+        <div v-if="createMapError" class="modal-error-banner">⚠️ {{ createMapError }}</div>
         <form @submit.prevent="submitCreateMap">
           <div class="form-group">
             <label>Map Name *</label>
@@ -621,6 +624,7 @@
     <div v-if="showAddTokenModal" class="modal-backdrop" @click.self="showAddTokenModal = false">
       <div class="modal-card">
         <h3>Add Token to Map</h3>
+        <div v-if="createTokenError" class="modal-error-banner">⚠️ {{ createTokenError }}</div>
         <form @submit.prevent="submitAddToken">
           <div class="form-group">
             <label>Link to Character Sheet (Optional)</label>
@@ -715,8 +719,8 @@
     <!-- Deploy Vehicle Modal -->
     <DeployVehicleModal
       v-model="showDeployVehicleModal"
-      :default-x="getEmptyCenterCoords().x"
-      :default-y="getEmptyCenterCoords().y"
+      :default-x="deployVehicleCoords.x"
+      :default-y="deployVehicleCoords.y"
       :is-gm="isGm"
       @deploy="onDeployVehicle"
     />
@@ -741,7 +745,6 @@ import VehicleTokenHud from '../components/VehicleTokenHud.vue';
 import DeployVehicleModal from '../components/DeployVehicleModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
-import DiceBox from '@3d-dice/dice-box';
 import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
@@ -769,6 +772,36 @@ const initialVttState = getUserState(getSafeUserId(), 'rpgVtt', {
 
 // Dice state
 let diceBoxInstance = null;
+let diceBoxInitPromise = null;
+
+async function initDiceBox() {
+  if (diceBoxInstance) return diceBoxInstance;
+  if (!diceBoxInitPromise) {
+    diceBoxInitPromise = (async () => {
+      const { default: DiceBox } = await import('@3d-dice/dice-box');
+      const box = new DiceBox({
+        id: "dice-canvas",
+        container: "#dice-box",
+        assetPath: '/assets/dice-box/',
+        theme: 'default',
+        scale: 5,
+        offscreen: false
+      });
+      await box.init();
+      diceBoxInstance = box;
+      return box;
+    })().catch((err) => {
+      console.warn('DiceBox init failed:', err);
+      diceBoxInitPromise = null;
+      return null;
+    });
+  }
+  return diceBoxInitPromise;
+}
+
+async function getReadyDiceBox() {
+  return await initDiceBox();
+}
 const damageDiceCount = ref(1);
 const showDmgMenu = ref(false);
 const dmgMenuRef = ref(null);
@@ -865,15 +898,16 @@ function toggleDmgMenu() {
 
 async function rollPercentile() {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
-        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
-        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
+        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
@@ -902,14 +936,15 @@ async function rollPercentile() {
 
 async function rollDamage() {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
     showDmgMenu.value = false;
 
     try {
-      const results = await diceBoxInstance.roll([
+      const results = await diceBox.roll([
         { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
       ]);
       const rollSummary = calculateDamageRoll(results);
@@ -937,10 +972,11 @@ async function rollDamage() {
   }
 }
 
-function clearDice() {
-  if (diceBoxInstance) {
+async function clearDice() {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     try {
-      diceBoxInstance.clear();
+      diceBox.clear();
     } catch (err) {
       console.warn('Failed to clear dice box:', err);
     }
@@ -1007,9 +1043,18 @@ watch([panX, panY, zoomLevel, activeTool, selectedTokenId, isRollLogOpen], () =>
 const showGmDrawer = ref(false);
 const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
+const createMapError = ref('');
 const showAddTokenModal = ref(false);
+const createTokenError = ref('');
 const showStockAdversaryModal = ref(false);
 const showDeployVehicleModal = ref(false);
+const deployVehicleCoords = ref({ x: 0, y: 0 });
+
+watch(showDeployVehicleModal, (isOpen) => {
+  if (isOpen) {
+    deployVehicleCoords.value = getEmptyCenterCoords();
+  }
+});
 const adversaryImageSelectedUrl = ref('');
 const showImageBrowser = ref(false);
 const imageBrowserTarget = ref('token');
@@ -1106,12 +1151,24 @@ const selectedToken = computed(() => {
   return tokens.value.find((t) => t.id === selectedTokenId.value) || null;
 });
 
-// Watch selectedToken to sync reactive form
+// Watch selectedToken to sync reactive form (Bugs 12 & 31)
 watch(selectedToken, (newToken) => {
   if (newToken) {
     selectedTokenForm.color = newToken.color || '#666666';
     selectedTokenForm.size = newToken.size || 1;
-    selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
+    let effects = newToken.status_effects;
+    if (typeof effects === 'string') {
+      try {
+        effects = JSON.parse(effects);
+      } catch {
+        effects = [];
+      }
+    }
+    selectedTokenForm.status_effects = Array.isArray(effects) ? [...effects] : [];
+  } else {
+    selectedTokenForm.color = '#666666';
+    selectedTokenForm.size = 1;
+    selectedTokenForm.status_effects = [];
   }
 });
 
@@ -1176,6 +1233,7 @@ async function activateMap(mapId) {
       const data = await res.json();
       activeMap.value = data.map;
       tokens.value = data.tokens || [];
+      selectedTokenId.value = null;
       if (isGm.value) fetchMapList();
     }
   } catch (err) {
@@ -1251,6 +1309,7 @@ async function onActiveMapUpload(e) {
 }
 
 function openCreateMapModal() {
+  createMapError.value = '';
   newMapForm.name = '';
   newMapForm.map_type = 'rpg';
   newMapForm.width = 20;
@@ -1263,6 +1322,7 @@ function openCreateMapModal() {
 }
 
 async function submitCreateMap() {
+  createMapError.value = '';
   try {
     const res = await fetch('/api/maps', {
       method: 'POST',
@@ -1275,9 +1335,13 @@ async function submitCreateMap() {
       showCreateMapModal.value = false;
       fetchMapList();
       activateMap(created.id);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      createMapError.value = data.error || `Failed to create map (HTTP ${res.status})`;
     }
   } catch (err) {
     console.error('Failed to create map:', err);
+    createMapError.value = err.message || 'Error creating map';
   }
 }
 
@@ -1352,6 +1416,7 @@ function getEmptyCenterCoords() {
 }
 
 function openAddTokenModal() {
+  createTokenError.value = '';
   selectedCharacterId.value = null;
   newTokenForm.name = '';
   newTokenForm.color = '#666666';
@@ -1417,7 +1482,11 @@ function onCharacterSelected() {
 }
 
 async function submitAddToken() {
-  if (!activeMap.value) return;
+  createTokenError.value = '';
+  if (!activeMap.value) {
+    createTokenError.value = 'No active map selected';
+    return;
+  }
   try {
     const res = await fetch('/api/tokens', {
       method: 'POST',
@@ -1440,9 +1509,13 @@ async function submitAddToken() {
       const exists = tokens.value.some((t) => t.id === created.id);
       if (!exists) tokens.value.push(created);
       selectedTokenId.value = created.id;
+    } else {
+      const data = await res.json().catch(() => ({}));
+      createTokenError.value = data.error || `Failed to create token (HTTP ${res.status})`;
     }
   } catch (err) {
     console.error('Failed to create token:', err);
+    createTokenError.value = err.message || 'Error creating token';
   }
 }
 
@@ -1583,15 +1656,16 @@ async function onAdversaryTokenUpdate(updatedToken) {
 
 async function onAdversaryRollAttack({ action, token }) {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
-        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
@@ -1632,25 +1706,81 @@ async function onAdversaryRollAttack({ action, token }) {
 
 async function onAdversaryRollDamage({ action, token }) {
   playDiceSound({ isRemote: false });
-  const match = (action.damage || '1d10').match(/(\d+)d10(?:\+(\d+))?/i);
-  const diceCount = match ? parseInt(match[1], 10) : 1;
-  const flatBonus = match && match[2] ? parseInt(match[2], 10) : 0;
+  const rawDamage = (action.damage || '').trim();
 
-  if (diceBoxInstance) {
+  // Support flat damage formulas (e.g. "5", "3") (Bug 23)
+  const flatMatch = rawDamage.match(/^\d+$/);
+  if (flatMatch) {
+    const total = parseInt(flatMatch[0], 10);
+    showDamageHud.value = false;
+    showPercentileHud.value = false;
+    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+    lastDamageRoll.value = {
+      dice: [total],
+      count: 0,
+      total,
+      breakdown: `${total}`,
+      username: authStore.user?.username,
+      role: authStore.user?.role
+    };
+    showDamageHud.value = true;
+    sendRollToServer({
+      type: 'damage',
+      label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
+      total,
+      breakdown: `${total}`,
+      rollSummary: { dice: [total], count: 0, total }
+    });
+    damageHudTimeout = setTimeout(() => {
+      showDamageHud.value = false;
+    }, 8000);
+    return;
+  }
+
+  // Parse dice formulas with support for fractional dice ("1d10/2") and negative modifiers ("1d10-2")
+  let diceCount = 1;
+  let divisor = 1;
+  let modifier = 0;
+
+  const diceMatch = rawDamage.match(/(?:(\d+)\s*)?d10/i);
+  if (diceMatch) {
+    diceCount = diceMatch[1] ? parseInt(diceMatch[1], 10) : 1;
+  }
+  const divMatch = rawDamage.match(/\/\s*(\d+)/);
+  if (divMatch) {
+    divisor = parseInt(divMatch[1], 10) || 1;
+  }
+  const modMatch = rawDamage.match(/([+-])\s*(\d+)(?!\s*d10)/);
+  if (modMatch) {
+    const sign = modMatch[1] === '-' ? -1 : 1;
+    modifier = sign * parseInt(modMatch[2], 10);
+  }
+
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
+      const results = await diceBox.roll([
         { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: diceCount }
       ]);
       const rollSummary = calculateDamageRoll(results);
       if (rollSummary.count > 0) {
-        const finalTotal = rollSummary.total + flatBonus;
+        const rawSum = rollSummary.total;
+        const scaled = divisor > 1 ? Math.ceil(rawSum / divisor) : rawSum;
+        const finalTotal = scaled + modifier;
+
+        let breakdownStr = `[${rollSummary.dice.join(', ')}]`;
+        if (divisor > 1) breakdownStr += ` / ${divisor}`;
+        if (modifier > 0) breakdownStr += ` + ${modifier}`;
+        else if (modifier < 0) breakdownStr += ` - ${Math.abs(modifier)}`;
+
         lastDamageRoll.value = {
           ...rollSummary,
           total: finalTotal,
+          breakdown: breakdownStr,
           username: authStore.user?.username,
           role: authStore.user?.role
         };
@@ -1659,7 +1789,7 @@ async function onAdversaryRollDamage({ action, token }) {
           type: 'damage',
           label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
           total: finalTotal,
-          breakdown: flatBonus ? `[${rollSummary.dice.join(', ')}] + ${flatBonus}` : `[${rollSummary.dice.join(', ')}]`,
+          breakdown: breakdownStr,
           rollSummary: { ...rollSummary, total: finalTotal }
         });
         damageHudTimeout = setTimeout(() => {
@@ -1674,12 +1804,20 @@ async function onAdversaryRollDamage({ action, token }) {
     for (let i = 0; i < diceCount; i++) {
       rolls.push(Math.floor(Math.random() * 10) + 1);
     }
-    const total = rolls.reduce((a, b) => a + b, 0) + flatBonus;
+    const rawSum = rolls.reduce((a, b) => a + b, 0);
+    const scaled = divisor > 1 ? Math.ceil(rawSum / divisor) : rawSum;
+    const total = scaled + modifier;
+
+    let breakdownStr = `[${rolls.join(', ')}]`;
+    if (divisor > 1) breakdownStr += ` / ${divisor}`;
+    if (modifier > 0) breakdownStr += ` + ${modifier}`;
+    else if (modifier < 0) breakdownStr += ` - ${Math.abs(modifier)}`;
+
     sendRollToServer({
       type: 'damage',
       label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
       total,
-      breakdown: flatBonus ? `[${rolls.join(', ')}] + ${flatBonus}` : `[${rolls.join(', ')}]`,
+      breakdown: breakdownStr,
     });
   }
 }
@@ -1741,15 +1879,16 @@ async function onVehicleTokenUpdate(updatedToken) {
 
 async function onVehicleRollControl({ token } = {}) {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
-        { sides: 10, theme: 'custom-ones', themeColor: '#38bdf8', qty: 1 },
-        { sides: 10, theme: 'custom-tens', themeColor: '#0369a1', qty: 1 }
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-tens', themeColor: '#38bdf8', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#0369a1', qty: 1 }
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
@@ -1786,13 +1925,14 @@ async function onVehicleRollControl({ token } = {}) {
 
 async function onVehicleRollDamage({ token } = {}) {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
+      const results = await diceBox.roll([
         { sides: 10, theme: 'custom-dmg', themeColor: '#f97316', qty: 2 }
       ]);
       const rollSummary = calculateDamageRoll(results);
@@ -1853,41 +1993,54 @@ function adjustZoom(delta) {
   zoomLevel.value = Math.round(newZoom * 100) / 100;
 }
 
-// Socket.io Real-time Event Listeners
+// Socket.io Real-time Event Listeners (Bug 25 - specific handlers)
+let onSocketMapActivated = null;
+let onSocketMapUpdated = null;
+let onSocketMapCreated = null;
+let onSocketMapDeleted = null;
+let onSocketTokenCreated = null;
+let onSocketTokenMoved = null;
+let onSocketTokenUpdated = null;
+let onSocketTokenDeleted = null;
+let onSocketRollCreated = null;
+let onSocketRollCleared = null;
+
 function setupSocketListeners() {
-  socket.on('map:activated', ({ map, tokens: newTokens }) => {
+  socket.on('map:activated', onSocketMapActivated = ({ map, tokens: newTokens }) => {
     if (map && map.map_type === 'rpg') {
       activeMap.value = map;
       tokens.value = newTokens || [];
+      selectedTokenId.value = null;
     }
   });
 
-  socket.on('map:updated', ({ map }) => {
+  socket.on('map:updated', onSocketMapUpdated = ({ map }) => {
     if (activeMap.value && activeMap.value.id === map.id) {
       activeMap.value = map;
     }
   });
 
-  socket.on('map:created', () => {
+  socket.on('map:created', onSocketMapCreated = () => {
     if (isGm.value) fetchMapList();
   });
 
-  socket.on('map:deleted', ({ id }) => {
+  socket.on('map:deleted', onSocketMapDeleted = ({ id }) => {
     if (isGm.value) fetchMapList();
     if (activeMap.value && activeMap.value.id === id) {
       activeMap.value = null;
       tokens.value = [];
+      selectedTokenId.value = null;
     }
   });
 
-  socket.on('token:created', ({ token }) => {
+  socket.on('token:created', onSocketTokenCreated = ({ token }) => {
     if (activeMap.value && token.map_id === activeMap.value.id) {
       const exists = tokens.value.some((t) => t.id === token.id);
       if (!exists) tokens.value.push(token);
     }
   });
 
-  socket.on('token:moved', ({ token }) => {
+  socket.on('token:moved', onSocketTokenMoved = ({ token }) => {
     if (activeMap.value && token.map_id === activeMap.value.id) {
       const idx = tokens.value.findIndex((t) => t.id === token.id);
       if (idx !== -1) {
@@ -1897,7 +2050,7 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('token:updated', ({ token }) => {
+  socket.on('token:updated', onSocketTokenUpdated = ({ token }) => {
     if (activeMap.value && token.map_id === activeMap.value.id) {
       const idx = tokens.value.findIndex((t) => t.id === token.id);
       if (idx !== -1) {
@@ -1906,14 +2059,14 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('token:deleted', ({ id }) => {
+  socket.on('token:deleted', onSocketTokenDeleted = ({ id }) => {
     tokens.value = tokens.value.filter((t) => t.id !== id);
     if (selectedTokenId.value === id) {
       selectedTokenId.value = null;
     }
   });
 
-  socket.on('roll:created', ({ mode, roll }) => {
+  socket.on('roll:created', onSocketRollCreated = ({ mode, roll }) => {
     if (mode !== 'rpg') return;
     if (roll.username !== authStore.user?.username) {
       playDiceSound({ isRemote: true });
@@ -1957,7 +2110,7 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('roll:cleared', ({ mode }) => {
+  socket.on('roll:cleared', onSocketRollCleared = ({ mode }) => {
     if (mode === 'rpg') {
       rollLog.value = [];
       clearDice();
@@ -1966,16 +2119,16 @@ function setupSocketListeners() {
 }
 
 function cleanupSocketListeners() {
-  socket.off('map:activated');
-  socket.off('map:updated');
-  socket.off('map:created');
-  socket.off('map:deleted');
-  socket.off('token:created');
-  socket.off('token:moved');
-  socket.off('token:updated');
-  socket.off('token:deleted');
-  socket.off('roll:created');
-  socket.off('roll:cleared');
+  if (onSocketMapActivated) socket.off('map:activated', onSocketMapActivated);
+  if (onSocketMapUpdated) socket.off('map:updated', onSocketMapUpdated);
+  if (onSocketMapCreated) socket.off('map:created', onSocketMapCreated);
+  if (onSocketMapDeleted) socket.off('map:deleted', onSocketMapDeleted);
+  if (onSocketTokenCreated) socket.off('token:created', onSocketTokenCreated);
+  if (onSocketTokenMoved) socket.off('token:moved', onSocketTokenMoved);
+  if (onSocketTokenUpdated) socket.off('token:updated', onSocketTokenUpdated);
+  if (onSocketTokenDeleted) socket.off('token:deleted', onSocketTokenDeleted);
+  if (onSocketRollCreated) socket.off('roll:created', onSocketRollCreated);
+  if (onSocketRollCleared) socket.off('roll:cleared', onSocketRollCleared);
 }
 
 function onKeyDown(e) {
@@ -1994,17 +2147,7 @@ onMounted(() => {
     fetchMapList();
   }
   
-  if (!diceBoxInstance) {
-    diceBoxInstance = new DiceBox({
-      id: "dice-canvas",
-      container: "#dice-box",
-      assetPath: '/assets/dice-box/',
-      theme: 'default',
-      scale: 5,
-      offscreen: false
-    });
-    diceBoxInstance.init();
-  }
+  initDiceBox();
 
   setupSocketListeners();
   document.addEventListener('click', onDocClick);
@@ -2027,10 +2170,45 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown);
   if (damageHudTimeout) clearTimeout(damageHudTimeout);
   if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  if (diceBoxInstance) {
+    try {
+      diceBoxInstance.clear();
+    } catch (e) {}
+
+    // Clean up WebGL canvas contexts properly to prevent context leak (Bug 24)
+    const canvas = diceBoxInstance.canvas || document.querySelector('#dice-canvas') || document.querySelector('#dice-box canvas');
+    if (canvas && typeof canvas.getContext === 'function') {
+      try {
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const loseContext = gl.getExtension('WEBGL_lose_context');
+          if (loseContext) {
+            loseContext.loseContext();
+          }
+        }
+      } catch (e) {}
+    }
+    diceBoxInstance = null;
+    diceBoxInitPromise = null;
+  }
+  const diceBoxContainer = document.querySelector('#dice-box');
+  if (diceBoxContainer) {
+    diceBoxContainer.innerHTML = '';
+  }
 });
 </script>
 
 <style scoped>
+.modal-error-banner {
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid #dc3545;
+  color: #ff8591;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
 .vtt-view {
   display: flex;
   flex-direction: column;
@@ -2521,6 +2699,16 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #bbf2d4;
   font-weight: 600;
+}
+
+.percentile-hud-banner .hud-tens-val {
+  color: #77d19e;
+  font-weight: 700;
+}
+
+.percentile-hud-banner .hud-ones-val {
+  color: #38bdf8;
+  font-weight: 700;
 }
 
 /* Transitions */

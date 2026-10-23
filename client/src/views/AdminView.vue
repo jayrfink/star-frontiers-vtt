@@ -109,7 +109,8 @@
                 </button>
                 <button
                   class="btn-danger btn-small"
-                  title="Delete user"
+                  :title="user.id === auth.user?.id ? 'Cannot delete your own account' : 'Delete user'"
+                  :disabled="user.id === auth.user?.id"
                   @click="deleteUser(user)"
                 >
                   Delete
@@ -606,6 +607,11 @@ async function resetPassword(user) {
 }
 
 async function deleteUser(user) {
+  if (user.id === auth.user?.id) {
+    error.value = 'Cannot delete your own account';
+    return;
+  }
+
   if (!window.confirm(`Are you sure you want to delete user "${user.username}"?`)) {
     return;
   }

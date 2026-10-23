@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { socket } from '../services/socket.js';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
@@ -26,6 +27,9 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await fetch('/api/auth/me', { credentials: 'include' });
       if (res.ok) {
         user.value = await res.json();
+        if (socket && !socket.connected) {
+          socket.connect();
+        }
       } else {
         user.value = null;
       }
@@ -47,6 +51,9 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error(data.error || 'Login failed');
     }
     user.value = await res.json();
+    if (socket && !socket.connected) {
+      socket.connect();
+    }
   }
 
   async function register(username, password) {
@@ -67,6 +74,9 @@ export const useAuthStore = defineStore('auth', () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     user.value = null;
     checked.value = false;
+    if (socket && socket.connected) {
+      socket.disconnect();
+    }
   }
 
   async function changePassword(currentPassword, newPassword) {

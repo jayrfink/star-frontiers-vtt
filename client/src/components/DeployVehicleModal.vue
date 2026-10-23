@@ -361,6 +361,8 @@
 </template>
 
 <script>
+import { socket } from '../services/socket.js';
+
 export default {
   name: 'DeployVehicleModal',
   props: {
@@ -467,13 +469,38 @@ export default {
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', this.handleKeydown);
     }
+    if (socket) {
+      socket.on('vehicle:created', this.onVehicleCreated);
+      socket.on('vehicle:deleted', this.onVehicleDeleted);
+    }
   },
   beforeUnmount() {
     if (typeof window !== 'undefined') {
       window.removeEventListener('keydown', this.handleKeydown);
     }
+    if (socket) {
+      socket.off('vehicle:created', this.onVehicleCreated);
+      socket.off('vehicle:deleted', this.onVehicleDeleted);
+    }
   },
   methods: {
+    onVehicleCreated(payload) {
+      const newVeh = payload?.vehicle || payload;
+      if (!newVeh || !newVeh.id) return;
+      const idx = this.vehicles.findIndex((v) => v.id === newVeh.id);
+      if (idx >= 0) {
+        this.vehicles.splice(idx, 1, newVeh);
+      } else {
+        this.vehicles.push(newVeh);
+      }
+    },
+    onVehicleDeleted(payload) {
+      const id = payload?.id || payload;
+      this.vehicles = this.vehicles.filter((v) => v.id !== id);
+      if (this.selectedVehicleId === id) {
+        this.selectedVehicleId = this.vehicles.length > 0 ? this.vehicles[0].id : null;
+      }
+    },
     handleKeydown(e) {
       if (e.key === 'Escape' && this.modelValue) {
         this.close();
@@ -594,13 +621,19 @@ export default {
         type: this.selectedVehicle.type,
         current_speed: 0,
         top_speed: Number(this.selectedVehicle.top_speed_m_turn || this.selectedVehicle.top_speed || 175),
+        top_speed_kph: Number(this.selectedVehicle.top_speed_kph || 0),
+        top_speed_m_turn: Number(this.selectedVehicle.top_speed_m_turn || 0),
+        cruise_speed_kph: Number(this.selectedVehicle.cruise_speed_kph || 0),
         accel: Number(this.selectedVehicle.accel ?? 60),
         decel: Number(this.selectedVehicle.decel ?? 40),
         turn_speed: Number(this.selectedVehicle.turn_speed ?? 80),
         current_seu: Number(this.selectedVehicle.max_seu ?? 100),
         max_seu: Number(this.selectedVehicle.max_seu ?? 100),
         damage_conditions: [],
-        passengers: this.deployDriver || '',
+        passengers: Number(this.selectedVehicle.passengers || 1),
+        passengers_capacity: Number(this.selectedVehicle.passengers_capacity ?? this.selectedVehicle.passengers ?? 4),
+        driver: this.deployDriver || '',
+        driver_notes: this.deployDriver || '',
         cargo_notes: this.deployCargo || '',
         token_size: Number(this.deploySize || this.selectedVehicle.token_size || 2),
         avatar_url: this.selectedVehicle.avatar_url || '',
@@ -619,6 +652,9 @@ export default {
 
       this.$emit('deploy', payload);
       this.close();
+    },
+    deployVehicle() {
+      return this.submitDeploy();
     },
   },
 };

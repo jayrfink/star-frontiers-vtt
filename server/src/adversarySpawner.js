@@ -4,47 +4,75 @@ import { formatAdversary } from './adversaries.js';
 
 /**
  * Finds non-overlapping coordinates in a spiral search around the center of the map
+ * Supports multi-cell token footprints (size >= 1).
  */
-function findOpenCoordinates(mapWidth, mapHeight, occupiedSet, count) {
+export function findOpenCoordinates(mapWidth, mapHeight, occupiedSet, count, tokenSize = 1) {
   const result = [];
-  const centerX = Math.floor(mapWidth / 2);
-  const centerY = Math.floor(mapHeight / 2);
+  const size = Math.max(1, tokenSize);
+  const centerX = Math.max(0, Math.floor((mapWidth - size) / 2));
+  const centerY = Math.max(0, Math.floor((mapHeight - size) / 2));
 
-  const isCellOpen = (x, y) => {
-    if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return false;
-    return !occupiedSet.has(`${x},${y}`);
+  const canPlaceToken = (x, y) => {
+    if (x < 0 || x + size > mapWidth || y < 0 || y + size > mapHeight) return false;
+    for (let dx = 0; dx < size; dx++) {
+      for (let dy = 0; dy < size; dy++) {
+        if (occupiedSet.has(`${x + dx},${y + dy}`)) return false;
+      }
+    }
+    return true;
   };
 
-  // Spiral search directions: right, down, left, up
+  const occupyToken = (x, y) => {
+    for (let dx = 0; dx < size; dx++) {
+      for (let dy = 0; dy < size; dy++) {
+        occupiedSet.add(`${x + dx},${y + dy}`);
+      }
+    }
+  };
+
   let x = centerX;
   let y = centerY;
-  let dx = 0;
-  let dy = -1;
-  const maxSteps = Math.max(mapWidth, mapHeight) * 2;
 
-  let currentDist = 0;
-  for (let step = 0; step < maxSteps * maxSteps && result.length < count; step++) {
-    if (isCellOpen(x, y)) {
-      result.push({ x, y });
-      occupiedSet.add(`${x},${y}`);
-    }
+  if (canPlaceToken(x, y)) {
+    result.push({ x, y });
+    occupyToken(x, y);
+  }
 
-    if (x === y || (x < 0 && x === -y) || (x > 0 && x === 1 - y)) {
-      const temp = dx;
-      dx = -dy;
-      dy = temp;
+  // Spiral search: alternate directions expanding outward (Right, Down, Left, Up)
+  const directions = [
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: -1 },
+  ];
+
+  let dir = 0;
+  let legLength = 1;
+  const maxLeg = Math.max(mapWidth, mapHeight) * 2;
+
+  while (result.length < count && legLength <= maxLeg) {
+    for (let k = 0; k < 2 && result.length < count; k++) {
+      const { dx, dy } = directions[dir];
+      for (let s = 0; s < legLength && result.length < count; s++) {
+        x += dx;
+        y += dy;
+        if (canPlaceToken(x, y)) {
+          result.push({ x, y });
+          occupyToken(x, y);
+        }
+      }
+      dir = (dir + 1) % 4;
     }
-    x += dx;
-    y += dy;
+    legLength++;
   }
 
   // Fallback if map center is congested: scan from top-left
   if (result.length < count) {
-    for (let r = 0; r < mapHeight && result.length < count; r++) {
-      for (let c = 0; c < mapWidth && result.length < count; c++) {
-        if (!occupiedSet.has(`${c},${r}`)) {
+    for (let r = 0; r <= mapHeight - size && result.length < count; r++) {
+      for (let c = 0; c <= mapWidth - size && result.length < count; c++) {
+        if (canPlaceToken(c, r)) {
           result.push({ x: c, y: r });
-          occupiedSet.add(`${c},${r}`);
+          occupyToken(c, r);
         }
       }
     }
@@ -59,6 +87,8 @@ function findOpenCoordinates(mapWidth, mapHeight, occupiedSet, count) {
 export async function spawnAdversaries({ db, io, mapId, template, count = 1, options = {} }) {
   if (!mapId) throw new Error('mapId is required');
   if (!template) throw new Error('template is required');
+
+  const safeCount = Math.min(50, Math.max(1, parseInt(count, 10) || 1));
 
   const map = db.prepare('SELECT * FROM maps WHERE id = ?').get(mapId);
   if (!map) throw new Error(`Map with id ${mapId} not found`);
@@ -124,13 +154,14 @@ export async function spawnAdversaries({ db, io, mapId, template, count = 1, opt
   });
 
   // 3. Find open placement coordinates around center
-  const targetCoords = findOpenCoordinates(map.width, map.height, occupiedSet, count);
+  const tokenSize = template.token_size || 1;
+  const targetCoords = findOpenCoordinates(map.width, map.height, occupiedSet, safeCount, tokenSize);
 
   // 4. Insert N numbered tokens
   const spawnedTokens = [];
-  const tokenSize = template.token_size || 1;
   const ringColor = getTierRingColor(template.threat_tier);
   const initialSeu = template.system_data?.seu_max !== undefined ? template.system_data.seu_max : null;
+  const tokenLayer = options.layer || 'character';
 
   const insertStmt = db.prepare(`
     INSERT INTO tokens (
@@ -140,37 +171,50 @@ export async function spawnAdversaries({ db, io, mapId, template, count = 1, opt
     ) VALUES (
       ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?, ?, ?,
-      '[]', 'character'
+      '[]', ?
     )
   `);
 
-  for (let i = 0; i < count; i++) {
-    const coord = targetCoords[i] || { x: 0, y: 0 };
-    const label = count === 1 ? template.name : `${template.name} #${i + 1}`;
+  const runInsertTransaction = db.transaction(() => {
+    const tokens = [];
+    for (let i = 0; i < safeCount; i++) {
+      const coord = targetCoords[i] || { x: 0, y: 0 };
+      const label = safeCount === 1 ? template.name : `${template.name} #${i + 1}`;
 
-    const res = insertStmt.run(
-      mapId,
-      template.template_id,
-      label,
-      ringColor,
-      template.token_image_path || '',
-      coord.x,
-      coord.y,
-      tokenSize,
-      template.hp_max,
-      template.hp_max,
-      initialSeu,
-      JSON.stringify([])
-    );
+      const res = insertStmt.run(
+        mapId,
+        template.template_id,
+        label,
+        ringColor,
+        template.token_image_path || '',
+        coord.x,
+        coord.y,
+        tokenSize,
+        template.hp_max,
+        template.hp_max,
+        initialSeu,
+        JSON.stringify([]),
+        tokenLayer
+      );
 
-    const tokenRow = db.prepare('SELECT * FROM tokens WHERE id = ?').get(res.lastInsertRowid);
-    const token = formatToken(tokenRow);
-    token.template = formattedTemplate;
-
-    if (io) {
-      io.emit('token:created', { token });
+      const tokenRow = db.prepare('SELECT * FROM tokens WHERE id = ?').get(res.lastInsertRowid);
+      const token = formatToken(tokenRow);
+      token.template = formattedTemplate;
+      tokens.push(token);
     }
+    return tokens;
+  });
 
+  const insertedTokens = runInsertTransaction();
+
+  for (const token of insertedTokens) {
+    if (io) {
+      if (token.layer === 'gm') {
+        io.to('role:GameMaster').emit('token:created', { token });
+      } else {
+        io.emit('token:created', { token });
+      }
+    }
     spawnedTokens.push(token);
   }
 

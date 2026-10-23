@@ -69,11 +69,27 @@ describe('combatReference', () => {
       expect(lb.restrictions).toEqual(['T', 'RD']);
     });
 
+    it('contains accurate Knight Hawks rulebook weapon ranges matching official rules and shipWeapons catalog (Bug 2.1)', () => {
+      const getWeapon = (name) => SHIP_COMBAT_REF.weapons.find((w) => w.name === name);
+
+      expect(getWeapon('Laser Cannon').rangeHexes).toBe(10);
+      expect(getWeapon('Laser Battery').rangeHexes).toBe(9);
+      expect(getWeapon('Electron Battery').rangeHexes).toBe(10);
+      expect(getWeapon('Proton Battery').rangeHexes).toBe(12);
+      expect(getWeapon('Disruptor Cannon').rangeHexes).toBe(9);
+      expect(getWeapon('Torpedo').rangeHexes).toBe(4);
+      expect(getWeapon('Assault Rocket').rangeHexes).toBe(4);
+      expect(getWeapon('Rocket Battery').rangeHexes).toBe(3);
+      expect(getWeapon('Mine').rangeHexes).toBe(0);
+      expect(getWeapon('Mine').damage).toBe('3d10+5');
+    });
+
     it('contains expected ship defenses and critical hit entries', () => {
       const defenseNames = SHIP_COMBAT_REF.defenses.map((d) => d.name);
       expect(defenseNames).toContain('Reflective Hull');
       expect(defenseNames).toContain('Masking Screen');
-      expect(defenseNames).toContain('Inertia Screen');
+      expect(defenseNames).toContain('Proton Screen');
+      expect(defenseNames).toContain('Electron Screen');
       expect(defenseNames).toContain('Stasis Screen');
       expect(defenseNames.some((n) => n.includes('ICM'))).toBe(true);
 

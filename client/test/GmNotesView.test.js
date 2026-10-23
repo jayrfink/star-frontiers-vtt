@@ -115,4 +115,82 @@ describe('GmNotesView Component', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('guards against async session panel fetch race conditions and ignores out-of-order responses', async () => {
+    const originalFetch = global.fetch;
+
+    let resolveSession1;
+    const session1Promise = new Promise((resolve) => {
+      resolveSession1 = resolve;
+    });
+
+    let resolveSession2;
+    const session2Promise = new Promise((resolve) => {
+      resolveSession2 = resolve;
+    });
+
+    global.fetch = vi.fn(async (url) => {
+      if (url === '/api/gm-notes/sessions') {
+        return {
+          ok: true,
+          json: async () => [
+            { id: 1, title: 'Session 1' },
+            { id: 2, title: 'Session 2' },
+          ],
+        };
+      }
+      if (url === '/api/gm-notes/sessions/1/panels') {
+        return session1Promise;
+      }
+      if (url === '/api/gm-notes/sessions/2/panels') {
+        return session2Promise;
+      }
+      return { ok: true, json: async () => [] };
+    });
+
+    try {
+      const wrapper = mount(GmNotesView);
+      await flushPromises();
+
+      // Session 1 is selected on mount and is waiting on session1Promise
+      // User clicks on Session 2
+      const sessionItems = wrapper.findAll('.gm-session-item');
+      await sessionItems[1].trigger('click');
+
+      // Session 2 resolves FIRST
+      resolveSession2({
+        ok: true,
+        json: async () => [
+          { id: 201, session_id: 2, title: 'Session 2 Panel', content: 'Correct active content' },
+        ],
+      });
+      await flushPromises();
+
+      expect(wrapper.findAll('.note-panel-card')).toHaveLength(1);
+      expect(wrapper.find('.panel-title-input').element.value).toBe('Session 2 Panel');
+
+      // The slow Session 1 response finally resolves LATER
+      resolveSession1({
+        ok: true,
+        json: async () => [
+          { id: 101, session_id: 1, title: 'Session 1 Stale Panel', content: 'Stale content' },
+        ],
+      });
+      await flushPromises();
+
+      // Active panels must STILL be Session 2's panels, not overwritten by Session 1
+      expect(wrapper.findAll('.note-panel-card')).toHaveLength(1);
+      expect(wrapper.find('.panel-title-input').element.value).toBe('Session 2 Panel');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('does not contain invalid list-style: border-box CSS typo (Bug 3.6)', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../src/views/GmNotesView.vue'), 'utf-8');
+    expect(source).not.toContain('list-style: border-box');
+    expect(source).toContain('box-sizing: border-box');
+  });
 });

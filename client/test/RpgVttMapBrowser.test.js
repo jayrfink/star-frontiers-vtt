@@ -48,4 +48,21 @@ describe('RpgVttView Map Background Browser & Modal Layout', () => {
     const submitMapSection = content.slice(content.indexOf('async function submitCreateMap()'), content.indexOf('function openAddTokenModal()'));
     expect(submitMapSection).toMatch(/activateMap\(created\.id\)/);
   });
+
+  describe('Dangling Token Selection Prevention (Bug 3.1)', () => {
+    it('resets selectedTokenId on map:activated socket event in RpgVttView', () => {
+      const mapActivatedSection = content.slice(content.indexOf("socket.on('map:activated'"), content.indexOf("socket.on('map:updated'"));
+      expect(mapActivatedSection).toMatch(/selectedTokenId\.value\s*=\s*null;/);
+    });
+
+    it('resets selectedTokenId on map:deleted socket event in RpgVttView when active map is deleted', () => {
+      const mapDeletedSection = content.slice(content.indexOf("socket.on('map:deleted'"), content.indexOf("socket.on('token:created'"));
+      expect(mapDeletedSection).toMatch(/selectedTokenId\.value\s*=\s*null;/);
+    });
+
+    it('resets selectedTokenId when activateMap completes in RpgVttView', () => {
+      const activateMapSection = content.slice(content.indexOf('async function activateMap('), content.indexOf('function clampGridLineWidth('));
+      expect(activateMapSection).toMatch(/selectedTokenId\.value\s*=\s*null;/);
+    });
+  });
 });

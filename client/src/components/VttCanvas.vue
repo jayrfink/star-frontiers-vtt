@@ -59,6 +59,8 @@ const emit = defineEmits([
   'update:panY',
   'token-moved',
   'token-selected',
+  'tokens-updated',
+  'map-updated',
 ]);
 
 const containerRef = ref(null);
@@ -69,10 +71,28 @@ const panX = ref(props.panX);
 const panY = ref(props.panY);
 
 watch(() => props.panX, (val) => {
-  if (typeof val === 'number' && val !== panX.value) panX.value = val;
+  if (typeof val === 'number' && val !== panX.value) {
+    panX.value = val;
+    requestRender();
+  }
 });
 watch(() => props.panY, (val) => {
-  if (typeof val === 'number' && val !== panY.value) panY.value = val;
+  if (typeof val === 'number' && val !== panY.value) {
+    panY.value = val;
+    requestRender();
+  }
+});
+watch(() => props.zoomLevel, () => {
+  requestRender();
+});
+watch(() => props.tokens, () => {
+  requestRender();
+}, { deep: true });
+watch(() => props.map, () => {
+  requestRender();
+}, { deep: true });
+watch(() => props.selectedTokenId, () => {
+  requestRender();
 });
 
 const isPanning = ref(false);
@@ -86,6 +106,7 @@ const dragCell = ref({ x: 0, y: 0 });
 // Ruler state
 const rulerStart = ref(null);
 const rulerEnd = ref(null);
+const isMeasuring = ref(false);
 
 // Image cache
 const imageCache = new Map();
@@ -101,7 +122,7 @@ function getCachedImage(url) {
   imageCache.set(url, record);
   img.onload = () => {
     record.loaded = true;
-    drawCanvas();
+    requestRender();
   };
   img.onerror = () => {
     imageCache.delete(url);
@@ -111,53 +132,86 @@ function getCachedImage(url) {
 }
 
 function handleAssetRenamed({ oldUrl, newUrl }) {
-  if (props.tokens && Array.isArray(props.tokens)) {
-    for (const t of props.tokens) {
-      if (t.avatar_url === oldUrl) {
-        t.avatar_url = newUrl;
+  for (const [key, cached] of Array.from(imageCache.entries())) {
+    if (key === oldUrl || key.split('?')[0] === oldUrl) {
+      imageCache.delete(key);
+      const query = key.includes('?') ? '?' + key.split('?')[1] : '';
+      if (newUrl) {
+        imageCache.set(newUrl + query, cached);
       }
     }
   }
-  if (imageCache.has(oldUrl)) {
-    const cached = imageCache.get(oldUrl);
-    imageCache.delete(oldUrl);
-    if (newUrl) {
-      imageCache.set(newUrl, cached);
+  if (props.tokens && Array.isArray(props.tokens)) {
+    let changed = false;
+    const updatedTokens = props.tokens.map((t) => {
+      if (t.avatar_url === oldUrl) {
+        changed = true;
+        return { ...t, avatar_url: newUrl };
+      } else if (t.avatar_url && t.avatar_url.split('?')[0] === oldUrl) {
+        changed = true;
+        const query = t.avatar_url.includes('?') ? '?' + t.avatar_url.split('?')[1] : '';
+        return { ...t, avatar_url: newUrl + query };
+      }
+      return t;
+    });
+    if (changed) {
+      emit('tokens-updated', updatedTokens);
     }
   }
-  drawCanvas();
+  requestRender();
 }
 
 function handleAssetDeleted({ url }) {
-  if (props.tokens && Array.isArray(props.tokens)) {
-    for (const t of props.tokens) {
-      if (t.avatar_url === url) {
-        t.avatar_url = '';
-      }
+  for (const key of Array.from(imageCache.keys())) {
+    if (key === url || key.split('?')[0] === url) {
+      imageCache.delete(key);
     }
   }
-  imageCache.delete(url);
-  drawCanvas();
+  if (props.tokens && Array.isArray(props.tokens)) {
+    let changed = false;
+    const updatedTokens = props.tokens.map((t) => {
+      if (t.avatar_url === url || (t.avatar_url && t.avatar_url.split('?')[0] === url)) {
+        changed = true;
+        return { ...t, avatar_url: '' };
+      }
+      return t;
+    });
+    if (changed) {
+      emit('tokens-updated', updatedTokens);
+    }
+  }
+  requestRender();
 }
 
 function handleMapAssetRenamed({ oldUrl, newUrl }) {
-  if (props.map && props.map.background_url === oldUrl) {
-    props.map.background_url = newUrl;
+  for (const [key, cached] of Array.from(imageCache.entries())) {
+    if (key === oldUrl || key.split('?')[0] === oldUrl) {
+      imageCache.delete(key);
+      const query = key.includes('?') ? '?' + key.split('?')[1] : '';
+      if (newUrl) imageCache.set(newUrl + query, cached);
+    }
   }
-  if (imageCache.has(oldUrl)) {
-    const cached = imageCache.get(oldUrl);
-    imageCache.delete(oldUrl);
-    if (newUrl) imageCache.set(newUrl, cached);
+  if (props.map) {
+    if (props.map.background_url === oldUrl) {
+      emit('map-updated', { ...props.map, background_url: newUrl });
+    } else if (props.map.background_url && props.map.background_url.split('?')[0] === oldUrl) {
+      const query = props.map.background_url.includes('?') ? '?' + props.map.background_url.split('?')[1] : '';
+      emit('map-updated', { ...props.map, background_url: newUrl + query });
+    }
   }
-  drawCanvas();
+  requestRender();
 }
 
 function handleMapAssetDeleted({ url }) {
-  if (props.map && props.map.background_url === url) {
-    props.map.background_url = '';
+  for (const key of Array.from(imageCache.keys())) {
+    if (key === url || key.split('?')[0] === url) {
+      imageCache.delete(key);
+    }
   }
-  imageCache.delete(url);
-  drawCanvas();
+  if (props.map && (props.map.background_url === url || (props.map.background_url && props.map.background_url.split('?')[0] === url))) {
+    emit('map-updated', { ...props.map, background_url: '' });
+  }
+  requestRender();
 }
 
 // Helpers
@@ -166,6 +220,11 @@ const mapCols = computed(() => props.map?.width || 20);
 const mapRows = computed(() => props.map?.height || 20);
 
 function getCellFromWorld(wx, wy) {
+  const mapW = mapCols.value * gridPx.value;
+  const mapH = mapRows.value * gridPx.value;
+  if (wx < 0 || wy < 0 || wx >= mapW || wy >= mapH) {
+    return null;
+  }
   const cx = Math.floor(wx / gridPx.value);
   const cy = Math.floor(wy / gridPx.value);
   return {
@@ -189,19 +248,32 @@ function getWorldFromScreen(sx, sy) {
 function resizeCanvas() {
   if (!containerRef.value || !canvasRef.value) return;
   const rect = containerRef.value.getBoundingClientRect();
-  canvasRef.value.width = rect.width;
-  canvasRef.value.height = rect.height;
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+  canvasRef.value.width = Math.round(rect.width * dpr);
+  canvasRef.value.height = Math.round(rect.height * dpr);
+  canvasRef.value.style.width = `${rect.width}px`;
+  canvasRef.value.style.height = `${rect.height}px`;
 }
 
-// Animation loop handle
+// Animation loop handle & dirty flag
 let animationFrameId = null;
+let needsRender = false;
+
+function requestRender() {
+  needsRender = true;
+  if (!animationFrameId) {
+    animationFrameId = requestAnimationFrame(() => {
+      animationFrameId = null;
+      if (needsRender) {
+        needsRender = false;
+        drawCanvas();
+      }
+    });
+  }
+}
 
 function startRenderLoop() {
-  function render() {
-    drawCanvas();
-    animationFrameId = requestAnimationFrame(render);
-  }
-  animationFrameId = requestAnimationFrame(render);
+  requestRender();
 }
 
 function stopRenderLoop() {
@@ -209,6 +281,7 @@ function stopRenderLoop() {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
+  needsRender = false;
 }
 
 // Canvas rendering
@@ -216,20 +289,27 @@ function drawCanvas() {
   const canvas = canvasRef.value;
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
   const width = canvas.width;
   const height = canvas.height;
 
-  // Clear canvas
+  // Clear canvas buffer
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
   if (!props.map) {
     // Render blank background when no map is active
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, width, height);
+    ctx.save();
+    ctx.scale(dpr, dpr);
     ctx.fillStyle = '#8b949e';
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('No Active Map Loaded. Select or Create a Map in GM Panel.', width / 2, height / 2);
+    const cssW = width / dpr;
+    const cssH = height / dpr;
+    ctx.fillText('No Active Map Loaded. Select or Create a Map in GM Panel.', cssW / 2, cssH / 2);
+    ctx.restore();
     return;
   }
 
@@ -237,6 +317,7 @@ function drawCanvas() {
   const mapH = mapRows.value * gridPx.value;
 
   ctx.save();
+  ctx.scale(dpr, dpr);
   ctx.translate(panX.value, panY.value);
   ctx.scale(props.zoomLevel, props.zoomLevel);
 
@@ -363,7 +444,14 @@ function drawGrid(ctx, mapW, mapH) {
 function drawTokens(ctx) {
   const gSize = gridPx.value;
 
-  props.tokens.forEach((token) => {
+  // Layering: larger tokens (e.g. vehicles size >= 2) render first (underneath), smaller tokens on top
+  const sortedTokens = [...props.tokens].sort((a, b) => {
+    const sizeA = Number(a.size) || 1;
+    const sizeB = Number(b.size) || 1;
+    return sizeB - sizeA;
+  });
+
+  sortedTokens.forEach((token) => {
     if (draggingToken.value && draggingToken.value.id === token.id) {
       // Skip drawing normal token if being dragged
       return;
@@ -438,7 +526,15 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   ctx.stroke();
 
   // Status Icons (⚡ Stunned, 💀 Unconscious, 🩸 Wounded)
-  if (token.status_effects && Array.isArray(token.status_effects) && token.status_effects.length > 0) {
+  let statusEffects = token.status_effects;
+  if (typeof statusEffects === 'string') {
+    try {
+      statusEffects = JSON.parse(statusEffects);
+    } catch {
+      statusEffects = [];
+    }
+  }
+  if (statusEffects && Array.isArray(statusEffects) && statusEffects.length > 0) {
     const iconMap = {
       stunned: '⚡',
       unconscious: '💀',
@@ -447,7 +543,7 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
       '💀': '💀',
       '🩸': '🩸',
     };
-    const activeIcons = token.status_effects.map(s => iconMap[s] || s);
+    const activeIcons = statusEffects.map(s => iconMap[s] || s);
     const iconStr = activeIcons.join('');
     
     ctx.font = '12px sans-serif';
@@ -460,9 +556,15 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   // Vehicle Token Overlays (Speed badge & Damage condition icon)
   if (token.vehicle_data) {
     // Damage Condition Indicator (🔥 Burning, ⚠️ Damaged)
-    const conditions = Array.isArray(token.vehicle_data.damage_conditions)
-      ? token.vehicle_data.damage_conditions
-      : [];
+    let conditions = token.vehicle_data.damage_conditions;
+    if (typeof conditions === 'string') {
+      try {
+        conditions = JSON.parse(conditions);
+      } catch {
+        conditions = [];
+      }
+    }
+    conditions = Array.isArray(conditions) ? conditions : [];
     if (conditions.length > 0) {
       const isBurning = conditions.some(
         c => typeof c === 'string' && (c.toLowerCase().includes('burn') || c.includes('🔥'))
@@ -596,15 +698,25 @@ function onMouseDown(e) {
 
   if (e.button === 0) {
     if (props.activeTool === 'select') {
-      const hitToken = [...props.tokens].reverse().find((t) => {
-        const size = t.size || 1;
-        return (
-          cell.x >= t.x &&
-          cell.x < t.x + size &&
-          cell.y >= t.y &&
-          cell.y < t.y + size
-        );
+      // Hit-testing: smaller tokens on top take precedence over larger tokens underneath
+      const hitTestOrder = [...props.tokens].sort((a, b) => {
+        const sizeA = Number(a.size) || 1;
+        const sizeB = Number(b.size) || 1;
+        return sizeA - sizeB;
       });
+      const hitToken = cell
+        ? hitTestOrder.find((t) => {
+            const tx = Number(t.x) || 0;
+            const ty = Number(t.y) || 0;
+            const size = Number(t.size) || 1;
+            return (
+              cell.x >= tx &&
+              cell.x < tx + size &&
+              cell.y >= ty &&
+              cell.y < ty + size
+            );
+          })
+        : null;
 
       if (hitToken) {
         draggingToken.value = hitToken;
@@ -613,9 +725,12 @@ function onMouseDown(e) {
       } else {
         emit('token-selected', null);
       }
-    } else if (props.activeTool === 'measure') {
+      requestRender();
+    } else if (cell && props.activeTool === 'measure') {
       rulerStart.value = cell;
       rulerEnd.value = cell;
+      isMeasuring.value = true;
+      requestRender();
     }
   }
 }
@@ -629,23 +744,32 @@ function onMouseMove(e) {
     panY.value = e.clientY - panStart.y;
     emit('update:panX', panX.value);
     emit('update:panY', panY.value);
+    requestRender();
     return;
   }
 
-  if (draggingToken.value) {
+  if (cell && draggingToken.value) {
     dragCell.value = cell;
+    requestRender();
     return;
   }
 
-  if (rulerStart.value && props.activeTool === 'measure') {
+  if (rulerStart.value && props.activeTool === 'measure' && isMeasuring.value) {
     rulerEnd.value = cell;
+    requestRender();
     return;
   }
 }
 
 function onMouseUp() {
+  if (isMeasuring.value) {
+    isMeasuring.value = false;
+    requestRender();
+  }
+
   if (isPanning.value) {
     isPanning.value = false;
+    requestRender();
   }
 
   if (draggingToken.value) {
@@ -657,6 +781,7 @@ function onMouseUp() {
       });
     }
     draggingToken.value = null;
+    requestRender();
   }
 }
 
@@ -679,11 +804,15 @@ function onWheel(e) {
   }
 
   emit('update:zoomLevel', newZoom);
+  requestRender();
 }
 
 function onKeyDown(e) {
-  if (e.code === 'Space' && !isSpacePressed.value && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-    isSpacePressed.value = true;
+  if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    if (!isSpacePressed.value) {
+      isSpacePressed.value = true;
+    }
   }
 }
 
@@ -699,7 +828,9 @@ watch(
     if (newTool !== 'measure') {
       rulerStart.value = null;
       rulerEnd.value = null;
+      isMeasuring.value = false;
     }
+    requestRender();
   }
 );
 
@@ -732,8 +863,9 @@ onBeforeUnmount(() => {
   socket.off('token:asset-deleted', handleAssetDeleted);
   socket.off('map:asset-renamed', handleMapAssetRenamed);
   socket.off('map:asset-deleted', handleMapAssetDeleted);
-  if (resizeObserver && containerRef.value) {
-    resizeObserver.unobserve(containerRef.value);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
   }
   window.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKeyDown);

@@ -55,6 +55,8 @@ const emit = defineEmits([
   'update:panY',
   'token-moved',
   'token-selected',
+  'tokens-updated',
+  'map-updated',
 ]);
 
 const containerRef = ref(null);
@@ -65,10 +67,31 @@ const panX = ref(props.panX);
 const panY = ref(props.panY);
 
 watch(() => props.panX, (val) => {
-  if (typeof val === 'number' && val !== panX.value) panX.value = val;
+  if (typeof val === 'number' && val !== panX.value) {
+    panX.value = val;
+    requestRender();
+  }
 });
 watch(() => props.panY, (val) => {
-  if (typeof val === 'number' && val !== panY.value) panY.value = val;
+  if (typeof val === 'number' && val !== panY.value) {
+    panY.value = val;
+    requestRender();
+  }
+});
+watch(() => props.zoomLevel, () => {
+  requestRender();
+});
+watch(() => props.tokens, () => {
+  requestRender();
+}, { deep: true });
+watch(() => props.map, () => {
+  requestRender();
+}, { deep: true });
+watch(() => props.selectedTokenId, () => {
+  requestRender();
+});
+watch(() => props.activeTool, () => {
+  requestRender();
 });
 
 const isPanning = ref(false);
@@ -93,7 +116,7 @@ function getCachedImage(url) {
   imageCache.set(url, record);
   img.onload = () => {
     record.loaded = true;
-    drawCanvas();
+    requestRender();
   };
   img.onerror = () => {
     imageCache.delete(url);
@@ -103,53 +126,86 @@ function getCachedImage(url) {
 }
 
 function handleAssetRenamed({ oldUrl, newUrl }) {
-  if (props.tokens && Array.isArray(props.tokens)) {
-    for (const t of props.tokens) {
-      if (t.avatar_url === oldUrl) {
-        t.avatar_url = newUrl;
+  for (const [key, cached] of Array.from(imageCache.entries())) {
+    if (key === oldUrl || key.split('?')[0] === oldUrl) {
+      imageCache.delete(key);
+      const query = key.includes('?') ? '?' + key.split('?')[1] : '';
+      if (newUrl) {
+        imageCache.set(newUrl + query, cached);
       }
     }
   }
-  if (imageCache.has(oldUrl)) {
-    const cached = imageCache.get(oldUrl);
-    imageCache.delete(oldUrl);
-    if (newUrl) {
-      imageCache.set(newUrl, cached);
+  if (props.tokens && Array.isArray(props.tokens)) {
+    let changed = false;
+    const updatedTokens = props.tokens.map((t) => {
+      if (t.avatar_url === oldUrl) {
+        changed = true;
+        return { ...t, avatar_url: newUrl };
+      } else if (t.avatar_url && t.avatar_url.split('?')[0] === oldUrl) {
+        changed = true;
+        const query = t.avatar_url.includes('?') ? '?' + t.avatar_url.split('?')[1] : '';
+        return { ...t, avatar_url: newUrl + query };
+      }
+      return t;
+    });
+    if (changed) {
+      emit('tokens-updated', updatedTokens);
     }
   }
-  drawCanvas();
+  requestRender();
 }
 
 function handleAssetDeleted({ url }) {
-  if (props.tokens && Array.isArray(props.tokens)) {
-    for (const t of props.tokens) {
-      if (t.avatar_url === url) {
-        t.avatar_url = '';
-      }
+  for (const key of Array.from(imageCache.keys())) {
+    if (key === url || key.split('?')[0] === url) {
+      imageCache.delete(key);
     }
   }
-  imageCache.delete(url);
-  drawCanvas();
+  if (props.tokens && Array.isArray(props.tokens)) {
+    let changed = false;
+    const updatedTokens = props.tokens.map((t) => {
+      if (t.avatar_url === url || (t.avatar_url && t.avatar_url.split('?')[0] === url)) {
+        changed = true;
+        return { ...t, avatar_url: '' };
+      }
+      return t;
+    });
+    if (changed) {
+      emit('tokens-updated', updatedTokens);
+    }
+  }
+  requestRender();
 }
 
 function handleMapAssetRenamed({ oldUrl, newUrl }) {
-  if (props.map && props.map.background_url === oldUrl) {
-    props.map.background_url = newUrl;
+  for (const [key, cached] of Array.from(imageCache.entries())) {
+    if (key === oldUrl || key.split('?')[0] === oldUrl) {
+      imageCache.delete(key);
+      const query = key.includes('?') ? '?' + key.split('?')[1] : '';
+      if (newUrl) imageCache.set(newUrl + query, cached);
+    }
   }
-  if (imageCache.has(oldUrl)) {
-    const cached = imageCache.get(oldUrl);
-    imageCache.delete(oldUrl);
-    if (newUrl) imageCache.set(newUrl, cached);
+  if (props.map) {
+    if (props.map.background_url === oldUrl) {
+      emit('map-updated', { ...props.map, background_url: newUrl });
+    } else if (props.map.background_url && props.map.background_url.split('?')[0] === oldUrl) {
+      const query = props.map.background_url.includes('?') ? '?' + props.map.background_url.split('?')[1] : '';
+      emit('map-updated', { ...props.map, background_url: newUrl + query });
+    }
   }
-  drawCanvas();
+  requestRender();
 }
 
 function handleMapAssetDeleted({ url }) {
-  if (props.map && props.map.background_url === url) {
-    props.map.background_url = '';
+  for (const key of Array.from(imageCache.keys())) {
+    if (key === url || key.split('?')[0] === url) {
+      imageCache.delete(key);
+    }
   }
-  imageCache.delete(url);
-  drawCanvas();
+  if (props.map && (props.map.background_url === url || (props.map.background_url && props.map.background_url.split('?')[0] === url))) {
+    emit('map-updated', { ...props.map, background_url: '' });
+  }
+  requestRender();
 }
 
 // Helpers
@@ -193,6 +249,10 @@ function getCellFromWorld(wx, wy) {
     }
   }
   
+  if (minDist > hexSize.value * 1.5) {
+    return null;
+  }
+
   return { q: bestQ, r: bestR };
 }
 
@@ -211,19 +271,32 @@ function getWorldFromScreen(sx, sy) {
 function resizeCanvas() {
   if (!containerRef.value || !canvasRef.value) return;
   const rect = containerRef.value.getBoundingClientRect();
-  canvasRef.value.width = rect.width;
-  canvasRef.value.height = rect.height;
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+  canvasRef.value.width = Math.round(rect.width * dpr);
+  canvasRef.value.height = Math.round(rect.height * dpr);
+  canvasRef.value.style.width = `${rect.width}px`;
+  canvasRef.value.style.height = `${rect.height}px`;
 }
 
-// Animation loop handle
+// Animation loop handle & dirty flag
 let animationFrameId = null;
+let needsRender = false;
+
+function requestRender() {
+  needsRender = true;
+  if (!animationFrameId) {
+    animationFrameId = requestAnimationFrame(() => {
+      animationFrameId = null;
+      if (needsRender) {
+        needsRender = false;
+        drawCanvas();
+      }
+    });
+  }
+}
 
 function startRenderLoop() {
-  function render() {
-    drawCanvas();
-    animationFrameId = requestAnimationFrame(render);
-  }
-  animationFrameId = requestAnimationFrame(render);
+  requestRender();
 }
 
 function stopRenderLoop() {
@@ -231,6 +304,7 @@ function stopRenderLoop() {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
+  needsRender = false;
 }
 
 // Canvas rendering
@@ -238,10 +312,12 @@ function drawCanvas() {
   const canvas = canvasRef.value;
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
   const width = canvas.width;
   const height = canvas.height;
 
-  // Clear canvas
+  // Clear canvas buffer
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
   if (!props.map) {
@@ -254,6 +330,7 @@ function drawCanvas() {
   const mapH = mapRows.value * (0.75 * hexH.value) + 0.25 * hexH.value;
 
   ctx.save();
+  ctx.scale(dpr, dpr);
   ctx.translate(panX.value, panY.value);
   ctx.scale(props.zoomLevel, props.zoomLevel);
 
@@ -361,7 +438,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   const center = getCellCenter(q, r);
   const cx = center.x;
   const cy = center.y;
-  const size = hexSize.value * 0.8; // Token slightly smaller than hex
+  const size = hexSize.value * 0.8 * (token.size || 1); // Token scaled to hex size footprint
   
   // Selected Token Glow
   if (isSelected) {
@@ -511,8 +588,17 @@ function onMouseDown(e) {
 
   if (e.button === 0) {
     if (props.activeTool === 'select') {
-      const hitToken = [...props.tokens].reverse().find((t) => {
-        return t.x === cell.q && t.y === cell.r;
+      const hitTestOrder = [...props.tokens].sort((a, b) => {
+        const aCel = isCelestialToken(a) ? 0 : 1;
+        const bCel = isCelestialToken(b) ? 0 : 1;
+        return bCel - aCel; // Ships first, celestials last
+      });
+      const hitToken = hitTestOrder.find((t) => {
+        if (cell && t.x === cell.q && t.y === cell.r) return true;
+        const center = getCellCenter(t.x, t.y);
+        const radius = hexSize.value * 0.8 * (t.size || 1);
+        const dist = Math.sqrt((worldPos.x - center.x) ** 2 + (worldPos.y - center.y) ** 2);
+        return dist <= radius;
       });
 
       if (hitToken) {
@@ -522,6 +608,7 @@ function onMouseDown(e) {
       } else {
         emit('token-selected', null);
       }
+      requestRender();
     }
   }
 }
@@ -535,11 +622,13 @@ function onMouseMove(e) {
     panY.value = e.clientY - panStart.y;
     emit('update:panX', panX.value);
     emit('update:panY', panY.value);
+    requestRender();
     return;
   }
 
-  if (draggingToken.value) {
+  if (cell && draggingToken.value) {
     dragCell.value = cell;
+    requestRender();
     return;
   }
 }
@@ -547,6 +636,7 @@ function onMouseMove(e) {
 function onMouseUp() {
   if (isPanning.value) {
     isPanning.value = false;
+    requestRender();
   }
 
   if (draggingToken.value) {
@@ -558,6 +648,7 @@ function onMouseUp() {
       });
     }
     draggingToken.value = null;
+    requestRender();
   }
 }
 
@@ -580,11 +671,15 @@ function onWheel(e) {
   }
 
   emit('update:zoomLevel', newZoom);
+  requestRender();
 }
 
 function onKeyDown(e) {
-  if (e.code === 'Space' && !isSpacePressed.value && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-    isSpacePressed.value = true;
+  if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    if (!isSpacePressed.value) {
+      isSpacePressed.value = true;
+    }
   }
 }
 
@@ -623,8 +718,9 @@ onBeforeUnmount(() => {
   socket.off('token:asset-deleted', handleAssetDeleted);
   socket.off('map:asset-renamed', handleMapAssetRenamed);
   socket.off('map:asset-deleted', handleMapAssetDeleted);
-  if (resizeObserver && containerRef.value) {
-    resizeObserver.unobserve(containerRef.value);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
   }
   window.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKeyDown);

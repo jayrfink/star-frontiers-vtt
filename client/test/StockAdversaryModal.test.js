@@ -1,9 +1,10 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import StockAdversaryModal from '../src/components/StockAdversaryModal.vue';
+import { socket } from '../src/services/socket.js';
 
 describe('StockAdversaryModal Component', () => {
   it('exports component definition with props and default state', () => {
@@ -352,6 +353,75 @@ describe('StockAdversaryModal Component', () => {
 
       await wrapper.setData({ isSpawning: false });
       expect(btn.element.disabled).toBe(false);
+    });
+  });
+
+  describe('Real-time Adversary Socket Sync (Bug 3.2)', () => {
+    it('registers socket listeners on mounted and deregisters on unmounted', () => {
+      const onSpy = vi.spyOn(socket, 'on');
+      const offSpy = vi.spyOn(socket, 'off');
+
+      const wrapper = mount(StockAdversaryModal, {
+        props: {
+          modelValue: false,
+          activeMap: { id: 1 },
+        },
+      });
+
+      expect(onSpy).toHaveBeenCalledWith('adversary:saved', expect.any(Function));
+      expect(onSpy).toHaveBeenCalledWith('adversary:deleted', expect.any(Function));
+
+      wrapper.unmount();
+
+      expect(offSpy).toHaveBeenCalledWith('adversary:saved', expect.any(Function));
+      expect(offSpy).toHaveBeenCalledWith('adversary:deleted', expect.any(Function));
+    });
+
+    it('handleAdversarySaved adds new template or updates existing template in templates list', () => {
+      const vm = {
+        templates: [
+          { template_id: 'tpl-1', name: 'Sathar Trooper', threat_tier: 2 },
+        ],
+        selectedTemplateId: 'tpl-1',
+      };
+
+      // 1. Update existing template
+      const updatedTemplate = { template_id: 'tpl-1', name: 'Sathar Elite Shock Trooper', threat_tier: 3 };
+      StockAdversaryModal.methods.handleAdversarySaved.call(vm, { template: updatedTemplate });
+
+      expect(vm.templates.length).toBe(1);
+      expect(vm.templates[0].name).toBe('Sathar Elite Shock Trooper');
+      expect(vm.templates[0].threat_tier).toBe(3);
+
+      // 2. Add new template
+      const newTemplate = { template_id: 'tpl-2', name: 'Sand Shark', threat_tier: 4 };
+      StockAdversaryModal.methods.handleAdversarySaved.call(vm, { template: newTemplate });
+
+      expect(vm.templates.length).toBe(2);
+      expect(vm.templates[1].name).toBe('Sand Shark');
+    });
+
+    it('handleAdversaryDeleted removes template and switches selectedTemplateId if active', () => {
+      const vm = {
+        templates: [
+          { template_id: 'tpl-1', name: 'Sathar' },
+          { template_id: 'tpl-2', name: 'Sand Shark' },
+        ],
+        selectedTemplateId: 'tpl-1',
+      };
+
+      // Delete active template tpl-1
+      StockAdversaryModal.methods.handleAdversaryDeleted.call(vm, { id: 'tpl-1' });
+
+      expect(vm.templates.length).toBe(1);
+      expect(vm.templates[0].template_id).toBe('tpl-2');
+      expect(vm.selectedTemplateId).toBe('tpl-2');
+
+      // Delete remaining template tpl-2
+      StockAdversaryModal.methods.handleAdversaryDeleted.call(vm, { id: 'tpl-2' });
+
+      expect(vm.templates.length).toBe(0);
+      expect(vm.selectedTemplateId).toBeNull();
     });
   });
 });

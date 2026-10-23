@@ -216,49 +216,100 @@ if (!mapCols.includes('map_type')) {
 
   const charTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='character_sheets'").get();
   if (charTableInfo && charTableInfo.sql && charTableInfo.sql.includes("CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian'))")) {
-    db.exec(`
-      PRAGMA foreign_keys = OFF;
-      CREATE TABLE character_sheets_dg_tmp (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        race TEXT NOT NULL CHECK(length(trim(race)) > 0),
-        psa TEXT NOT NULL DEFAULT 'Military' CHECK(psa IN ('Military', 'Technological', 'Biosocial')),
-        gender TEXT,
-        height TEXT,
-        weight TEXT,
-        str INTEGER NOT NULL DEFAULT 50,
-        sta INTEGER NOT NULL DEFAULT 50,
-        current_sta INTEGER NOT NULL DEFAULT 50,
-        dex INTEGER NOT NULL DEFAULT 50,
-        rs INTEGER NOT NULL DEFAULT 50,
-        int_stat INTEGER NOT NULL DEFAULT 50,
-        log_stat INTEGER NOT NULL DEFAULT 50,
-        per INTEGER NOT NULL DEFAULT 50,
-        ldr INTEGER NOT NULL DEFAULT 50,
-        racial_abilities TEXT DEFAULT '{}',
-        skills TEXT DEFAULT '[]',
-        inventory TEXT DEFAULT '[]',
-        notes TEXT DEFAULT '',
-        avatar_url TEXT DEFAULT '',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-      INSERT INTO character_sheets_dg_tmp (
-        id, user_id, name, race, psa, gender, height, weight,
-        str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
-        racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
-      )
-      SELECT
-        id, user_id, name, race, psa, gender, height, weight,
-        str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
-        racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
-      FROM character_sheets;
-      DROP TABLE character_sheets;
-      ALTER TABLE character_sheets_dg_tmp RENAME TO character_sheets;
-      PRAGMA foreign_keys = ON;
-    `);
+    db.pragma('foreign_keys = OFF');
+    const migrateCharSheets = db.transaction(() => {
+      db.exec(`
+        CREATE TABLE character_sheets_dg_tmp (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          race TEXT NOT NULL CHECK(length(trim(race)) > 0),
+          psa TEXT NOT NULL DEFAULT 'Military' CHECK(psa IN ('Military', 'Technological', 'Biosocial')),
+          gender TEXT,
+          height TEXT,
+          weight TEXT,
+          str INTEGER NOT NULL DEFAULT 50,
+          sta INTEGER NOT NULL DEFAULT 50,
+          current_sta INTEGER NOT NULL DEFAULT 50,
+          dex INTEGER NOT NULL DEFAULT 50,
+          rs INTEGER NOT NULL DEFAULT 50,
+          int_stat INTEGER NOT NULL DEFAULT 50,
+          log_stat INTEGER NOT NULL DEFAULT 50,
+          per INTEGER NOT NULL DEFAULT 50,
+          ldr INTEGER NOT NULL DEFAULT 50,
+          racial_abilities TEXT DEFAULT '{}',
+          skills TEXT DEFAULT '[]',
+          inventory TEXT DEFAULT '[]',
+          notes TEXT DEFAULT '',
+          avatar_url TEXT DEFAULT '',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        INSERT INTO character_sheets_dg_tmp (
+          id, user_id, name, race, psa, gender, height, weight,
+          str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+          racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
+        )
+        SELECT
+          id, user_id, name, race, psa, gender, height, weight,
+          str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+          racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
+        FROM character_sheets;
+        DROP TABLE character_sheets;
+        ALTER TABLE character_sheets_dg_tmp RENAME TO character_sheets;
+      `);
+    });
+    migrateCharSheets();
+    db.pragma('foreign_keys = ON');
+  }
+
+  const tokensTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tokens'").get();
+  if (tokensTableInfo && tokensTableInfo.sql && !tokensTableInfo.sql.includes('ON DELETE CASCADE')) {
+    db.pragma('foreign_keys = OFF');
+    const migrateTokens = db.transaction(() => {
+      db.exec(`
+        CREATE TABLE tokens_dg_tmp (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          map_id INTEGER NOT NULL,
+          character_id INTEGER,
+          name TEXT NOT NULL,
+          color TEXT DEFAULT '#666666',
+          avatar_url TEXT DEFAULT '',
+          x INTEGER NOT NULL DEFAULT 0,
+          y INTEGER NOT NULL DEFAULT 0,
+          size INTEGER NOT NULL DEFAULT 1,
+          current_hp INTEGER,
+          max_hp INTEGER,
+          status_effects TEXT DEFAULT '[]',
+          layer TEXT NOT NULL DEFAULT 'character',
+          rotation INTEGER DEFAULT 0,
+          current_speed INTEGER DEFAULT 0,
+          template_id TEXT,
+          conditions TEXT DEFAULT '[]',
+          seu_current INTEGER,
+          vehicle_data TEXT DEFAULT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
+          FOREIGN KEY (template_id) REFERENCES adversary_templates(id)
+        );
+        INSERT INTO tokens_dg_tmp (
+          id, map_id, character_id, name, color, avatar_url, x, y, size,
+          current_hp, max_hp, status_effects, layer, rotation, current_speed,
+          template_id, conditions, seu_current, vehicle_data, created_at, updated_at
+        )
+        SELECT
+          id, map_id, character_id, name, color, avatar_url, x, y, size,
+          current_hp, max_hp, status_effects, layer, rotation, current_speed,
+          template_id, conditions, seu_current, vehicle_data, created_at, updated_at
+        FROM tokens;
+        DROP TABLE tokens;
+        ALTER TABLE tokens_dg_tmp RENAME TO tokens;
+      `);
+    });
+    migrateTokens();
+    db.pragma('foreign_keys = ON');
   }
 
   const shipCols = db.prepare("PRAGMA table_info(ship_sheets)").all().map(c => c.name);

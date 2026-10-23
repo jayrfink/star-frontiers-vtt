@@ -56,6 +56,30 @@ describe('Token Damage & Wounded Red Overlay', () => {
           conditions: ['Wounded'],
         })
       ).toBe('bloodied');
+
+      // Safely handles JSON string representation of status_effects or conditions
+      expect(
+        getTokenDamageOverlayState({
+          name: 'Vrusk Scout',
+          status_effects: '["wounded"]',
+        })
+      ).toBe('bloodied');
+
+      expect(
+        getTokenDamageOverlayState({
+          name: 'Human Tech',
+          conditions: '["Stunned", "Wounded"]',
+        })
+      ).toBe('bloodied');
+
+      // Gracefully ignores invalid JSON strings
+      expect(
+        getTokenDamageOverlayState({
+          name: 'Corrupted Token',
+          status_effects: 'invalid json [',
+          conditions: 'not json',
+        })
+      ).toBeNull();
     });
 
     it('prioritizes "dead" and "critical" over "wounded" status when STA is below 20% or 0', () => {

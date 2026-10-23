@@ -154,6 +154,27 @@ describe('Vehicles API & Token Vehicle Support', () => {
       const listRes = await gmAgent.get('/api/vehicles');
       expect(listRes.body.find(v => v.id === id)).toBeUndefined();
     });
+
+    it('sanitizes non-finite numeric parameters to defaults when creating vehicle template', async () => {
+      const res = await gmAgent.post('/api/vehicles').send({
+        name: 'Faulty Flyer',
+        type: 'Air',
+        cost: 'invalid_cost',
+        top_speed_kph: NaN,
+        accel: Infinity,
+        decel: null,
+        max_seu: 'bad_seu',
+        passengers: undefined,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.cost).toBe(5000);
+      expect(res.body.top_speed_kph).toBe(100);
+      expect(res.body.accel).toBe(60);
+      expect(res.body.decel).toBe(40);
+      expect(res.body.max_seu).toBe(100);
+      expect(res.body.passengers).toBe(4);
+    });
   });
 
   describe('Tokens with vehicle_data integration', () => {

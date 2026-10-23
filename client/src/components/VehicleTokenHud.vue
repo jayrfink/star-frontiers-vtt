@@ -42,6 +42,7 @@
                 min="0"
                 :max="vehicleData.top_speed"
                 @change="onSpeedDirectChange($event.target.value)"
+                @keyup.enter="$event.target.blur()"
               />
             </div>
           </div>
@@ -146,9 +147,10 @@
             <input
               type="text"
               class="driver-notes-input note-input"
-              :value="vehicleData.passengers"
+              :value="vehicleData.driver || vehicleData.driver_notes || ''"
               placeholder="e.g. Driver: Ace (Dex 65)"
               @change="onDriverNotesChange($event.target.value)"
+              @keyup.enter="$event.target.blur()"
             />
           </div>
           <div class="note-row">
@@ -159,6 +161,7 @@
               :value="vehicleData.cargo_notes"
               placeholder="e.g. Survey gear, 2x 100 SEU clips"
               @change="onCargoNotesChange($event.target.value)"
+              @keyup.enter="$event.target.blur()"
             />
           </div>
         </div>
@@ -190,7 +193,7 @@
           </div>
           <div class="overview-item">
             <span class="item-label">Passengers</span>
-            <span class="item-value">{{ vehicleData.passengers_capacity || vehicleData.passengers || '-' }}</span>
+            <span class="item-value">{{ vehicleData.passengers_capacity || (typeof vehicleData.passengers === 'number' || (!isNaN(Number(vehicleData.passengers)) && vehicleData.passengers !== '') ? vehicleData.passengers : '-') }}</span>
           </div>
           <div class="overview-item">
             <span class="item-label">Cargo</span>
@@ -245,7 +248,7 @@ export default {
     },
     speedKph() {
       const topM = Number(this.vehicleData?.top_speed) || 175;
-      const topKph = Number(this.vehicleData?.top_speed_kph) || Math.round(topM * 0.6);
+      const topKph = Number(this.vehicleData?.top_speed_kph) || Math.round(topM * 0.36);
       if (topM <= 0) return 0;
       return Math.round(this.currentSpeed * (topKph / topM));
     },
@@ -253,7 +256,7 @@ export default {
       if (this.vehicleData?.cruise_speed_kph) {
         return this.vehicleData.cruise_speed_kph;
       }
-      const topKph = Number(this.vehicleData?.top_speed_kph) || Math.round((this.vehicleData?.top_speed || 100) * 0.6);
+      const topKph = Number(this.vehicleData?.top_speed_kph) || Math.round((this.vehicleData?.top_speed || 100) * 0.36);
       return Math.round(topKph * 0.6);
     },
     currentSeu() {
@@ -329,7 +332,13 @@ export default {
       this.emitVehicleUpdate({ damage_conditions: next });
     },
     onDriverNotesChange(val) {
-      this.emitVehicleUpdate({ passengers: val });
+      this.emitVehicleUpdate({
+        driver: val,
+        driver_notes: val,
+      });
+    },
+    saveDriverNotes(val) {
+      this.onDriverNotesChange(val);
     },
     onCargoNotesChange(val) {
       this.emitVehicleUpdate({ cargo_notes: val });

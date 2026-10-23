@@ -85,7 +85,7 @@ export const SHIP_COMBAT_REF = {
       name: 'Electron Battery',
       type: 'Beam',
       damage: '1d10',
-      rangeHexes: 6,
+      rangeHexes: 10,
       ammo: 'Unlimited',
       rof: 1,
       notes: 'Medium beam weapon with high armor penetration',
@@ -95,17 +95,17 @@ export const SHIP_COMBAT_REF = {
       name: 'Proton Battery',
       type: 'Beam',
       damage: '1d10',
-      rangeHexes: 5,
+      rangeHexes: 12,
       ammo: 'Unlimited',
       rof: 1,
-      notes: 'Proton Screen / Battery weapon; effective against energy shields',
+      notes: 'High-energy beam weapon with maximum effective beam range',
       restrictions: ['T', 'RD']
     },
     {
       name: 'Disruptor Cannon',
       type: 'Energy',
       damage: '3d10',
-      rangeHexes: 8,
+      rangeHexes: 9,
       ammo: 'Unlimited',
       rof: 1,
       notes: 'High-yield particle disruption beam',
@@ -144,7 +144,7 @@ export const SHIP_COMBAT_REF = {
     {
       name: 'Mine',
       type: 'Hazard',
-      damage: '3d10',
+      damage: '3d10+5',
       rangeHexes: 0,
       ammo: 'Limited',
       rof: 1,
@@ -167,20 +167,26 @@ export const SHIP_COMBAT_REF = {
     {
       name: 'Reflective Hull',
       type: 'Passive Armor',
-      effect: 'Halves all Laser/Beam weapon damage rounded down',
+      effect: 'Deflects laser and energy attacks; halves all Laser/Beam weapon damage rounded down',
       limitations: 'No effect against kinetic weapons (rockets, torpedoes, collisions)'
     },
     {
       name: 'Masking Screen',
       type: 'ECM Screen',
-      effect: 'Disrupts enemy fire control (+10% or -10% hit penalty)',
+      effect: 'Generates false signatures and sensor clutter; disrupts enemy fire control (+10% or -10% hit penalty)',
       limitations: 'Consumes screen generator charges per combat turn'
     },
     {
-      name: 'Inertia Screen',
-      type: 'Kinetic Screen',
-      effect: 'Absorbs kinetic damage (rockets, torpedoes, collisions)',
-      limitations: 'Ineffective against beam weapons; limited charges'
+      name: 'Proton Screen',
+      type: 'Energy Screen',
+      effect: 'Absorbs energy attacks; reduces damage from Laser Cannon, Laser Battery, Electron Battery',
+      limitations: 'Consumes screen generator charges per combat turn'
+    },
+    {
+      name: 'Electron Screen',
+      type: 'Energy Screen',
+      effect: 'Absorbs energy attacks; reduces damage from Proton Battery',
+      limitations: 'Consumes screen generator charges per combat turn'
     },
     {
       name: 'Stasis Screen',
@@ -189,9 +195,9 @@ export const SHIP_COMBAT_REF = {
       limitations: 'Electrical pulse attracts kinetic ordinance (+25% to-hit for Torpedoes); only one screen active at a time'
     },
     {
-      name: 'ICM (Interceptors)',
+      name: 'Interceptor Missiles (ICM)',
       type: 'Countermeasure',
-      effect: 'Intercepts incoming rockets and torpedoes (interception % roll)',
+      effect: 'Kinetic defense launched to intercept incoming torpedoes and rockets',
       limitations: 'Single-use projectiles per launcher per salvo'
     }
   ],

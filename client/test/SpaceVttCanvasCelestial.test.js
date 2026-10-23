@@ -41,4 +41,25 @@ describe('SpaceVttCanvas Celestial Token Rendering', () => {
     expect(drawSection).toMatch(/isCelestialToken\(a\)\s*\?\s*0\s*:\s*1/);
     expect(drawSection).toMatch(/isCelestialToken\(b\)\s*\?\s*0\s*:\s*1/);
   });
+
+  it('sorts tokens for hit-testing in reverse layer order (ships first, celestials last) in onMouseDown', () => {
+    const mouseSection = content.slice(content.indexOf('function onMouseDown'), content.indexOf('function onMouseMove'));
+    expect(mouseSection).toMatch(/const\s+hitTestOrder\s*=\s*\[\.\.\.props\.tokens\]\.sort\(/);
+    expect(mouseSection).toMatch(/bCel\s*-\s*aCel/);
+    expect(mouseSection).toMatch(/const\s+hitToken\s*=\s*hitTestOrder\.find\(/);
+  });
+
+  it('disconnects and nullifies resizeObserver on unmount', () => {
+    const unmountSection = content.slice(content.indexOf('onBeforeUnmount('));
+    expect(unmountSection).toContain('resizeObserver.disconnect()');
+    expect(unmountSection).toContain('resizeObserver = null');
+  });
+
+  it('emits updates without mutating props in asset event handlers', () => {
+    const assetSection = content.slice(content.indexOf('function handleAssetRenamed'), content.indexOf('const hexSize'));
+    expect(assetSection).not.toMatch(/(?<!=)t\.avatar_url\s*=\s*(?!=)/);
+    expect(assetSection).not.toMatch(/(?<!=)props\.map\.background_url\s*=\s*(?!=)/);
+    expect(assetSection).toContain("emit('tokens-updated'");
+    expect(assetSection).toContain("emit('map-updated'");
+  });
 });

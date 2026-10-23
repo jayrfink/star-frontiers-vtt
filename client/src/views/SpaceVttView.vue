@@ -233,7 +233,7 @@
             </div>
             <div class="hud-body">
               <span class="hud-total">{{ lastPercentileRoll.total }}</span>
-              <span class="hud-dice">(Tens: {{ lastPercentileRoll.tens }}, Ones: {{ lastPercentileRoll.ones }})</span>
+              <span class="hud-dice">(<span class="hud-tens-val">Tens: {{ lastPercentileRoll.tens }}</span>, <span class="hud-ones-val">Ones: {{ lastPercentileRoll.ones }}</span>)</span>
             </div>
           </div>
         </transition>
@@ -251,6 +251,8 @@
           :selected-token-id="selectedTokenId"
           @token-moved="onTokenMoved"
           @token-selected="onTokenSelected"
+          @tokens-updated="tokens = $event"
+          @map-updated="activeMap = $event"
         />
 
         <!-- No Active Map Overlay -->
@@ -586,6 +588,21 @@
                 </div>
               </div>
 
+              <!-- Token Size -->
+              <div class="form-group">
+                <label>Size:</label>
+                <select
+                  v-model.number="selectedTokenForm.size"
+                  class="size-select token-size-select"
+                  @change="updateSelectedToken"
+                >
+                  <option :value="1">1 Hex (Small / Medium)</option>
+                  <option :value="2">2 Hexes (Large)</option>
+                  <option :value="3">3 Hexes (Huge)</option>
+                  <option :value="4">4 Hexes (Gargantuan / Station)</option>
+                </select>
+              </div>
+
               <!-- Token Color -->
               <div class="form-group">
                 <label>Ring Color:</label>
@@ -640,6 +657,7 @@
     <div v-if="showCreateMapModal" class="modal-backdrop" @click.self="showCreateMapModal = false">
       <div class="modal-card">
         <h3>Create New Tactical Space Map</h3>
+        <div v-if="createMapError" class="modal-error-banner">⚠️ {{ createMapError }}</div>
         <form @submit.prevent="submitCreateMap">
           <div class="form-group">
             <label>Map Name *</label>
@@ -699,6 +717,7 @@
     <div v-if="showAddTokenModal" class="modal-backdrop" @click.self="showAddTokenModal = false">
       <div class="modal-card">
         <h3>Add Token to Space Map</h3>
+        <div v-if="createTokenError" class="modal-error-banner">⚠️ {{ createTokenError }}</div>
         <form @submit.prevent="submitAddToken">
 
           <!-- Token Type Toggle -->
@@ -774,6 +793,16 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label>Size</label>
+            <select v-model.number="newTokenForm.size" class="ship-sheet-select token-size-select">
+              <option :value="1">1 Hex (Fighter / Scout / Frigate)</option>
+              <option :value="2">2 Hexes (Destroyer / Cruiser)</option>
+              <option :value="3">3 Hexes (Heavy Cruiser / Carrier)</option>
+              <option :value="4">4 Hexes (Dreadnought / Station)</option>
+            </select>
+          </div>
+
 
           <div class="form-row">
             <div class="form-group">
@@ -841,7 +870,6 @@ import SpaceVttCanvas from '../components/SpaceVttCanvas.vue';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
-import DiceBox from '@3d-dice/dice-box';
 import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
@@ -876,6 +904,36 @@ const initialVttState = getUserState(getSafeUserId(), 'spaceVtt', {
 
 // Dice state
 let diceBoxInstance = null;
+let diceBoxInitPromise = null;
+
+async function initDiceBox() {
+  if (diceBoxInstance) return diceBoxInstance;
+  if (!diceBoxInitPromise) {
+    diceBoxInitPromise = (async () => {
+      const { default: DiceBox } = await import('@3d-dice/dice-box');
+      const box = new DiceBox({
+        id: "dice-canvas",
+        container: "#dice-box",
+        assetPath: '/assets/dice-box/',
+        theme: 'default',
+        scale: 5,
+        offscreen: false
+      });
+      await box.init();
+      diceBoxInstance = box;
+      return box;
+    })().catch((err) => {
+      console.warn('DiceBox init failed:', err);
+      diceBoxInitPromise = null;
+      return null;
+    });
+  }
+  return diceBoxInitPromise;
+}
+
+async function getReadyDiceBox() {
+  return await initDiceBox();
+}
 const damageDiceCount = ref(1);
 const showDmgMenu = ref(false);
 const dmgMenuRef = ref(null);
@@ -972,15 +1030,16 @@ function toggleDmgMenu() {
 
 async function rollPercentile() {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
-        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
-        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
+        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
@@ -1009,14 +1068,15 @@ async function rollPercentile() {
 
 async function rollDamage() {
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
     showDmgMenu.value = false;
 
     try {
-      const results = await diceBoxInstance.roll([
+      const results = await diceBox.roll([
         { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
       ]);
       const rollSummary = calculateDamageRoll(results);
@@ -1044,10 +1104,11 @@ async function rollDamage() {
   }
 }
 
-function clearDice() {
-  if (diceBoxInstance) {
+async function clearDice() {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     try {
-      diceBoxInstance.clear();
+      diceBox.clear();
     } catch (err) {
       console.warn('Failed to clear dice box:', err);
     }
@@ -1114,7 +1175,9 @@ watch([panX, panY, zoomLevel, activeTool, selectedTokenId, isRollLogOpen], () =>
 const showGmDrawer = ref(false);
 const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
+const createMapError = ref('');
 const showAddTokenModal = ref(false);
+const createTokenError = ref('');
 const showImageBrowser = ref(false);
 const imageBrowserTarget = ref('token');
 const selectedShipId = ref(null);
@@ -1212,14 +1275,28 @@ const selectedTokenCanFlipAndBurn = computed(() => {
   return true;
 });
 
-// Watch selectedToken to sync reactive form
+// Watch selectedToken to sync reactive form (Bugs 12 & 31)
 watch(selectedToken, (newToken) => {
   if (newToken) {
     selectedTokenForm.color = newToken.color || '#666666';
     selectedTokenForm.size = newToken.size || 1;
-    selectedTokenForm.status_effects = [...(newToken.status_effects || [])];
+    let effects = newToken.status_effects;
+    if (typeof effects === 'string') {
+      try {
+        effects = JSON.parse(effects);
+      } catch {
+        effects = [];
+      }
+    }
+    selectedTokenForm.status_effects = Array.isArray(effects) ? [...effects] : [];
     selectedTokenForm.current_speed = newToken.current_speed ?? 0;
     selectedTokenForm.rotation = newToken.rotation ?? 0;
+  } else {
+    selectedTokenForm.color = '#666666';
+    selectedTokenForm.size = 1;
+    selectedTokenForm.status_effects = [];
+    selectedTokenForm.current_speed = 0;
+    selectedTokenForm.rotation = 0;
   }
 });
 
@@ -1333,15 +1410,16 @@ async function executeFlipAndBurn() {
 async function rollFlipAndBurnStaCheck() {
   const shipName = selectedToken.value?.name || 'Ship';
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
-        { sides: 10, theme: 'custom-ones', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-tens', themeColor: '#22384a', qty: 1 },
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
@@ -1379,13 +1457,14 @@ async function rollFlipAndBurnStaCheck() {
 async function rollFlipAndBurnBlackout() {
   const shipName = selectedToken.value?.name || 'Ship';
   playDiceSound({ isRemote: false });
-  if (diceBoxInstance) {
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
-      const results = await diceBoxInstance.roll([
+      const results = await diceBox.roll([
         { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: 1 },
       ]);
       const rollSummary = calculateDamageRoll(results);
@@ -1472,6 +1551,7 @@ async function activateMap(mapId) {
       const data = await res.json();
       activeMap.value = data.map;
       tokens.value = data.tokens || [];
+      selectedTokenId.value = null;
       if (isGm.value) fetchMapList();
     }
   } catch (err) {
@@ -1549,6 +1629,7 @@ async function onActiveMapUpload(e) {
 }
 
 function openCreateMapModal() {
+  createMapError.value = '';
   newMapForm.name = '';
   newMapForm.map_type = 'space';
   newMapForm.width = 20;
@@ -1562,6 +1643,7 @@ function openCreateMapModal() {
 }
 
 async function submitCreateMap() {
+  createMapError.value = '';
   try {
     const res = await fetch('/api/maps', {
       method: 'POST',
@@ -1574,9 +1656,13 @@ async function submitCreateMap() {
       showCreateMapModal.value = false;
       fetchMapList();
       activateMap(created.id);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      createMapError.value = data.error || `Failed to create map (HTTP ${res.status})`;
     }
   } catch (err) {
     console.error('Failed to create map:', err);
+    createMapError.value = err.message || 'Error creating map';
   }
 }
 
@@ -1651,6 +1737,7 @@ function getEmptyCenterCoords() {
 }
 
 function openAddTokenModal() {
+  createTokenError.value = '';
   selectedShipId.value = null;
   newTokenForm.token_type = 'ship';
   newTokenForm.name = '';
@@ -1718,7 +1805,11 @@ function onShipSelected() {
 }
 
 async function submitAddToken() {
-  if (!activeMap.value) return;
+  createTokenError.value = '';
+  if (!activeMap.value) {
+    createTokenError.value = 'No active map selected';
+    return;
+  }
   try {
     const isCelestial = newTokenForm.token_type === 'celestial';
     const res = await fetch('/api/tokens', {
@@ -1733,7 +1824,7 @@ async function submitAddToken() {
         avatar_url: newTokenForm.avatar_url,
         x: newTokenForm.x,
         y: newTokenForm.y,
-        size: 1,
+        size: Number(newTokenForm.size) || 1,
         rotation: isCelestial ? 0 : (newTokenForm.rotation || 0),
         current_speed: isCelestial ? null : (newTokenForm.current_speed || 0),
         layer: isCelestial ? 'celestial' : 'character',
@@ -1745,9 +1836,13 @@ async function submitAddToken() {
       const exists = tokens.value.some((t) => t.id === created.id);
       if (!exists) tokens.value.push(created);
       selectedTokenId.value = created.id;
+    } else {
+      const data = await res.json().catch(() => ({}));
+      createTokenError.value = data.error || `Failed to create token (HTTP ${res.status})`;
     }
   } catch (err) {
     console.error('Failed to create token:', err);
+    createTokenError.value = err.message || 'Error creating token';
   }
 }
 
@@ -1889,9 +1984,20 @@ function adjustZoom(delta) {
   zoomLevel.value = Math.round(newZoom * 100) / 100;
 }
 
-// Socket.io Real-time Event Listeners
+// Socket.io Real-time Event Listeners (Bug 25 - specific handlers)
+let onSocketMapActivated = null;
+let onSocketMapUpdated = null;
+let onSocketMapCreated = null;
+let onSocketMapDeleted = null;
+let onSocketTokenCreated = null;
+let onSocketTokenMoved = null;
+let onSocketTokenUpdated = null;
+let onSocketTokenDeleted = null;
+let onSocketRollCreated = null;
+let onSocketRollCleared = null;
+
 function setupSocketListeners() {
-  socket.on('map:activated', ({ map, tokens: newTokens }) => {
+  socket.on('map:activated', onSocketMapActivated = ({ map, tokens: newTokens }) => {
     if (map && map.map_type === 'space') {
       activeMap.value = map;
       tokens.value = newTokens || [];
@@ -1899,32 +2005,33 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('map:updated', ({ map }) => {
+  socket.on('map:updated', onSocketMapUpdated = ({ map }) => {
     if (activeMap.value && activeMap.value.id === map.id) {
       activeMap.value = map;
     }
   });
 
-  socket.on('map:created', () => {
+  socket.on('map:created', onSocketMapCreated = () => {
     if (isGm.value) fetchMapList();
   });
 
-  socket.on('map:deleted', ({ id }) => {
+  socket.on('map:deleted', onSocketMapDeleted = ({ id }) => {
     if (isGm.value) fetchMapList();
     if (activeMap.value && activeMap.value.id === id) {
       activeMap.value = null;
       tokens.value = [];
+      selectedTokenId.value = null;
     }
   });
 
-  socket.on('token:created', ({ token }) => {
+  socket.on('token:created', onSocketTokenCreated = ({ token }) => {
     if (activeMap.value && token.map_id === activeMap.value.id) {
       const exists = tokens.value.some((t) => t.id === token.id);
       if (!exists) tokens.value.push(token);
     }
   });
 
-  socket.on('token:moved', ({ token }) => {
+  socket.on('token:moved', onSocketTokenMoved = ({ token }) => {
     if (activeMap.value && token.map_id === activeMap.value.id) {
       const idx = tokens.value.findIndex((t) => t.id === token.id);
       if (idx !== -1) {
@@ -1934,7 +2041,7 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('token:updated', ({ token }) => {
+  socket.on('token:updated', onSocketTokenUpdated = ({ token }) => {
     if (activeMap.value && token.map_id === activeMap.value.id) {
       const idx = tokens.value.findIndex((t) => t.id === token.id);
       if (idx !== -1) {
@@ -1942,7 +2049,15 @@ function setupSocketListeners() {
         if (selectedTokenId.value === token.id) {
           selectedTokenForm.color = token.color || '#666666';
           selectedTokenForm.size = token.size || 1;
-          selectedTokenForm.status_effects = [...(token.status_effects || [])];
+          let effects = token.status_effects;
+          if (typeof effects === 'string') {
+            try {
+              effects = JSON.parse(effects);
+            } catch {
+              effects = [];
+            }
+          }
+          selectedTokenForm.status_effects = Array.isArray(effects) ? [...effects] : [];
           selectedTokenForm.current_speed = token.current_speed ?? 0;
           selectedTokenForm.rotation = token.rotation ?? 0;
         }
@@ -1950,14 +2065,14 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('token:deleted', ({ id }) => {
+  socket.on('token:deleted', onSocketTokenDeleted = ({ id }) => {
     tokens.value = tokens.value.filter((t) => t.id !== id);
     if (selectedTokenId.value === id) {
       selectedTokenId.value = null;
     }
   });
 
-  socket.on('roll:created', ({ mode, roll }) => {
+  socket.on('roll:created', onSocketRollCreated = ({ mode, roll }) => {
     if (mode !== 'space') return;
     if (roll.username !== authStore.user?.username) {
       playDiceSound({ isRemote: true });
@@ -2001,7 +2116,7 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('roll:cleared', ({ mode }) => {
+  socket.on('roll:cleared', onSocketRollCleared = ({ mode }) => {
     if (mode === 'space') {
       rollLog.value = [];
       clearDice();
@@ -2010,16 +2125,16 @@ function setupSocketListeners() {
 }
 
 function cleanupSocketListeners() {
-  socket.off('map:activated');
-  socket.off('map:updated');
-  socket.off('map:created');
-  socket.off('map:deleted');
-  socket.off('token:created');
-  socket.off('token:moved');
-  socket.off('token:updated');
-  socket.off('token:deleted');
-  socket.off('roll:created');
-  socket.off('roll:cleared');
+  if (onSocketMapActivated) socket.off('map:activated', onSocketMapActivated);
+  if (onSocketMapUpdated) socket.off('map:updated', onSocketMapUpdated);
+  if (onSocketMapCreated) socket.off('map:created', onSocketMapCreated);
+  if (onSocketMapDeleted) socket.off('map:deleted', onSocketMapDeleted);
+  if (onSocketTokenCreated) socket.off('token:created', onSocketTokenCreated);
+  if (onSocketTokenMoved) socket.off('token:moved', onSocketTokenMoved);
+  if (onSocketTokenUpdated) socket.off('token:updated', onSocketTokenUpdated);
+  if (onSocketTokenDeleted) socket.off('token:deleted', onSocketTokenDeleted);
+  if (onSocketRollCreated) socket.off('roll:created', onSocketRollCreated);
+  if (onSocketRollCleared) socket.off('roll:cleared', onSocketRollCleared);
 }
 
 onMounted(() => {
@@ -2030,17 +2145,7 @@ onMounted(() => {
     fetchMapList();
   }
   
-  if (!diceBoxInstance) {
-    diceBoxInstance = new DiceBox({
-      id: "dice-canvas",
-      container: "#dice-box",
-      assetPath: '/assets/dice-box/',
-      theme: 'default',
-      scale: 5,
-      offscreen: false
-    });
-    diceBoxInstance.init();
-  }
+  initDiceBox();
 
   setupSocketListeners();
   window.addEventListener('keydown', onKeyDown);
@@ -2063,10 +2168,45 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onDocClick);
   if (damageHudTimeout) clearTimeout(damageHudTimeout);
   if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  if (diceBoxInstance) {
+    try {
+      diceBoxInstance.clear();
+    } catch (e) {}
+
+    // Clean up WebGL canvas contexts properly to prevent context leak (Bug 24)
+    const canvas = diceBoxInstance.canvas || document.querySelector('#dice-canvas') || document.querySelector('#dice-box canvas');
+    if (canvas && typeof canvas.getContext === 'function') {
+      try {
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const loseContext = gl.getExtension('WEBGL_lose_context');
+          if (loseContext) {
+            loseContext.loseContext();
+          }
+        }
+      } catch (e) {}
+    }
+    diceBoxInstance = null;
+    diceBoxInitPromise = null;
+  }
+  const diceBoxContainer = document.querySelector('#dice-box');
+  if (diceBoxContainer) {
+    diceBoxContainer.innerHTML = '';
+  }
 });
 </script>
 
 <style scoped>
+.modal-error-banner {
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid #dc3545;
+  color: #ff8591;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
 .vtt-view {
   display: flex;
   flex-direction: column;
@@ -2556,6 +2696,16 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #bbf2d4;
   font-weight: 600;
+}
+
+.percentile-hud-banner .hud-tens-val {
+  color: #77d19e;
+  font-weight: 700;
+}
+
+.percentile-hud-banner .hud-ones-val {
+  color: #38bdf8;
+  font-weight: 700;
 }
 
 /* Transitions */

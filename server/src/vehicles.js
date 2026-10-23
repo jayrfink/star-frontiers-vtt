@@ -31,6 +31,12 @@ export function loadCanonicalVehicles() {
 }
 
 
+function sanitizeNumber(val, fallback) {
+  if (val === null || val === undefined || val === '') return fallback;
+  const n = Number(val);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export function formatVehicleTemplate(row) {
   if (!row) return null;
   return {
@@ -103,6 +109,19 @@ export function createVehiclesRouter(db, io) {
         return res.status(400).json({ error: 'Vehicle name is required' });
       }
 
+      const numCost = sanitizeNumber(cost, 5000);
+      const numTopSpeedKph = sanitizeNumber(top_speed_kph, 100);
+      const numTopSpeedMTurn = sanitizeNumber(top_speed_m_turn, 175);
+      const numCruiseSpeedKph = sanitizeNumber(cruise_speed_kph, 60);
+      const numAccel = sanitizeNumber(accel, 60);
+      const numDecel = sanitizeNumber(decel, 40);
+      const numTurnSpeed = sanitizeNumber(turn_speed, 80);
+      const numPassengers = sanitizeNumber(passengers, 4);
+      const numCargoKg = sanitizeNumber(cargo_kg, 150);
+      const numCargoM3 = sanitizeNumber(cargo_m3, 1.0);
+      const numMaxSeu = sanitizeNumber(max_seu, 100);
+      const numTokenSize = sanitizeNumber(token_size, 2);
+
       const id = `veh_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
       const userId = req.session.userId;
 
@@ -121,10 +140,10 @@ export function createVehiclesRouter(db, io) {
       `);
 
       stmt.run(
-        id, userId, name.trim(), type, cost,
-        top_speed_kph, top_speed_m_turn, cruise_speed_kph,
-        accel, decel, turn_speed, passengers, cargo_kg,
-        cargo_m3, battery_type, max_seu, token_size, avatar_url, description
+        id, userId, name.trim(), type, numCost,
+        numTopSpeedKph, numTopSpeedMTurn, numCruiseSpeedKph,
+        numAccel, numDecel, numTurnSpeed, numPassengers, numCargoKg,
+        numCargoM3, battery_type, numMaxSeu, numTokenSize, avatar_url, description
       );
 
       const createdRow = db.prepare('SELECT * FROM vehicle_templates WHERE id = ?').get(id);

@@ -64,6 +64,48 @@ describe('Rolls API & Sockets', () => {
     expect(res3.status).toBe(400);
   });
 
+  it('rejects POST /api/rolls with NaN, Infinity, and non-finite numbers with 400', async () => {
+    const resNaN = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: NaN,
+      breakdown: 'test',
+    });
+    expect(resNaN.status).toBe(400);
+    expect(resNaN.body.error).toBe('Invalid roll total: must be a finite number');
+
+    const resInf = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: Infinity,
+      breakdown: 'test',
+    });
+    expect(resInf.status).toBe(400);
+    expect(resInf.body.error).toBe('Invalid roll total: must be a finite number');
+
+    const resNegInf = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: -Infinity,
+      breakdown: 'test',
+    });
+    expect(resNegInf.status).toBe(400);
+    expect(resNegInf.body.error).toBe('Invalid roll total: must be a finite number');
+
+    const resStr = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: 'fifty',
+      breakdown: 'test',
+    });
+    expect(resStr.status).toBe(400);
+    expect(resStr.body.error).toBe('Invalid roll total: must be a finite number');
+  });
+
   it('creates a roll with authenticated user attribution and emits roll:created', async () => {
     let emittedEvent = null;
     io.on('connection', (sock) => {
@@ -176,11 +218,96 @@ describe('Rolls API & Sockets', () => {
       mode: 'rpg',
       type: 'percentile',
       label: 'd% #101',
-      total: 101,
+      total: 100,
       breakdown: 'roll 101'
     });
 
     const count = db.prepare('SELECT COUNT(*) as count FROM roll_logs WHERE mode = ?').get('rpg').count;
     expect(count).toBe(100);
+  });
+
+  it('safely handles corrupted roll_summary without throwing 500 error', async () => {
+    // Insert a roll record with corrupted JSON in roll_summary
+    db.prepare(`
+      INSERT INTO roll_logs (mode, user_id, username, role, type, label, total, breakdown, roll_summary)
+      VALUES ('rpg', 1, 'gmUser', 'GameMaster', 'percentile', 'Corrupted Roll', 42, 'bad json', '{invalid: json')
+    `).run();
+
+    const res = await playerAgent.get('/api/rolls?mode=rpg');
+    expect(res.status).toBe(200);
+    const corrupted = res.body.find(r => r.label === 'Corrupted Roll');
+    expect(corrupted).toBeDefined();
+    expect(corrupted.rollSummary).toEqual({});
+  });
+
+  it('Bug 13: validates roll bounds and parameter validation', async () => {
+    // Percentile < 1 rejected
+    const resLowPct = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: 0,
+      breakdown: '0'
+    });
+    expect(resLowPct.status).toBe(400);
+
+    // Percentile > 100 rejected
+    const resHighPct = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: 101,
+      breakdown: '101'
+    });
+    expect(resHighPct.status).toBe(400);
+
+    // Damage < 0 rejected
+    const resNegDamage = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '1d10',
+      total: -1,
+      breakdown: '-1'
+    });
+    expect(resNegDamage.status).toBe(400);
+
+    // Invalid dice parameter in rollSummary rejected
+    const resBadDice = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '1d10',
+      total: 5,
+      breakdown: '5',
+      rollSummary: { dice: [NaN] }
+    });
+    expect(resBadDice.status).toBe(400);
+
+    // Valid percentile total (1 and 100) and damage (0) accepted
+    const resValid1 = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: 1,
+      breakdown: '1'
+    });
+    expect(resValid1.status).toBe(201);
+
+    const resValid100 = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'd%',
+      total: 100,
+      breakdown: '100'
+    });
+    expect(resValid100.status).toBe(201);
+
+    const resValidDmg = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '0 dmg',
+      total: 0,
+      breakdown: '0'
+    });
+    expect(resValidDmg.status).toBe(201);
   });
 });

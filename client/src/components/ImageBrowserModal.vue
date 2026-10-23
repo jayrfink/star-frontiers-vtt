@@ -205,11 +205,6 @@ export default {
       }
     },
   },
-  mounted() {
-    if (this.modelValue) {
-      this.fetchFiles();
-    }
-  },
   computed: {
     isGm() {
       try {

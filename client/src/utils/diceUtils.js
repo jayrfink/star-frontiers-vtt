@@ -47,10 +47,10 @@ export function calculatePercentileRoll(results) {
     return { total: 0, tens: 0, ones: 0, valid: false };
   }
 
-  // Find tens die (lighter colored die #77d19e or group 0)
-  const tensDie = flatResults.find(d => d?.themeColor === '#77d19e' || d?.groupId === 0) || flatResults[0];
-  // Find ones die (darker colored die #22384a or group 1)
-  const onesDie = flatResults.find(d => d !== tensDie && (d?.themeColor === '#22384a' || d?.groupId === 1)) ||
+  // Find tens die (lighter colored die #77d19e, theme 'custom-tens', or group 0)
+  const tensDie = flatResults.find(d => d?.theme === 'custom-tens' || d?.themeColor === '#77d19e' || d?.groupId === 0) || flatResults[0];
+  // Find ones die (darker colored die #22384a, theme 'custom-ones', or group 1)
+  const onesDie = flatResults.find(d => d !== tensDie && (d?.theme === 'custom-ones' || d?.themeColor === '#22384a' || d?.groupId === 1)) ||
     flatResults.find(d => d !== tensDie) ||
     flatResults[1];
 

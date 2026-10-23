@@ -397,6 +397,8 @@
 </template>
 
 <script>
+import { socket } from '../services/socket.js';
+
 export default {
   name: 'StockAdversaryModal',
   props: {
@@ -775,8 +777,34 @@ export default {
         this.isGeneratingArt = false;
       }
     },
+    handleAdversarySaved({ template } = {}) {
+      if (!template) return;
+      const id = template.template_id || template.id;
+      const idx = this.templates.findIndex((t) => (t.template_id || t.id) === id);
+      if (idx !== -1) {
+        this.templates.splice(idx, 1, template);
+      } else {
+        this.templates.push(template);
+      }
+      if (!this.selectedTemplateId && this.templates.length > 0) {
+        this.selectedTemplateId = this.templates[0].template_id || this.templates[0].id;
+      }
+    },
+    handleAdversaryDeleted({ id } = {}) {
+      if (!id) return;
+      this.templates = this.templates.filter((t) => (t.template_id || t.id) !== id);
+      if (this.selectedTemplateId === id) {
+        this.selectedTemplateId = this.templates.length > 0 ? (this.templates[0].template_id || this.templates[0].id) : null;
+      }
+    },
+  },
+  mounted() {
+    socket.on('adversary:saved', this.handleAdversarySaved);
+    socket.on('adversary:deleted', this.handleAdversaryDeleted);
   },
   beforeUnmount() {
+    socket.off('adversary:saved', this.handleAdversarySaved);
+    socket.off('adversary:deleted', this.handleAdversaryDeleted);
     if (this.artCooldownTimer) {
       clearInterval(this.artCooldownTimer);
       this.artCooldownTimer = null;

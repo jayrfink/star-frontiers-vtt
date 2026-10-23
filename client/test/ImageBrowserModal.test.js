@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { createSSRApp } from 'vue';
 import { renderToString } from 'vue/server-renderer';
@@ -294,15 +298,51 @@ describe('ImageBrowserModal.vue', () => {
   });
 
   describe('Mounted & watch lifecycle', () => {
-    it('fetches files on mounted if modelValue is true', () => {
-      const fetchFilesMock = vi.fn();
-      const vmOpen = { modelValue: true, fetchFiles: fetchFilesMock };
-      ImageBrowserModal.mounted.call(vmOpen);
-      expect(fetchFilesMock).toHaveBeenCalledTimes(1);
+    it('fetches files exactly once on mount when modelValue is true (Bug 3.3)', () => {
+      const fetchSpy = vi.spyOn(ImageBrowserModal.methods, 'fetchFiles').mockImplementation(() => Promise.resolve());
+      const wrapper = mount(ImageBrowserModal, {
+        props: {
+          modelValue: true,
+        },
+      });
+      try {
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        fetchSpy.mockRestore();
+        wrapper.unmount();
+      }
+    });
 
-      const vmClosed = { modelValue: false, fetchFiles: fetchFilesMock };
-      ImageBrowserModal.mounted.call(vmClosed);
-      expect(fetchFilesMock).toHaveBeenCalledTimes(1); // not called again
+    it('does not fetch files on mount when modelValue is false', () => {
+      const fetchSpy = vi.spyOn(ImageBrowserModal.methods, 'fetchFiles').mockImplementation(() => Promise.resolve());
+      const wrapper = mount(ImageBrowserModal, {
+        props: {
+          modelValue: false,
+        },
+      });
+      try {
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        fetchSpy.mockRestore();
+        wrapper.unmount();
+      }
+    });
+
+    it('fetches files when modelValue changes from false to true', async () => {
+      const fetchSpy = vi.spyOn(ImageBrowserModal.methods, 'fetchFiles').mockImplementation(() => Promise.resolve());
+      const wrapper = mount(ImageBrowserModal, {
+        props: {
+          modelValue: false,
+        },
+      });
+      try {
+        expect(fetchSpy).not.toHaveBeenCalled();
+        await wrapper.setProps({ modelValue: true });
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        fetchSpy.mockRestore();
+        wrapper.unmount();
+      }
     });
 
     it('has immediate watcher on modelValue', () => {
@@ -580,10 +620,8 @@ describe('ImageBrowserModal.vue', () => {
       expect(vttSrc).toContain("socket.off('token:asset-deleted', handleAssetDeleted)");
       expect(vttSrc).toContain("socket.off('map:asset-renamed', handleMapAssetRenamed)");
       expect(vttSrc).toContain("socket.off('map:asset-deleted', handleMapAssetDeleted)");
-      expect(vttSrc).toContain("t.avatar_url = newUrl");
-      expect(vttSrc).toContain("t.avatar_url = ''");
-      expect(vttSrc).toContain("props.map.background_url = newUrl");
-      expect(vttSrc).toContain("props.map.background_url = ''");
+      expect(vttSrc).toContain("emit('tokens-updated', updatedTokens)");
+      expect(vttSrc).toContain("emit('map-updated'");
       expect(vttSrc).toContain("drawCanvas()");
     });
 
@@ -601,10 +639,8 @@ describe('ImageBrowserModal.vue', () => {
       expect(spaceSrc).toContain("socket.off('token:asset-deleted', handleAssetDeleted)");
       expect(spaceSrc).toContain("socket.off('map:asset-renamed', handleMapAssetRenamed)");
       expect(spaceSrc).toContain("socket.off('map:asset-deleted', handleMapAssetDeleted)");
-      expect(spaceSrc).toContain("t.avatar_url = newUrl");
-      expect(spaceSrc).toContain("t.avatar_url = ''");
-      expect(spaceSrc).toContain("props.map.background_url = newUrl");
-      expect(spaceSrc).toContain("props.map.background_url = ''");
+      expect(spaceSrc).toContain("emit('tokens-updated', updatedTokens)");
+      expect(spaceSrc).toContain("emit('map-updated'");
       expect(spaceSrc).toContain("drawCanvas()");
     });
   });

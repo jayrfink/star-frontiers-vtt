@@ -153,7 +153,39 @@ describe('DeployVehicleModal.vue', () => {
     expect(payload.vehicle_data).toBeDefined();
     expect(payload.vehicle_data.template_id).toBe('ground_car');
     expect(payload.vehicle_data.current_speed).toBe(0);
-    expect(payload.vehicle_data.passengers).toBe('Captain UPEX');
+    expect(payload.vehicle_data.passengers).toBe(6);
+    expect(payload.vehicle_data.passengers_capacity).toBe(6);
+    expect(payload.vehicle_data.driver).toBe('Captain UPEX');
+    expect(payload.vehicle_data.driver_notes).toBe('Captain UPEX');
+    expect(payload.vehicle_data.top_speed_kph).toBe(100);
+    expect(payload.vehicle_data.top_speed_m_turn).toBe(175);
+  });
+
+  it('updates vehicle list on vehicle:created and vehicle:deleted events', async () => {
+    const wrapper = mount(DeployVehicleModal, {
+      props: {
+        modelValue: true,
+        isGm: true,
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 10));
+
+    const newVehicle = {
+      id: 'tank_01',
+      name: 'Hover Tank',
+      type: 'Hover',
+      top_speed_kph: 120,
+      passengers: 4,
+      is_canonical: false,
+    };
+
+    wrapper.vm.onVehicleCreated(newVehicle);
+    expect(wrapper.vm.vehicles.some((v) => v.id === 'tank_01')).toBe(true);
+
+    wrapper.vm.onVehicleDeleted({ id: 'tank_01' });
+    expect(wrapper.vm.vehicles.some((v) => v.id === 'tank_01')).toBe(false);
   });
 
   it('allows creating and saving a custom vehicle in custom tab', async () => {
@@ -259,5 +291,48 @@ describe('DeployVehicleModal.vue', () => {
     await wrapper.find('button.tab-custom').trigger('click');
     expect(wrapper.find('div.create-custom-section').exists()).toBe(false);
     expect(wrapper.find('button.delete-custom-btn').exists()).toBe(false);
+  });
+
+  it('unpacks { vehicle } socket event payload and avoids duplicates in onVehicleCreated', async () => {
+    const wrapper = mount(DeployVehicleModal, {
+      props: {
+        modelValue: true,
+        isGm: true,
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Initial count
+    const initialCount = wrapper.vm.vehicles.length;
+    expect(initialCount).toBeGreaterThan(0);
+
+    // Call onVehicleCreated with wrapped { vehicle: ... }
+    const newVehicleObj = {
+      id: 'wrapped_veh_1',
+      name: 'Wrapped Hover Tank',
+      type: 'Hover',
+      top_speed_kph: 120,
+    };
+    wrapper.vm.onVehicleCreated({ vehicle: newVehicleObj });
+
+    expect(wrapper.vm.vehicles.some((v) => v.id === 'wrapped_veh_1')).toBe(true);
+    expect(wrapper.vm.vehicles).toHaveLength(initialCount + 1);
+
+    // Calling again with duplicate id should update in-place without adding duplicate
+    wrapper.vm.onVehicleCreated({ vehicle: { ...newVehicleObj, name: 'Wrapped Hover Tank Mk II' } });
+    expect(wrapper.vm.vehicles).toHaveLength(initialCount + 1);
+    expect(wrapper.vm.vehicles.find((v) => v.id === 'wrapped_veh_1').name).toBe('Wrapped Hover Tank Mk II');
+
+    // Calling with unwrapped vehicle payload also works
+    const unwrappedVeh = {
+      id: 'unwrapped_veh_2',
+      name: 'Unwrapped Explorer',
+      type: 'Ground',
+    };
+    wrapper.vm.onVehicleCreated(unwrappedVeh);
+    expect(wrapper.vm.vehicles.some((v) => v.id === 'unwrapped_veh_2')).toBe(true);
+    expect(wrapper.vm.vehicles).toHaveLength(initialCount + 2);
   });
 });

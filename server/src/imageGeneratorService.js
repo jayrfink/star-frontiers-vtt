@@ -135,11 +135,12 @@ export async function generateTokenArtFromDescription({
   weapon,
   armor,
   attacks,
+  uploadDir,
 }) {
   const enhancedPrompt = buildTokenPrompt({ prompt, name, species, category, weapon, armor, attacks });
   const imageBuffer = await generateAiImage(enhancedPrompt);
 
-  const uploadsDir = path.join(DATA_DIR, 'uploads');
+  const uploadsDir = uploadDir || path.join(DATA_DIR, 'uploads');
   const tokensUploadDir = path.join(uploadsDir, 'tokens');
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   if (!fs.existsSync(tokensUploadDir)) fs.mkdirSync(tokensUploadDir, { recursive: true });

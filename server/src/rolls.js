@@ -13,6 +13,15 @@ function toIsoString(dateVal) {
   return new Date(dateVal).toISOString();
 }
 
+function safeJsonParse(str, fallback = {}) {
+  if (!str) return fallback;
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
+}
+
 export function createRollRouter(db, io) {
   const router = Router();
 
@@ -36,7 +45,7 @@ export function createRollRouter(db, io) {
         const createdAtIso = toIsoString(r.createdAt);
         return {
           ...r,
-          rollSummary: r.rollSummary ? JSON.parse(r.rollSummary) : {},
+          rollSummary: safeJsonParse(r.rollSummary, {}),
           createdAt: createdAtIso,
           timestamp: createdAtIso
         };
@@ -59,7 +68,34 @@ export function createRollRouter(db, io) {
     if (type !== 'percentile' && type !== 'damage') {
       return res.status(400).json({ error: 'Valid type ("percentile" or "damage") is required' });
     }
-    if (!label || typeof total !== 'number' || typeof breakdown !== 'string') {
+    if (typeof total !== 'number' || Number.isNaN(total) || !Number.isFinite(total)) {
+      return res.status(400).json({ error: 'Invalid roll total: must be a finite number' });
+    }
+    if (type === 'percentile' && (total < 1 || total > 100)) {
+      return res.status(400).json({ error: 'Percentile roll total must be between 1 and 100' });
+    }
+    if (type === 'damage' && (total < 0 || total > 100000)) {
+      return res.status(400).json({ error: 'Damage roll total must be a non-negative finite number' });
+    }
+    if (rollSummary && typeof rollSummary === 'object') {
+      if (rollSummary.count !== undefined && (!Number.isFinite(rollSummary.count) || rollSummary.count < 0 || rollSummary.count > 1000)) {
+        return res.status(400).json({ error: 'Invalid roll count parameter' });
+      }
+      if (rollSummary.tens !== undefined && (!Number.isFinite(rollSummary.tens) || rollSummary.tens < 0 || rollSummary.tens > 10)) {
+        return res.status(400).json({ error: 'Invalid roll tens parameter' });
+      }
+      if (rollSummary.ones !== undefined && (!Number.isFinite(rollSummary.ones) || rollSummary.ones < 0 || rollSummary.ones > 9)) {
+        return res.status(400).json({ error: 'Invalid roll ones parameter' });
+      }
+      if (Array.isArray(rollSummary.dice)) {
+        for (const die of rollSummary.dice) {
+          if (!Number.isFinite(die) || die < 0 || die > 1000) {
+            return res.status(400).json({ error: 'Invalid dice value in rollSummary' });
+          }
+        }
+      }
+    }
+    if (!label || typeof breakdown !== 'string') {
       return res.status(400).json({ error: 'label, numeric total, and breakdown are required' });
     }
 
@@ -82,13 +118,20 @@ export function createRollRouter(db, io) {
         FROM roll_logs WHERE id = ?
       `).get(info.lastInsertRowid);
 
-      // Prune entries older than latest 100 per mode
-      db.prepare(`
-        DELETE FROM roll_logs
-        WHERE mode = ? AND id NOT IN (
-          SELECT id FROM roll_logs WHERE mode = ? ORDER BY created_at DESC, id DESC LIMIT 100
-        )
-      `).run(mode, mode);
+      // Optimized roll history pruning: find cutoff row via index if total rows exceed 100
+      const cutoff = db.prepare(`
+        SELECT id, created_at FROM roll_logs
+        WHERE mode = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1 OFFSET 100
+      `).get(mode);
+
+      if (cutoff) {
+        db.prepare(`
+          DELETE FROM roll_logs
+          WHERE mode = ? AND (created_at < ? OR (created_at = ? AND id <= ?))
+        `).run(mode, cutoff.created_at, cutoff.created_at, cutoff.id);
+      }
 
       const createdAtIso = toIsoString(inserted.createdAt);
 
@@ -102,7 +145,7 @@ export function createRollRouter(db, io) {
         label: inserted.label,
         total: inserted.total,
         breakdown: inserted.breakdown,
-        rollSummary: inserted.rollSummary ? JSON.parse(inserted.rollSummary) : {},
+        rollSummary: safeJsonParse(inserted.rollSummary, {}),
         timestamp: createdAtIso,
         createdAt: createdAtIso
       };

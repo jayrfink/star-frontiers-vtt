@@ -26,7 +26,8 @@ describe('VehicleTokenHud.vue', () => {
       max_seu: 100,
       battery_type: 'Type 2 (100 SEU)',
       damage_conditions: [],
-      passengers: 'Driver: Ace',
+      passengers: 6,
+      driver: 'Driver: Ace',
       cargo_notes: 'Survey supplies',
       description: 'Standard wheeled car',
     },
@@ -173,7 +174,7 @@ describe('VehicleTokenHud.vue', () => {
     expect(wrapper.emitted('close')).toBeTruthy();
   });
 
-  it('updates driver and cargo notes', async () => {
+  it('updates driver and cargo notes while preserving passengers capacity', async () => {
     const wrapper = mount(VehicleTokenHud, {
       props: {
         token: sampleToken,
@@ -186,6 +187,62 @@ describe('VehicleTokenHud.vue', () => {
 
     expect(wrapper.emitted('update:token')).toBeTruthy();
     const updated = wrapper.emitted('update:token')[0][0];
-    expect(updated.vehicle_data.passengers).toBe('Driver: Star Knight');
+    expect(updated.vehicle_data.passengers).toBe(6);
+    expect(updated.vehicle_data.driver).toBe('Driver: Star Knight');
+    expect(updated.vehicle_data.driver_notes).toBe('Driver: Star Knight');
+  });
+
+  it('renders passenger capacity from passengers_capacity if present', () => {
+    const tokenWithCap = {
+      ...sampleToken,
+      vehicle_data: {
+        ...sampleToken.vehicle_data,
+        passengers_capacity: 6,
+        passengers: 'Ace and Bob',
+      },
+    };
+    const wrapper = mount(VehicleTokenHud, {
+      props: {
+        token: tokenWithCap,
+      },
+    });
+
+    expect(wrapper.text()).toContain('6');
+  });
+
+  it('calculates speed in kph using 0.36 multiplier for meters/turn', () => {
+    const tokenWithoutKph = {
+      ...sampleToken,
+      vehicle_data: {
+        ...sampleToken.vehicle_data,
+        top_speed: 100,
+        current_speed: 50,
+        top_speed_kph: undefined,
+      },
+    };
+    const wrapper = mount(VehicleTokenHud, {
+      props: {
+        token: tokenWithoutKph,
+      },
+    });
+
+    // topKph = Math.round(100 * 0.36) = 36
+    // speedKph = Math.round(50 * (36 / 100)) = 18
+    expect(wrapper.vm.speedKph).toBe(18);
+    expect(wrapper.text()).toContain('(18 kph)');
+  });
+
+  it('blurs inputs on keyup.enter to avoid double-save network requests (Bug 38)', async () => {
+    const wrapper = mount(VehicleTokenHud, {
+      props: {
+        token: sampleToken,
+      },
+    });
+
+    const speedInput = wrapper.find('input.speed-input');
+    const blurSpy = vi.fn();
+    speedInput.element.blur = blurSpy;
+    await speedInput.trigger('keyup.enter');
+    expect(blurSpy).toHaveBeenCalled();
   });
 });

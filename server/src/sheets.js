@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from './middleware.js';
+import { requireAuth, isGameMaster } from './middleware.js';
 
 function safeJsonParse(str, fallback) {
   if (!str) return fallback;
@@ -8,6 +8,13 @@ function safeJsonParse(str, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function clampStat(val, fallback, min = 1, max = 200) {
+  if (val === undefined || val === null) return fallback;
+  const n = Number(val);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
 }
 
 function formatCharacterSheet(row) {
@@ -83,16 +90,25 @@ export function createCharacterRouter(db, io) {
         notes = '',
       } = req.body;
 
-      if (!name || !race || typeof race !== 'string' || !race.trim()) {
+      if (!name || typeof name !== 'string' || !name.trim() || !race || typeof race !== 'string' || !race.trim()) {
         return res.status(400).json({ error: 'Name and race are required' });
       }
 
+      const characterName = name.trim();
       race = race.trim();
-
-      console.log('Incoming PUT character body:', req.body);
 
       const validPsas = ['Military', 'Technological', 'Biosocial'];
       const characterPsa = validPsas.includes(psa) ? psa : 'Military';
+
+      const strVal = clampStat(str, 50, 1, 200);
+      const staVal = clampStat(sta, 50, 1, 200);
+      const curStaVal = clampStat(current_sta, staVal, 0, 200);
+      const dexVal = clampStat(dex, 50, 1, 200);
+      const rsVal = clampStat(rs, 50, 1, 200);
+      const intVal = clampStat(int_stat, 50, 1, 200);
+      const logVal = clampStat(log_stat, 50, 1, 200);
+      const perVal = clampStat(per, 50, 1, 200);
+      const ldrVal = clampStat(ldr, 50, 1, 200);
 
       const racialAbilitiesStr = typeof racial_abilities === 'string' ? racial_abilities : JSON.stringify(racial_abilities);
       const skillsStr = typeof skills === 'string' ? skills : JSON.stringify(skills);
@@ -111,8 +127,8 @@ export function createCharacterRouter(db, io) {
       `);
 
       const result = stmt.run(
-        req.session.userId, name, race, characterPsa, gender, height, weight,
-        str, sta, current_sta, dex, rs, int_stat, log_stat, per, ldr,
+        req.session.userId, characterName, race, characterPsa, gender, height, weight,
+        strVal, staVal, curStaVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || ''
       );
 
@@ -137,9 +153,14 @@ export function createCharacterRouter(db, io) {
         return res.status(404).json({ error: 'Character sheet not found' });
       }
 
+      const isOwner = existing.user_id === req.session.userId;
+      const isGM = isGameMaster(db, req.session.userId);
+      if (!isOwner && !isGM) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
       let race = req.body.race !== undefined ? req.body.race : existing.race;
       const {
-        name = existing.name,
         psa = existing.psa || 'Military',
         gender = existing.gender,
         height = existing.height,
@@ -159,7 +180,13 @@ export function createCharacterRouter(db, io) {
         notes = existing.notes,
       } = req.body;
 
-      console.log('Incoming PUT character body:', req.body);
+      if (req.body.name !== undefined) {
+        if (typeof req.body.name !== 'string' || !req.body.name.trim()) {
+          return res.status(400).json({ error: 'Valid character name is required' });
+        }
+      }
+      const name = req.body.name !== undefined ? req.body.name.trim() : existing.name;
+
       if (!race || typeof race !== 'string' || !race.trim()) {
         return res.status(400).json({ error: 'Valid race is required' });
       }
@@ -168,6 +195,16 @@ export function createCharacterRouter(db, io) {
 
       const validPsas = ['Military', 'Technological', 'Biosocial'];
       const characterPsa = validPsas.includes(psa) ? psa : (existing.psa || 'Military');
+
+      const strVal = clampStat(str, existing.str, 1, 200);
+      const staVal = clampStat(sta, existing.sta, 1, 200);
+      const curStaVal = clampStat(current_sta, existing.current_sta, 0, 200);
+      const dexVal = clampStat(dex, existing.dex, 1, 200);
+      const rsVal = clampStat(rs, existing.rs, 1, 200);
+      const intVal = clampStat(int_stat, existing.int_stat, 1, 200);
+      const logVal = clampStat(log_stat, existing.log_stat, 1, 200);
+      const perVal = clampStat(per, existing.per, 1, 200);
+      const ldrVal = clampStat(ldr, existing.ldr, 1, 200);
 
       const racialAbilitiesStr = typeof racial_abilities === 'string' ? racial_abilities : JSON.stringify(racial_abilities);
       const skillsStr = typeof skills === 'string' ? skills : JSON.stringify(skills);
@@ -183,11 +220,13 @@ export function createCharacterRouter(db, io) {
         WHERE id = ?
       `);
 
+      const avatarUrl = req.body.avatar_url !== undefined ? req.body.avatar_url : (existing.avatar_url || '');
+
       stmt.run(
         name, race, characterPsa, gender, height, weight,
-        str, sta, current_sta, dex, rs,
-        int_stat, log_stat, per, ldr,
-        racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || existing.avatar_url || '',
+        strVal, staVal, curStaVal, dexVal, rsVal,
+        intVal, logVal, perVal, ldrVal,
+        racialAbilitiesStr, skillsStr, inventoryStr, notes, avatarUrl,
         req.params.id
       );
 
@@ -212,7 +251,20 @@ export function createCharacterRouter(db, io) {
         return res.status(404).json({ error: 'Character sheet not found' });
       }
 
-      db.prepare('DELETE FROM character_sheets WHERE id = ?').run(req.params.id);
+      const isOwner = existing.user_id === req.session.userId;
+      const isGM = isGameMaster(db, req.session.userId);
+      if (!isOwner && !isGM) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const deleteCharacterTx = db.transaction((id) => {
+        db.prepare(`
+          UPDATE tokens SET character_id = NULL
+          WHERE character_id = ? AND map_id IN (SELECT id FROM maps WHERE map_type != 'space')
+        `).run(id);
+        db.prepare('DELETE FROM character_sheets WHERE id = ?').run(id);
+      });
+      deleteCharacterTx(req.params.id);
 
       if (io) {
         io.emit('sheet:deleted', { type: 'character', id: Number(req.params.id) });
@@ -276,6 +328,14 @@ export function createShipRouter(db, io) {
         return res.status(400).json({ error: 'Name and ship_type are required' });
       }
 
+      const clampedHullPoints = clampStat(hull_points, 50, 1, 10000);
+      const clampedCurrentHp = current_hp !== undefined && current_hp !== null
+        ? clampStat(current_hp, clampedHullPoints, 0, clampedHullPoints)
+        : clampedHullPoints;
+      const clampedAdf = clampStat(adf, 2, 0, 1000);
+      const clampedMr = clampStat(mr, 2, 0, 1000);
+      const clampedDcr = clampStat(dcr, 50, 0, 1000);
+
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
 
@@ -290,7 +350,7 @@ export function createShipRouter(db, io) {
       `);
 
       const result = stmt.run(
-        req.session.userId, name, ship_type, hull_points, current_hp, adf, mr, dcr,
+        req.session.userId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr,
         weaponsStr, defensesStr, notes, req.body.avatar_url || ''
       );
 
@@ -315,6 +375,12 @@ export function createShipRouter(db, io) {
         return res.status(404).json({ error: 'Ship sheet not found' });
       }
 
+      const isOwner = existing.user_id === req.session.userId;
+      const isGM = isGameMaster(db, req.session.userId);
+      if (!isOwner && !isGM) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
       const {
         name = existing.name,
         ship_type = existing.ship_type,
@@ -326,8 +392,17 @@ export function createShipRouter(db, io) {
         weapons = safeJsonParse(existing.weapons, []),
         defenses = safeJsonParse(existing.defenses, []),
         notes = existing.notes,
-        avatar_url = existing.avatar_url || '',
       } = req.body;
+
+      const avatarUrl = req.body.avatar_url !== undefined ? req.body.avatar_url : (existing.avatar_url || '');
+
+      const clampedHullPoints = clampStat(hull_points, existing.hull_points, 1, 10000);
+      const clampedCurrentHp = current_hp !== undefined && current_hp !== null
+        ? clampStat(current_hp, existing.current_hp, 0, clampedHullPoints)
+        : clampStat(existing.current_hp, clampedHullPoints, 0, clampedHullPoints);
+      const clampedAdf = clampStat(adf, existing.adf, 0, 1000);
+      const clampedMr = clampStat(mr, existing.mr, 0, 1000);
+      const clampedDcr = clampStat(dcr, existing.dcr, 0, 1000);
 
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
@@ -341,8 +416,8 @@ export function createShipRouter(db, io) {
       `);
 
       stmt.run(
-        name, ship_type, hull_points, current_hp,
-        adf, mr, dcr, weaponsStr, defensesStr, notes, avatar_url,
+        name, ship_type, clampedHullPoints, clampedCurrentHp,
+        clampedAdf, clampedMr, clampedDcr, weaponsStr, defensesStr, notes, avatarUrl,
         req.params.id
       );
 
@@ -367,7 +442,20 @@ export function createShipRouter(db, io) {
         return res.status(404).json({ error: 'Ship sheet not found' });
       }
 
-      db.prepare('DELETE FROM ship_sheets WHERE id = ?').run(req.params.id);
+      const isOwner = existing.user_id === req.session.userId;
+      const isGM = isGameMaster(db, req.session.userId);
+      if (!isOwner && !isGM) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const deleteShipTx = db.transaction((id) => {
+        db.prepare(`
+          UPDATE tokens SET character_id = NULL
+          WHERE character_id = ? AND map_id IN (SELECT id FROM maps WHERE map_type = 'space')
+        `).run(id);
+        db.prepare('DELETE FROM ship_sheets WHERE id = ?').run(id);
+      });
+      deleteShipTx(req.params.id);
 
       if (io) {
         io.emit('sheet:deleted', { type: 'ship', id: Number(req.params.id) });

@@ -105,4 +105,21 @@ describe('Token Image & Circular Masking Pipeline', () => {
     expect(metadata.format).toBe('png');
     expect(metadata.channels).toBe(4);
   });
+
+  it('generates token without throwing when label contains special XML characters (<, &, >)', async () => {
+    const outputPath = path.join(testOutputDir, 'special_chars.png');
+
+    const result = await generateTokenRingImage({
+      label: '<Unknown> & Hostile',
+      threatTier: 1,
+      category: 'creature',
+      outputPath,
+      size: 256,
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+    const metadata = await sharp(outputPath).metadata();
+    expect(metadata.width).toBe(256);
+    expect(metadata.format).toBe('png');
+  });
 });

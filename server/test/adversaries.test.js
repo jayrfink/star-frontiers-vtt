@@ -229,4 +229,93 @@ describe('Adversaries API - Template Delete & Token Update', () => {
       .send({ source_image_url: '/uploads/../../package.json' });
     expect(traversalRes.status).toBe(400);
   });
+
+  it('rejects non-GM Player access with 403 on adversary mutations and art generation', async () => {
+    // Create Player
+    await agent.post('/api/auth/register').send({ username: 'playerAdv', password: 'password123', role: 'Player' });
+    const pAgent = request.agent(app);
+    await pAgent.post('/api/auth/login').send({ username: 'playerAdv', password: 'password123' });
+
+    // POST /api/adversaries (create) -> 403
+    const createRes = await pAgent.post('/api/adversaries').send({ name: 'Hacked Template' });
+    expect(createRes.status).toBe(403);
+
+    // POST /api/adversaries/spawn -> 403
+    const spawnRes = await pAgent.post('/api/adversaries/spawn').send({ mapId, template: { name: 'Hacked Spawn' } });
+    expect(spawnRes.status).toBe(403);
+
+    // POST /api/adversaries/generate-token-art -> 403
+    const artRes = await pAgent.post('/api/adversaries/generate-token-art').send({ prompt: 'test' });
+    expect(artRes.status).toBe(403);
+
+    // PATCH /api/adversaries/:id/token -> 403
+    const patchRes = await pAgent.patch('/api/adversaries/tpl_1/token').send({ source_image_url: '/uploads/test.png' });
+    expect(patchRes.status).toBe(403);
+
+    // DELETE /api/adversaries/:id -> 403
+    const delRes = await pAgent.delete('/api/adversaries/tpl_1');
+    expect(delRes.status).toBe(403);
+  });
+
+  it('POST /api/adversaries accepts id as fallback for template_id', async () => {
+    const res = await agent.post('/api/adversaries').send({
+      id: 'adv-fallback-test',
+      name: 'Fallback Warrior',
+      category: 'npc',
+      threat_tier: 2,
+      hp_max: 50,
+      defense_summary: 'Skein Suit',
+      movement: '12 m/s',
+      initiative_mod: 5,
+      actions: [{ name: 'Laser', target_pct: 50, damage: '1d10' }],
+      traits: [],
+      system_data: {},
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.template_id).toBe('adv-fallback-test');
+    expect(res.body.name).toBe('Fallback Warrior');
+
+    const fetched = await agent.get('/api/adversaries/adv-fallback-test');
+    expect(fetched.status).toBe(200);
+    expect(fetched.body.template_id).toBe('adv-fallback-test');
+  });
+
+  it('POST /api/adversaries/spawn rejects path traversal and invalid characters in template_id', async () => {
+    const traversalRes = await agent.post('/api/adversaries/spawn').send({
+      mapId,
+      template: {
+        template_id: '../../traversal_test',
+        name: 'Evil Adversary',
+        category: 'npc',
+        threat_tier: 1,
+        actions: [{ name: 'Bite' }],
+      },
+    });
+    expect(traversalRes.status).toBe(400);
+
+    const backslashRes = await agent.post('/api/adversaries/spawn').send({
+      mapId,
+      template: {
+        template_id: '..\\traversal_test',
+        name: 'Evil Adversary 2',
+        category: 'npc',
+        threat_tier: 1,
+        actions: [{ name: 'Bite' }],
+      },
+    });
+    expect(backslashRes.status).toBe(400);
+
+    const invalidCharRes = await agent.post('/api/adversaries/spawn').send({
+      mapId,
+      template: {
+        template_id: 'bad id with spaces!',
+        name: 'Evil Adversary 3',
+        category: 'npc',
+        threat_tier: 1,
+        actions: [{ name: 'Bite' }],
+      },
+    });
+    expect(invalidCharRes.status).toBe(400);
+  });
 });

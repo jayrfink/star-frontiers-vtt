@@ -34,8 +34,19 @@ export function getTokenDamageOverlayState(token) {
     return lower === 'wounded' || lower === '🩸';
   };
 
-  const statusEffects = Array.isArray(token.status_effects) ? token.status_effects : [];
-  const conditions = Array.isArray(token.conditions) ? token.conditions : [];
+  const parseList = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  };
+
+  const statusEffects = parseList(token.status_effects);
+  const conditions = parseList(token.conditions);
 
   if (statusEffects.some(isWoundedEntry) || conditions.some(isWoundedEntry)) {
     return 'bloodied';

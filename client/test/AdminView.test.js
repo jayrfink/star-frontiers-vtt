@@ -580,6 +580,23 @@ describe('AdminView.vue - Uploads & Assets File Manager', () => {
       expect(instance.successMessage.value).toMatch(/deleted successfully/i);
       expect(instance.users.value).toEqual([]);
     });
+
+    it('blocks self-deletion and sets error message without calling delete API', async () => {
+      const authStore = useAuthStore();
+      authStore.user = { id: 1, username: 'gm1', role: 'GameMaster' };
+      const instance = getSetupInstance();
+      instance.users.value = [
+        { id: 1, username: 'gm1', role: 'GameMaster' },
+        { id: 2, username: 'gm2', role: 'GameMaster' },
+      ];
+      window.confirm.mockReturnValue(true);
+
+      await instance.deleteUser({ id: 1, username: 'gm1' });
+
+      expect(mockFetch).not.toHaveBeenCalledWith('/api/auth/users/1', expect.anything());
+      expect(instance.error.value).toBe('Cannot delete your own account');
+      expect(instance.users.value).toHaveLength(2);
+    });
   });
 });
 

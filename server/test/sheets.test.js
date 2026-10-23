@@ -353,6 +353,41 @@ describe('Sheets API & Socket.io', () => {
       });
     });
 
+    it('updates existing tokens character_id to NULL when deleting ship sheet', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'gmShip', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'gmShip', password: 'password123' });
+
+      // Create a map
+      const mapRes = await agent.post('/api/maps').send({ name: 'Space Battle', map_type: 'space' });
+      const mapId = mapRes.body.id;
+
+      // Create a ship sheet
+      const shipRes = await agent.post('/api/ships').send({
+        name: 'Void Raider',
+        ship_type: 'Frigate',
+      });
+      expect(shipRes.status).toBe(201);
+      const shipId = shipRes.body.id;
+
+      // Create token linked to ship sheet
+      const tokenRes = await agent.post('/api/tokens').send({
+        map_id: mapId,
+        character_id: shipId,
+        name: 'Void Raider Token',
+      });
+      expect(tokenRes.status).toBe(201);
+      const tokenId = tokenRes.body.id;
+
+      // Delete the ship sheet
+      const delRes = await agent.delete(`/api/ships/${shipId}`);
+      expect(delRes.status).toBe(200);
+
+      // Verify token's character_id is now NULL
+      const checkToken = db.prepare('SELECT character_id FROM tokens WHERE id = ?').get(tokenId);
+      expect(checkToken.character_id).toBeNull();
+    });
+
     it('validates missing name or ship_type', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
@@ -362,6 +397,188 @@ describe('Sheets API & Socket.io', () => {
         name: 'No Type',
       });
       expect(res.status).toBe(400);
+    });
+
+    it('enforces ownership on character and ship update/delete, clears avatar, and decouples tokens', async () => {
+      // First user is GM
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmUser', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmUser', password: 'password123' });
+
+      // GM creates player1 and player2
+      await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123', role: 'Player' });
+      await gmAgent.post('/api/auth/register').send({ username: 'player2', password: 'password123', role: 'Player' });
+
+      const p1Agent = request.agent(app);
+      await p1Agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      const p2Agent = request.agent(app);
+      await p2Agent.post('/api/auth/login').send({ username: 'player2', password: 'password123' });
+
+      // player1 creates a character and a ship
+      const p1Char = (await p1Agent.post('/api/characters').send({
+        name: 'P1 Char',
+        race: 'Human',
+        avatar_url: '/uploads/char1.png',
+      })).body;
+
+      const p1Ship = (await p1Agent.post('/api/ships').send({
+        name: 'P1 Ship',
+        ship_type: 'Fighter',
+        avatar_url: '/uploads/ship1.png',
+      })).body;
+
+      // player2 attempts to update player1's character (IDOR attempt) -> 403
+      const badCharUpdate = await p2Agent.put(`/api/characters/${p1Char.id}`).send({ name: 'Hacked Char' });
+      expect(badCharUpdate.status).toBe(403);
+
+      // player2 attempts to delete player1's character -> 403
+      const badCharDelete = await p2Agent.delete(`/api/characters/${p1Char.id}`);
+      expect(badCharDelete.status).toBe(403);
+
+      // player2 attempts to update player1's ship -> 403
+      const badShipUpdate = await p2Agent.put(`/api/ships/${p1Ship.id}`).send({ name: 'Hacked Ship' });
+      expect(badShipUpdate.status).toBe(403);
+
+      // player2 attempts to delete player1's ship -> 403
+      const badShipDelete = await p2Agent.delete(`/api/ships/${p1Ship.id}`);
+      expect(badShipDelete.status).toBe(403);
+
+      // player1 clears avatar URL to empty string -> should persist empty string
+      const clearAvatarRes = await p1Agent.put(`/api/characters/${p1Char.id}`).send({ avatar_url: '' });
+      expect(clearAvatarRes.status).toBe(200);
+      expect(clearAvatarRes.body.avatar_url).toBe('');
+
+      // Create a map and token linked to p1Char
+      const mapRes = await gmAgent.post('/api/maps').send({ name: 'Battle Map', map_type: 'rpg' });
+      const mapId = mapRes.body.id;
+      const tokenRes = await gmAgent.post('/api/tokens').send({
+        map_id: mapId,
+        character_id: p1Char.id,
+        name: 'P1 Token',
+      });
+      const tokenId = tokenRes.body.id;
+
+      // When player1 deletes character, linked token's character_id should become NULL
+      const delRes = await p1Agent.delete(`/api/characters/${p1Char.id}`);
+      expect(delRes.status).toBe(200);
+
+      const checkToken = db.prepare('SELECT character_id FROM tokens WHERE id = ?').get(tokenId);
+      expect(checkToken.character_id).toBeNull();
+    });
+
+    it('rejects empty name and clamps numeric stats on PUT /api/characters/:id', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'charClampUser', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'charClampUser', password: 'password123' });
+
+      const created = (await agent.post('/api/characters').send({
+        name: 'Normal Hero',
+        race: 'Human',
+        str: 50,
+        sta: 50,
+      })).body;
+
+      // Reject empty or whitespace-only name
+      const emptyNameRes = await agent.put(`/api/characters/${created.id}`).send({ name: '   ' });
+      expect(emptyNameRes.status).toBe(400);
+
+      // Clamp stats to 1..200 (and current_sta to 0..200)
+      const clampedRes = await agent.put(`/api/characters/${created.id}`).send({
+        name: 'Super Hero',
+        str: 999,
+        sta: -50,
+        current_sta: -10,
+        dex: 500,
+        rs: 0,
+      });
+
+      expect(clampedRes.status).toBe(200);
+      expect(clampedRes.body.name).toBe('Super Hero');
+      expect(clampedRes.body.str).toBe(200);
+      expect(clampedRes.body.sta).toBe(1);
+      expect(clampedRes.body.current_sta).toBe(0);
+      expect(clampedRes.body.dex).toBe(200);
+      expect(clampedRes.body.rs).toBe(1);
+    });
+
+    it('disambiguates token decoupling between characters and ships on delete', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmDelink', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmDelink', password: 'password123' });
+
+      const rpgMap = (await gmAgent.post('/api/maps').send({ name: 'Ground Base', map_type: 'rpg' })).body;
+      const spaceMap = (await gmAgent.post('/api/maps').send({ name: 'Orbit Station', map_type: 'space' })).body;
+
+      // Create a character (e.g. ID 1) and a ship (e.g. ID 1)
+      const char = (await gmAgent.post('/api/characters').send({ name: 'Captain Star', race: 'Human' })).body;
+      const ship = (await gmAgent.post('/api/ships').send({ name: 'Star Cruiser', ship_type: 'Cruiser' })).body;
+
+      // Create token for character on RPG map
+      const charToken = (await gmAgent.post('/api/tokens').send({
+        map_id: rpgMap.id,
+        character_id: char.id,
+        name: 'Captain Token',
+      })).body;
+
+      // Create token for ship on Space map
+      const shipToken = (await gmAgent.post('/api/tokens').send({
+        map_id: spaceMap.id,
+        character_id: ship.id,
+        name: 'Cruiser Token',
+      })).body;
+
+      // Delete character sheet: MUST decouple charToken on RPG map, but NOT shipToken on Space map
+      await gmAgent.delete(`/api/characters/${char.id}`);
+
+      const checkCharToken = db.prepare('SELECT character_id FROM tokens WHERE id = ?').get(charToken.id);
+      const checkShipToken = db.prepare('SELECT character_id FROM tokens WHERE id = ?').get(shipToken.id);
+
+      expect(checkCharToken.character_id).toBeNull();
+      expect(checkShipToken.character_id).toBe(ship.id); // preserved!
+
+      // Delete ship sheet: MUST decouple shipToken on Space map
+      await gmAgent.delete(`/api/ships/${ship.id}`);
+      const checkShipTokenAfter = db.prepare('SELECT character_id FROM tokens WHERE id = ?').get(shipToken.id);
+      expect(checkShipTokenAfter.character_id).toBeNull();
+    });
+
+    it('Bug 14: clamps ship stats on POST and PUT (hull_points >= 1, adf >= 0, mr >= 0, dcr >= 0)', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'shipClamper', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'shipClamper', password: 'password123' });
+
+      // Create with negative values
+      const createRes = await gmAgent.post('/api/ship-sheets').send({
+        name: 'Dreadnought Minus',
+        ship_type: 'Battleship',
+        hull_points: -50,
+        current_hp: -20,
+        adf: -5,
+        mr: -3,
+        dcr: -100,
+      });
+
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.hull_points).toBe(1); // clamped to >= 1
+      expect(createRes.body.current_hp).toBe(0); // clamped to >= 0
+      expect(createRes.body.adf).toBe(0); // clamped to >= 0
+      expect(createRes.body.mr).toBe(0); // clamped to >= 0
+      expect(createRes.body.dcr).toBe(0); // clamped to >= 0
+
+      // Update with out-of-range values on /api/ship-sheets/:id
+      const updateRes = await gmAgent.put(`/api/ship-sheets/${createRes.body.id}`).send({
+        hull_points: 0,
+        adf: -10,
+        mr: -2,
+        dcr: -5,
+      });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.hull_points).toBe(1);
+      expect(updateRes.body.adf).toBe(0);
+      expect(updateRes.body.mr).toBe(0);
+      expect(updateRes.body.dcr).toBe(0);
     });
   });
 });

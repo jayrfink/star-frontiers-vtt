@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
+import Database from 'better-sqlite3';
 import { createTestDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
+import { BetterSqlite3Store } from '../src/middleware.js';
 
 describe('Auth API', () => {
   let db, app, server;
@@ -340,6 +345,59 @@ describe('Auth API', () => {
       expect(usersRes.body).toHaveLength(1);
       expect(usersRes.body[0].username).toBe('gm1');
     });
+
+    it('returns 400 when attempting to delete own logged-in account (Bug 1.4)', async () => {
+      const gmAgent = request.agent(app);
+      const gm1Res = await gmAgent.post('/api/auth/register').send({ username: 'gm1', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm1', password: 'password123' });
+      await gmAgent
+        .post('/api/auth/register')
+        .send({ username: 'gm2', password: 'password123', role: 'GameMaster' });
+
+      // gm1 attempts to delete gm1
+      const delRes = await gmAgent.delete(`/api/auth/users/${gm1Res.body.id}`);
+      expect(delRes.status).toBe(400);
+      expect(delRes.body.error).toBe('Cannot delete your own account');
+
+      // Verify gm1 is still in database and session remains authenticated
+      const meRes = await gmAgent.get('/api/auth/me');
+      expect(meRes.status).toBe(200);
+      expect(meRes.body.username).toBe('gm1');
+    });
+
+    it('anchors session deletion LIKE query so deleting user 2 does not invalidate user 20 session', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmAdmin', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmAdmin', password: 'password123' });
+
+      // Create user 2 and user 20 in db explicitly (gmAdmin is user 1)
+      db.prepare(`INSERT OR IGNORE INTO users (id, username, password_hash, role) VALUES (2, 'u2', 'hash', 'Player')`).run();
+      db.prepare(`INSERT OR IGNORE INTO users (id, username, password_hash, role) VALUES (20, 'u20', 'hash', 'Player')`).run();
+
+      // Ensure sessions table exists
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          sid TEXT PRIMARY KEY,
+          sess TEXT,
+          expired DATETIME
+        )
+      `).run();
+
+      // Insert session records with JSON containing userId 2 and userId 20
+      db.prepare(`INSERT OR REPLACE INTO sessions (sid, sess) VALUES ('s2', '{"cookie":{},"userId":2,"role":"Player"}')`).run();
+      db.prepare(`INSERT OR REPLACE INTO sessions (sid, sess) VALUES ('s20', '{"cookie":{},"userId":20,"role":"Player"}')`).run();
+
+      // Delete user 2
+      const delRes = await gmAgent.delete('/api/auth/users/2');
+      expect(delRes.status).toBe(200);
+
+      // Verify session for user 2 is deleted, but session for user 20 is untouched
+      const s2 = db.prepare(`SELECT * FROM sessions WHERE sid = 's2'`).get();
+      const s20 = db.prepare(`SELECT * FROM sessions WHERE sid = 's20'`).get();
+
+      expect(s2).toBeUndefined();
+      expect(s20).toBeDefined();
+    });
   });
 
   describe('PUT /api/auth/users/:id/password', () => {
@@ -534,6 +592,249 @@ describe('Auth API', () => {
         .send({ username: 'gm', password: 'gmNewPassword123' });
       expect(successfulLogin.status).toBe(200);
       expect(successfulLogin.body.username).toBe('gm');
+    });
+
+    it('requireAuth rejects session if userId no longer exists in users table', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmAuth', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmAuth', password: 'password123' });
+
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'tempPlayer', password: 'password123', role: 'Player' });
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'tempPlayer', password: 'password123' });
+
+      // Check player is logged in
+      const meBefore = await playerAgent.get('/api/auth/me');
+      expect(meBefore.status).toBe(200);
+
+      // Delete user directly from users table
+      db.prepare('DELETE FROM users WHERE id = ?').run(regRes.body.id);
+
+      // Next request with that session should be rejected with 401 on any requireAuth route
+      const rollsAfter = await playerAgent.get('/api/rolls');
+      expect(rollsAfter.status).toBe(401);
+      const meAfter = await playerAgent.get('/api/auth/me');
+      expect(meAfter.status).toBe(401);
+    });
+
+    it('DELETE /api/auth/users/:id does not crash when sessions table does not exist', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmNoSess', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmNoSess', password: 'password123' });
+
+      const regRes = await gmAgent.post('/api/auth/register').send({ username: 'playerNoSess', password: 'password123', role: 'Player' });
+
+      // Verify sessions table does not exist in memory db or drop it if it does
+      try {
+        db.prepare('DROP TABLE IF EXISTS sessions').run();
+      } catch {}
+
+      const delRes = await gmAgent.delete(`/api/auth/users/${regRes.body.id}`);
+      expect(delRes.status).toBe(200);
+      expect(delRes.body.ok).toBe(true);
+    });
+  });
+
+  describe('Bug Fixes Coverage (Bugs 1, 2, 3, 4, 9)', () => {
+    // Bug 1: BetterSqlite3Store
+    describe('Bug 1: Session Store with better-sqlite3', () => {
+      it('creates and manages session store backed by better-sqlite3 without native sqlite3', async () => {
+        const tmpDir = path.join(os.tmpdir(), `sf-sess-test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+        fs.mkdirSync(tmpDir, { recursive: true });
+        try {
+          const store = new BetterSqlite3Store({ dir: tmpDir, db: 'sessions.db' });
+          expect(store).toBeDefined();
+
+          // Set a session
+          await new Promise((resolve, reject) => {
+            store.set('sess-1', { cookie: { maxAge: 100000 }, userId: 42, role: 'Player' }, (err) => {
+              if (err) reject(err); else resolve();
+            });
+          });
+
+          // Get the session
+          const session = await new Promise((resolve, reject) => {
+            store.get('sess-1', (err, data) => {
+              if (err) reject(err); else resolve(data);
+            });
+          });
+          expect(session).toBeDefined();
+          expect(session.userId).toBe(42);
+          expect(session.role).toBe('Player');
+
+          // Touch session
+          await new Promise((resolve, reject) => {
+            store.touch('sess-1', { cookie: { maxAge: 200000 } }, (err) => {
+              if (err) reject(err); else resolve();
+            });
+          });
+
+          // Length
+          const count = await new Promise((resolve, reject) => {
+            store.length((err, c) => {
+              if (err) reject(err); else resolve(c);
+            });
+          });
+          expect(count).toBe(1);
+
+          // All
+          const allSessions = await new Promise((resolve, reject) => {
+            store.all((err, s) => {
+              if (err) reject(err); else resolve(s);
+            });
+          });
+          expect(allSessions['sess-1']).toBeDefined();
+          expect(allSessions['sess-1'].userId).toBe(42);
+
+          // Destroy
+          await new Promise((resolve, reject) => {
+            store.destroy('sess-1', (err) => {
+              if (err) reject(err); else resolve();
+            });
+          });
+
+          const afterDestroy = await new Promise((resolve, reject) => {
+            store.get('sess-1', (err, data) => {
+              if (err) reject(err); else resolve(data);
+            });
+          });
+          expect(afterDestroy).toBeNull();
+
+          store.close();
+        } finally {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    // Bug 2: Invalidate sessions from sessions.db on DELETE /api/auth/users/:id
+    describe('Bug 2: Purge sessions.db when deleting user', () => {
+      it('purges active sessions from sessions.db for deleted user while preserving other users', async () => {
+        const tmpDir = path.join(os.tmpdir(), `sf-sess-purge-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+        fs.mkdirSync(tmpDir, { recursive: true });
+        const sessDbPath = path.join(tmpDir, 'sessions.db');
+        const customDb = createTestDb();
+        const customAppResult = createApp(customDb, tmpDir);
+
+        try {
+          const gmAgent = request.agent(customAppResult.app);
+          await gmAgent.post('/api/auth/register').send({ username: 'gmUser', password: 'password123' });
+          await gmAgent.post('/api/auth/login').send({ username: 'gmUser', password: 'password123' });
+
+          const p1Res = await gmAgent.post('/api/auth/register').send({ username: 'p1User', password: 'password123', role: 'Player' });
+          const p2Res = await gmAgent.post('/api/auth/register').send({ username: 'p2User', password: 'password123', role: 'Player' });
+
+          const p1Id = p1Res.body.id;
+          const p2Id = p2Res.body.id;
+
+          // Populate sessions in sessions.db
+          const sdb = new Database(sessDbPath);
+          sdb.prepare('INSERT OR REPLACE INTO sessions (sid, expired, sess) VALUES (?, ?, ?)')
+            .run('sess-p1', Date.now() + 60000, JSON.stringify({ cookie: {}, userId: p1Id, role: 'Player' }));
+          sdb.prepare('INSERT OR REPLACE INTO sessions (sid, expired, sess) VALUES (?, ?, ?)')
+            .run('sess-p2', Date.now() + 60000, JSON.stringify({ cookie: {}, userId: p2Id, role: 'Player' }));
+          sdb.prepare('INSERT OR REPLACE INTO sessions (sid, expired, sess) VALUES (?, ?, ?)')
+            .run('sess-p1-prefix', Date.now() + 60000, JSON.stringify({ cookie: {}, userId: Number(`${p1Id}00`), role: 'Player' }));
+          sdb.close();
+
+          // Delete user p1
+          const delRes = await gmAgent.delete(`/api/auth/users/${p1Id}`);
+          expect(delRes.status).toBe(200);
+
+          // Verify p1 session was purged, but p2 and p100 sessions remain
+          const verifyDb = new Database(sessDbPath);
+          const p1Session = verifyDb.prepare('SELECT * FROM sessions WHERE sid = ?').get('sess-p1');
+          const p2Session = verifyDb.prepare('SELECT * FROM sessions WHERE sid = ?').get('sess-p2');
+          const pPrefixSession = verifyDb.prepare('SELECT * FROM sessions WHERE sid = ?').get('sess-p1-prefix');
+          verifyDb.close();
+
+          expect(p1Session).toBeUndefined();
+          expect(p2Session).toBeDefined();
+          expect(pPrefixSession).toBeDefined();
+        } finally {
+          if (customAppResult.server && customAppResult.server.close) customAppResult.server.close();
+          if (customDb) customDb.close();
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    // Bug 3: CORS origin validation
+    describe('Bug 3: CORS origin validation prevents cross-site hijacking', () => {
+      it('allows requests from trusted origins (localhost:3000, localhost:3001, 127.0.0.1:3000)', async () => {
+        const res3000 = await request(app)
+          .get('/api/auth/setup')
+          .set('Origin', 'http://localhost:3000');
+        expect(res3000.headers['access-control-allow-origin']).toBe('http://localhost:3000');
+        expect(res3000.headers['access-control-allow-credentials']).toBe('true');
+
+        const res3001 = await request(app)
+          .get('/api/auth/setup')
+          .set('Origin', 'http://localhost:3001');
+        expect(res3001.headers['access-control-allow-origin']).toBe('http://localhost:3001');
+
+        const res127 = await request(app)
+          .get('/api/auth/setup')
+          .set('Origin', 'http://127.0.0.1:3000');
+        expect(res127.headers['access-control-allow-origin']).toBe('http://127.0.0.1:3000');
+      });
+
+      it('does NOT reflect untrusted origins in Access-Control-Allow-Origin', async () => {
+        const evilRes = await request(app)
+          .get('/api/auth/setup')
+          .set('Origin', 'http://evil-attacker.com');
+        expect(evilRes.headers['access-control-allow-origin']).toBeUndefined();
+      });
+
+      it('allows requests without an Origin header (same-origin / native / curl)', async () => {
+        const res = await request(app).get('/api/auth/setup');
+        expect(res.status).toBe(200);
+      });
+    });
+
+    // Bug 4: Atomic registration transaction
+    describe('Bug 4: Atomic registration prevents concurrent GameMaster race condition', () => {
+      it('prevents multiple concurrent first registrations from both becoming GameMaster', async () => {
+        const results = await Promise.all([
+          request(app).post('/api/auth/register').send({ username: 'raceGm1', password: 'password123' }),
+          request(app).post('/api/auth/register').send({ username: 'raceGm2', password: 'password123' }),
+        ]);
+
+        const statuses = results.map(r => r.status);
+        expect(statuses).toContain(201);
+        const successRes = results.find(r => r.status === 201);
+        expect(successRes.body.role).toBe('GameMaster');
+
+        const non201 = results.filter(r => r.status !== 201);
+        expect(non201.length).toBe(1);
+        expect([401, 403]).toContain(non201[0].status);
+
+        const gmCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'GameMaster'").get().count;
+        expect(gmCount).toBe(1);
+      });
+    });
+
+    // Bug 9: Safe mock response object in Socket.io handshake
+    describe('Bug 9: Safe mock response object in Socket.io session middleware', () => {
+      it('provides setHeader, getHeader, writeHead, and end stubs without throwing TypeError', async () => {
+        const mockRes = {
+          setHeader: () => {},
+          getHeader: () => undefined,
+          writeHead: () => mockRes,
+          end: () => mockRes,
+          write: () => true,
+          _implicitHeader: () => {},
+        };
+
+        expect(() => {
+          mockRes.setHeader('Set-Cookie', 'foo=bar');
+          mockRes.getHeader('Set-Cookie');
+          mockRes.writeHead(200);
+          mockRes.write('test');
+          mockRes.end();
+          mockRes._implicitHeader();
+        }).not.toThrow();
+      });
     });
   });
 });

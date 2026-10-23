@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
 
 describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
@@ -340,6 +340,179 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       const filtered = CharacterSheetsView.computed.filteredEquipmentList.call(vm);
       expect(filtered.length).toBe(8);
+    });
+  });
+
+  describe('Stamina Tracker & Max Stamina Editing', () => {
+    it('updates character sta and max_stamina when onMaxStaminaChange is invoked without being overwritten by old sta', async () => {
+      let sentPayload = null;
+      const mockFetch = vi.fn().mockImplementation((url, options) => {
+        sentPayload = JSON.parse(options.body);
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            ...sentPayload,
+            id: 1,
+          }),
+        });
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const vm = {
+        selectedChar: {
+          id: 1,
+          name: 'Hero',
+          race: 'Human',
+          sta: 50,
+          max_stamina: 50,
+          current_stamina: 50,
+        },
+        characters: [
+          { id: 1, name: 'Hero', race: 'Human', sta: 50, max_stamina: 50, current_stamina: 50 }
+        ],
+        normalizeCharacterData: CharacterSheetsView.methods.normalizeCharacterData,
+      };
+      vm.updateCharacter = CharacterSheetsView.methods.updateCharacter.bind(vm);
+      vm.onMaxStaminaChange = CharacterSheetsView.methods.onMaxStaminaChange.bind(vm);
+
+      // Simulate user editing the Max STA input from 50 to 65
+      vm.selectedChar.max_stamina = 65;
+      await vm.onMaxStaminaChange();
+
+      expect(vm.selectedChar.max_stamina).toBe(65);
+      expect(vm.selectedChar.sta).toBe(65);
+      expect(sentPayload.sta).toBe(65);
+      expect(sentPayload.max_stamina).toBe(65);
+    });
+
+    it('caps current_stamina to max_stamina if max_stamina is lowered below current_stamina', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: 1 }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const vm = {
+        selectedChar: {
+          id: 1,
+          name: 'Hero',
+          race: 'Human',
+          sta: 50,
+          max_stamina: 50,
+          current_stamina: 45,
+        },
+        characters: [],
+        normalizeCharacterData: CharacterSheetsView.methods.normalizeCharacterData,
+      };
+      vm.updateCharacter = CharacterSheetsView.methods.updateCharacter.bind(vm);
+      vm.onMaxStaminaChange = CharacterSheetsView.methods.onMaxStaminaChange.bind(vm);
+
+      // Lower max_stamina to 30
+      vm.selectedChar.max_stamina = 30;
+      await vm.onMaxStaminaChange();
+
+      expect(vm.selectedChar.max_stamina).toBe(30);
+      expect(vm.selectedChar.sta).toBe(30);
+      expect(vm.selectedChar.current_stamina).toBe(30);
+    });
+
+    it('updateCharacter directly preserves edited max_stamina and synchronizes sta in payload', async () => {
+      let sentPayload = null;
+      const mockFetch = vi.fn().mockImplementation((url, options) => {
+        sentPayload = JSON.parse(options.body);
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ...sentPayload, id: 2 }),
+        });
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const vm = {
+        selectedChar: {
+          id: 2,
+          name: 'Vrusk Scout',
+          race: 'Vrusk',
+          sta: 40,
+          max_stamina: 55, // User edited max_stamina
+          current_stamina: 40,
+        },
+        characters: [],
+        normalizeCharacterData: CharacterSheetsView.methods.normalizeCharacterData,
+      };
+      vm.updateCharacter = CharacterSheetsView.methods.updateCharacter.bind(vm);
+
+      await vm.updateCharacter();
+
+      expect(vm.selectedChar.max_stamina).toBe(55);
+      expect(sentPayload.sta).toBe(55);
+    });
+
+    it('clamps current_stamina to max_stamina when sta is reduced via shiftStat', () => {
+      const vm = {
+        selectedChar: {
+          str: 40,
+          sta: 50,
+          max_stamina: 50,
+          current_stamina: 50,
+        },
+        updateCharacter: vi.fn(),
+      };
+      vm.shiftStat = CharacterSheetsView.methods.shiftStat.bind(vm);
+
+      // Shift 5 points from STA to STR (amount = 5 for str, -5 for sta)
+      vm.shiftStat('str', 'sta', 5);
+
+      expect(vm.selectedChar.str).toBe(45);
+      expect(vm.selectedChar.sta).toBe(45);
+      expect(vm.selectedChar.max_stamina).toBe(45);
+      expect(vm.selectedChar.current_stamina).toBe(45);
+      expect(vm.updateCharacter).toHaveBeenCalled();
+    });
+
+    it('Bug 10: has correct point-shift arrow directions and tooltips in template', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf8');
+
+      // Left button ◄ should shift point to left stat (+1)
+      expect(vueFile).toContain('<button class="btn-shift" title="Shift point to STR" @click="shiftStat(\'str\', \'sta\', 1)">◄</button>');
+      expect(vueFile).toContain('<button class="btn-shift" title="Shift point to DEX" @click="shiftStat(\'dex\', \'rs\', 1)">◄</button>');
+      expect(vueFile).toContain('<button class="btn-shift" title="Shift point to INT" @click="shiftStat(\'int\', \'log\', 1)">◄</button>');
+
+      // Right button ► should shift point to right stat (-1)
+      expect(vueFile).toContain('<button class="btn-shift" title="Shift point to STA" @click="shiftStat(\'str\', \'sta\', -1)">►</button>');
+      expect(vueFile).toContain('<button class="btn-shift" title="Shift point to RS" @click="shiftStat(\'dex\', \'rs\', -1)">►</button>');
+      expect(vueFile).toContain('<button class="btn-shift" title="Shift point to LOG" @click="shiftStat(\'int\', \'log\', -1)">►</button>');
+    });
+
+    it('Bug 29: displays reactive errorMessage when character update, create, or delete fails', async () => {
+      const vm = {
+        selectedChar: { id: 10, name: 'Hero', str: 50, sta: 50 },
+        errorMessage: '',
+        normalizeCharacterData: (c) => c,
+        characters: [{ id: 10, name: 'Hero' }],
+      };
+
+      // Test updateCharacter failure
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden to edit character' }),
+      });
+
+      await CharacterSheetsView.methods.updateCharacter.call(vm);
+      expect(vm.errorMessage).toBe('Forbidden to edit character');
+
+      // Test deleteCharacter failure
+      global.confirm = () => true;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Database error' }),
+      });
+
+      await CharacterSheetsView.methods.deleteCharacter.call(vm, 10);
+      expect(vm.errorMessage).toBe('Database error');
     });
   });
 });
