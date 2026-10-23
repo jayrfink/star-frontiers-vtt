@@ -684,6 +684,74 @@ describe('ShipSheetsView - 0 Ammo Display & 0 Hull Point Calculations', () => {
       global.fetch = origFetch;
     }
   });
+
+  it('manages freeform hull damage and healing with bounds clamping', () => {
+    const vm = {
+      selectedShip: { current_hull_points: 35, current_hp: 35, max_hull_points: 50, hull_points: 50 },
+      hullDelta: 10,
+      updateShip: vi.fn(),
+    };
+
+    // Apply 10 damage: 35 - 10 = 25
+    ShipSheetsView.methods.applyHullDamage.call(vm);
+    expect(vm.selectedShip.current_hull_points).toBe(25);
+    expect(vm.selectedShip.current_hp).toBe(25);
+    expect(vm.hullDelta).toBeNull();
+    expect(vm.updateShip).toHaveBeenCalled();
+
+    // Apply excessive damage: clamped at 0
+    vm.hullDelta = 100;
+    ShipSheetsView.methods.applyHullDamage.call(vm);
+    expect(vm.selectedShip.current_hull_points).toBe(0);
+    expect(vm.selectedShip.current_hp).toBe(0);
+
+    // Apply 20 heal: 0 + 20 = 20
+    vm.hullDelta = 20;
+    ShipSheetsView.methods.applyHullHeal.call(vm);
+    expect(vm.selectedShip.current_hull_points).toBe(20);
+
+    // Apply excessive heal: clamped at max_hull_points (50)
+    vm.hullDelta = 100;
+    ShipSheetsView.methods.applyHullHeal.call(vm);
+    expect(vm.selectedShip.current_hull_points).toBe(50);
+  });
+
+  it('resets ship HP, DCR, and all weapon ammo to maximum on Full Repair & Resupply', () => {
+    const vm = {
+      selectedShip: {
+        ship_type: 'Assault Scout',
+        current_hull_points: 5,
+        current_hp: 5,
+        max_hull_points: 15,
+        hull_points: 15,
+        dcr: 10, // degraded from preset 35
+        weapons: [
+          { name: 'Laser Battery', ammo_max: 0, ammo_current: 0 },
+          { name: 'Proton Torpedo', ammo_max: 4, ammo_current: 1 },
+          { name: 'Rocket Battery', ammo_max: 2, ammo_current: 0 },
+        ],
+      },
+      openConfirmModal: (msg, onConfirm) => onConfirm(),
+      isLimitedAmmoWeapon: ShipSheetsView.methods.isLimitedAmmoWeapon,
+      getWeaponCategory: ShipSheetsView.methods.getWeaponCategory,
+      updateShip: vi.fn(),
+    };
+
+    ShipSheetsView.methods.resetShipStats.call(vm);
+
+    // HP restored to max
+    expect(vm.selectedShip.current_hull_points).toBe(15);
+    expect(vm.selectedShip.current_hp).toBe(15);
+
+    // DCR restored to Assault Scout preset rating (35)
+    expect(vm.selectedShip.dcr).toBe(35);
+
+    // Ammo restored for limited-ammo weapons
+    expect(vm.selectedShip.weapons[1].ammo_current).toBe(4);
+    expect(vm.selectedShip.weapons[2].ammo_current).toBe(2);
+
+    expect(vm.updateShip).toHaveBeenCalled();
+  });
 });
 
 

@@ -74,15 +74,20 @@
         <section class="hull-section card">
           <div class="hull-header">
             <h4>Hull Points (HP)</h4>
-            <div class="hull-values">
-              <span class="current">{{ selectedShip.current_hull_points ?? selectedShip.current_hp ?? 0 }}</span> / 
-              <input
-                type="number"
-                v-model.number="selectedShip.max_hull_points"
-                @change="updateShip"
-                class="input-max-hp"
-                min="1"
-              /> Max HP
+            <div class="hull-header-right">
+              <button class="btn-action-reset" @click="resetShipStats" title="Full Repair: Restore HP, DCR, and Ordnance Ammo to maximum">
+                🔄 Full Repair &amp; Resupply
+              </button>
+              <div class="hull-values">
+                <span class="current">{{ selectedShip.current_hull_points ?? selectedShip.current_hp ?? 0 }}</span> / 
+                <input
+                  type="number"
+                  v-model.number="selectedShip.max_hull_points"
+                  @change="updateShip"
+                  class="input-max-hp"
+                  min="1"
+                /> Max HP
+              </div>
             </div>
           </div>
           <div class="hull-bar-bg">
@@ -92,10 +97,24 @@
             ></div>
           </div>
           <div class="hull-controls">
-            <button class="btn-hp btn-sub" @click="adjustHullPoints(-5)">-5</button>
-            <button class="btn-hp btn-sub" @click="adjustHullPoints(-1)">-1</button>
-            <button class="btn-hp btn-add" @click="adjustHullPoints(+1)">+1</button>
-            <button class="btn-hp btn-add" @click="adjustHullPoints(+5)">+5</button>
+            <div class="stepper-group">
+              <button class="btn-hp btn-sub" @click="adjustHullPoints(-5)">-5</button>
+              <button class="btn-hp btn-sub" @click="adjustHullPoints(-1)">-1</button>
+              <button class="btn-hp btn-add" @click="adjustHullPoints(+1)">+1</button>
+              <button class="btn-hp btn-add" @click="adjustHullPoints(+5)">+5</button>
+            </div>
+            <div class="freeform-delta-group">
+              <input
+                type="number"
+                v-model.number="hullDelta"
+                placeholder="Amt"
+                min="1"
+                class="input-delta"
+                @keydown.enter.prevent="applyHullDamage"
+              />
+              <button class="btn-delta btn-sub" @click="applyHullDamage" title="Subtract damage from Hull Points">- Dmg</button>
+              <button class="btn-delta btn-add" @click="applyHullHeal" title="Repair Hull Points">+ Heal</button>
+            </div>
           </div>
         </section>
 
@@ -672,6 +691,7 @@ export default {
         message: '',
         onConfirm: null,
       },
+      hullDelta: null,
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'sheet',
@@ -1108,6 +1128,63 @@ export default {
       this.selectedShip.current_hull_points = newHp;
       this.selectedShip.current_hp = newHp;
       this.updateShip();
+    },
+    applyHullDamage() {
+      if (!this.selectedShip) return;
+      const delta = Number(this.hullDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const current = this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0;
+      const next = Math.max(0, current - delta);
+      this.selectedShip.current_hull_points = next;
+      this.selectedShip.current_hp = next;
+      this.hullDelta = null;
+      this.updateShip();
+    },
+    applyHullHeal() {
+      if (!this.selectedShip) return;
+      const delta = Number(this.hullDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const maxHp = this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 100;
+      const current = this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0;
+      const next = Math.min(maxHp, current + delta);
+      this.selectedShip.current_hull_points = next;
+      this.selectedShip.current_hp = next;
+      this.hullDelta = null;
+      this.updateShip();
+    },
+    resetShipStats() {
+      if (!this.selectedShip) return;
+      const doReset = () => {
+        const maxHp = this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 100;
+        this.selectedShip.current_hull_points = maxHp;
+        this.selectedShip.current_hp = maxHp;
+
+        // Reset DCR if matched to a preset
+        const shipType = this.selectedShip.ship_type || this.selectedShip.type;
+        const preset = (this.presets || SHIP_PRESETS).find(p => p.type === shipType || p.name === shipType);
+        if (preset && preset.dcr !== undefined) {
+          this.selectedShip.dcr = preset.dcr;
+        }
+
+        // Reset all weapon ammo to ammo_max
+        if (Array.isArray(this.selectedShip.weapons)) {
+          this.selectedShip.weapons.forEach(w => {
+            if (w.ammo_max !== undefined && w.ammo_max > 0) {
+              w.ammo_current = w.ammo_max;
+            } else if (this.isLimitedAmmoWeapon && this.isLimitedAmmoWeapon(w)) {
+              w.ammo_current = w.ammo_max || 0;
+            }
+          });
+        }
+
+        this.updateShip();
+      };
+
+      if (typeof this.openConfirmModal === 'function') {
+        this.openConfirmModal('Restore Hull Points, DCR, and all weapon ammunition to maximum?', doReset);
+      } else {
+        doReset();
+      }
     },
     deleteShip(id) {
       const doDelete = async () => {
@@ -1590,6 +1667,11 @@ export default {
   margin: 0;
   color: #3a859c;
 }
+.hull-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 .hull-values {
   font-size: 1.1rem;
@@ -1621,8 +1703,61 @@ export default {
 
 .hull-controls {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stepper-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.freeform-delta-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.input-delta {
+  width: 54px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  text-align: center;
+  padding: 5px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-delta {
+  padding: 5px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-action-reset {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-action-reset:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
 }
 
 .btn-hp {
