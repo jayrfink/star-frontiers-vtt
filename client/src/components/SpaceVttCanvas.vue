@@ -413,17 +413,59 @@ function drawGrid(ctx, mapW, mapH) {
 }
 
 function drawTokens(ctx) {
+  // Count tokens per hex for stack indicators
+  const hexCounts = {};
+  for (const t of props.tokens) {
+    const key = `${t.x},${t.y}`;
+    hexCounts[key] = (hexCounts[key] || 0) + 1;
+  }
+
   const sortedTokens = [...props.tokens].sort((a, b) => {
     const aCel = isCelestialToken(a) ? 0 : 1;
     const bCel = isCelestialToken(b) ? 0 : 1;
-    return aCel - bCel;
+    if (aCel !== bCel) return aCel - bCel;
+    if (a.id === props.selectedTokenId) return 1;
+    if (b.id === props.selectedTokenId) return -1;
+    return 0;
   });
+
   for (const token of sortedTokens) {
     if (draggingToken.value && draggingToken.value.id === token.id) {
       continue;
     }
     renderSingleToken(ctx, token, token.x, token.y, token.id === props.selectedTokenId);
   }
+
+  // Draw stack count badges for cells with 2+ tokens
+  for (const [key, count] of Object.entries(hexCounts)) {
+    if (count > 1) {
+      const [q, r] = key.split(',').map(Number);
+      drawStackBadge(ctx, q, r, count);
+    }
+  }
+}
+
+function drawStackBadge(ctx, q, r, count) {
+  const center = getCellCenter(q, r);
+  const badgeX = center.x + hexSize.value * 0.45;
+  const badgeY = center.y - hexSize.value * 0.4;
+  const badgeRadius = 9;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+  ctx.fillStyle = '#1e293b';
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.stroke();
+
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillStyle = '#38bdf8';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(count), badgeX, badgeY);
+  ctx.restore();
 }
 
 function drawGhostToken(ctx, token, cell) {
@@ -438,7 +480,7 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   const center = getCellCenter(q, r);
   const cx = center.x;
   const cy = center.y;
-  const size = hexSize.value * 0.8 * (token.size || 1); // Token scaled to hex size footprint
+  const size = hexSize.value * 0.8; // Space tokens strictly occupy 1 hex under Star Frontiers rules
   
   // Selected Token Glow
   if (isSelected) {
@@ -593,13 +635,23 @@ function onMouseDown(e) {
         const bCel = isCelestialToken(b) ? 0 : 1;
         return bCel - aCel; // Ships first, celestials last
       });
-      const hitToken = hitTestOrder.find((t) => {
+      const candidates = hitTestOrder.filter((t) => {
         if (cell && t.x === cell.q && t.y === cell.r) return true;
         const center = getCellCenter(t.x, t.y);
-        const radius = hexSize.value * 0.8 * (t.size || 1);
+        const radius = hexSize.value * 0.8;
         const dist = Math.sqrt((worldPos.x - center.x) ** 2 + (worldPos.y - center.y) ** 2);
         return dist <= radius;
       });
+
+      let hitToken = null;
+      if (candidates.length > 0) {
+        if (props.selectedTokenId && candidates.some((t) => t.id === props.selectedTokenId)) {
+          const currentIdx = candidates.findIndex((t) => t.id === props.selectedTokenId);
+          hitToken = candidates[(currentIdx + 1) % candidates.length];
+        } else {
+          hitToken = candidates[0];
+        }
+      }
 
       if (hitToken) {
         draggingToken.value = hitToken;

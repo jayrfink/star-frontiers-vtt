@@ -46,7 +46,7 @@ describe('SpaceVttCanvas Celestial Token Rendering', () => {
     const mouseSection = content.slice(content.indexOf('function onMouseDown'), content.indexOf('function onMouseMove'));
     expect(mouseSection).toMatch(/const\s+hitTestOrder\s*=\s*\[\.\.\.props\.tokens\]\.sort\(/);
     expect(mouseSection).toMatch(/bCel\s*-\s*aCel/);
-    expect(mouseSection).toMatch(/const\s+hitToken\s*=\s*hitTestOrder\.find\(/);
+    expect(mouseSection).toMatch(/candidates\s*=\s*hitTestOrder\.filter\(/);
   });
 
   it('disconnects and nullifies resizeObserver on unmount', () => {

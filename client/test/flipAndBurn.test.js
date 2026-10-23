@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   canFlipAndBurn,
+  canMultiTurnFlip,
   calculateFlipHeading,
+  calculateTurnHeading,
   calculateBlackoutSeconds,
   formatFlipAndBurnAlert,
+  formatMultiTurnAlert,
+  MULTI_TURN_FLIP_STATUS,
 } from '../src/utils/flipAndBurn.js';
 
 describe('Space Combat: Flip and Burn Mechanics', () => {
@@ -51,6 +55,58 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
       expect(msg).toContain('180°');
       expect(msg).toContain('STA');
       expect(msg).toContain('1d10');
+    });
+  });
+
+  describe('canMultiTurnFlip (MR < 3)', () => {
+    it('returns true when MR is 1 or 2', () => {
+      expect(canMultiTurnFlip(1)).toBe(true);
+      expect(canMultiTurnFlip(2)).toBe(true);
+      expect(canMultiTurnFlip('1')).toBe(true);
+      expect(canMultiTurnFlip('2')).toBe(true);
+    });
+
+    it('returns false when MR is 3 or greater (uses standard 1-turn flip)', () => {
+      expect(canMultiTurnFlip(3)).toBe(false);
+      expect(canMultiTurnFlip(4)).toBe(false);
+    });
+
+    it('returns false when MR is 0, null, or invalid', () => {
+      expect(canMultiTurnFlip(0)).toBe(false);
+      expect(canMultiTurnFlip(null)).toBe(false);
+      expect(canMultiTurnFlip(undefined)).toBe(false);
+    });
+  });
+
+  describe('calculateTurnHeading', () => {
+    it('rotates heading by 90 degrees per turn', () => {
+      expect(calculateTurnHeading(0, 90)).toBe(90);
+      expect(calculateTurnHeading(90, 90)).toBe(180);
+      expect(calculateTurnHeading(270, 90)).toBe(0);
+      expect(calculateTurnHeading(300, 90)).toBe(30);
+    });
+  });
+
+  describe('formatMultiTurnAlert', () => {
+    it('formats Turn 1 announcement with STA Check #1', () => {
+      const msg = formatMultiTurnAlert('Assault Scout', 1, 90);
+      expect(msg).toContain('Turn 1/2 of Multi-Turn Flip');
+      expect(msg).toContain('Assault Scout');
+      expect(msg).toContain('90°');
+      expect(msg).toContain('STA Check #1');
+    });
+
+    it('formats Turn 2 announcement with STA Check #2 and full 180 reversal', () => {
+      const msg = formatMultiTurnAlert('Assault Scout', 2, 180);
+      expect(msg).toContain('Turn 2/2 completed');
+      expect(msg).toContain('180° reversal');
+      expect(msg).toContain('STA Check #2');
+    });
+  });
+
+  describe('MULTI_TURN_FLIP_STATUS constant', () => {
+    it('exports standard status string', () => {
+      expect(MULTI_TURN_FLIP_STATUS).toBe('🔄 Flip & Burn (Turn 1/2)');
     });
   });
 });

@@ -65,6 +65,10 @@
           📏 Ruler
         </button>
 
+        <button class="btn-tool btn-initiative" @click="rollInitiative" title="Roll Combat Initiative (Players vs. Opposition 2d10)">
+          ⚡ Initiative
+        </button>
+
         <button class="btn-tool" @click="rollPercentile">
           🎲 Roll d%
         </button>
@@ -191,8 +195,19 @@
                     <span class="roll-item-badge">{{ item.label }}</span>
                   </div>
                   <div class="roll-item-result">
-                    <span class="roll-item-total">{{ item.total }}</span>
-                    <span class="roll-item-breakdown">{{ item.breakdown }}</span>
+                    <template v-if="item.type === 'initiative' && item.roll_summary">
+                      <div class="init-log-pills">
+                        <span class="init-pill-player">P: {{ item.roll_summary.playerRoll }}</span>
+                        <span class="init-pill-opp">O: {{ item.roll_summary.oppRoll }}</span>
+                        <span class="init-pill-winner" :class="item.roll_summary.winner">
+                          {{ item.roll_summary.winner === 'players' ? 'Players' : (item.roll_summary.winner === 'opposition' ? 'Opposition' : 'Tie') }}
+                        </span>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <span class="roll-item-total">{{ item.total }}</span>
+                      <span class="roll-item-breakdown">{{ item.breakdown }}</span>
+                    </template>
                   </div>
                 </li>
               </ul>
@@ -242,6 +257,47 @@
             <div class="hud-body">
               <span class="hud-total">{{ lastPercentileRoll.total }}</span>
               <span class="hud-dice">(<span class="hud-tens-val">Tens: {{ lastPercentileRoll.tens }}</span>, <span class="hud-ones-val">Ones: {{ lastPercentileRoll.ones }}</span>)</span>
+            </div>
+          </div>
+        </transition>
+
+        <!-- Floating Initiative HUD Banner -->
+        <transition name="hud-pop">
+          <div
+            v-if="showInitiativeHud && lastInitiativeRoll"
+            class="initiative-hud-banner"
+            @click="showInitiativeHud = false"
+          >
+            <div class="hud-header">
+              <div class="hud-title">
+                <span v-if="lastInitiativeRoll.username" class="hud-user-tag" :class="lastInitiativeRoll.role?.toLowerCase()">
+                  {{ lastInitiativeRoll.role === 'GameMaster' ? 'GM' : 'PLAYER' }} {{ lastInitiativeRoll.username }}
+                </span>
+                ⚡ Combat Initiative
+              </div>
+              <button class="hud-close" @click.stop="showInitiativeHud = false">&times;</button>
+            </div>
+            <div class="hud-body init-hud-body">
+              <div class="init-die-box init-player-die">
+                <span class="init-label">PLAYERS</span>
+                <span class="init-val">{{ lastInitiativeRoll.playerRoll }}</span>
+              </div>
+              <span class="init-vs">VS</span>
+              <div class="init-die-box init-opp-die">
+                <span class="init-label">OPPOSITION</span>
+                <span class="init-val">{{ lastInitiativeRoll.oppRoll }}</span>
+              </div>
+            </div>
+            <div class="init-winner-banner" :class="lastInitiativeRoll.winner">
+              <template v-if="lastInitiativeRoll.winner === 'players'">
+                🎉 PLAYERS WIN INITIATIVE
+              </template>
+              <template v-else-if="lastInitiativeRoll.winner === 'opposition'">
+                💀 OPPOSITION WINS INITIATIVE
+              </template>
+              <template v-else>
+                ⚖️ TIE — REROLL INITIATIVE
+              </template>
             </div>
           </div>
         </transition>
@@ -745,7 +801,7 @@ import VehicleTokenHud from '../components/VehicleTokenHud.vue';
 import DeployVehicleModal from '../components/DeployVehicleModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
-import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
+import { calculateDamageRoll, calculatePercentileRoll, calculateInitiativeRoll } from '../utils/diceUtils.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
 
@@ -812,6 +868,10 @@ let damageHudTimeout = null;
 const lastPercentileRoll = ref(null);
 const showPercentileHud = ref(false);
 let percentileHudTimeout = null;
+
+const lastInitiativeRoll = ref(null);
+const showInitiativeHud = ref(false);
+let initiativeHudTimeout = null;
 
 const RPG_ROLL_LOG_KEY = 'sf_vtt_rpg_roll_log';
 const rollLog = ref([]);
@@ -896,12 +956,92 @@ function toggleDmgMenu() {
   showDmgMenu.value = !showDmgMenu.value;
 }
 
+async function rollInitiative() {
+  playDiceSound({ isRemote: false });
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
+    showInitiativeHud.value = false;
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
+
+    try {
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-init-player', themeColor: '#17304a', qty: 1 },
+        { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
+      ]);
+      const initSummary = calculateInitiativeRoll(results);
+      if (initSummary.valid) {
+        const rollData = {
+          ...initSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
+        lastInitiativeRoll.value = rollData;
+        showInitiativeHud.value = true;
+
+        let winnerText = 'Tie — Reroll Required!';
+        if (initSummary.winner === 'players') winnerText = 'Players Win Initiative!';
+        if (initSummary.winner === 'opposition') winnerText = 'Opposition Wins Initiative!';
+
+        sendRollToServer({
+          type: 'initiative',
+          label: '⚡ Combat Initiative',
+          total: initSummary.playerRoll,
+          breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll} — ${winnerText}`,
+          rollSummary: rollData
+        });
+
+        initiativeHudTimeout = setTimeout(() => {
+          showInitiativeHud.value = false;
+        }, 9000);
+      }
+    } catch (err) {
+      console.error('Initiative roll failed:', err);
+    }
+  } else {
+    const playerRoll = Math.floor(Math.random() * 10) + 1;
+    const oppRoll = Math.floor(Math.random() * 10) + 1;
+    let winner = 'tie';
+    if (playerRoll > oppRoll) winner = 'players';
+    else if (oppRoll > playerRoll) winner = 'opposition';
+
+    const rollData = {
+      playerRoll,
+      oppRoll,
+      winner,
+      valid: true,
+      username: authStore.user?.username,
+      role: authStore.user?.role
+    };
+    lastInitiativeRoll.value = rollData;
+    showInitiativeHud.value = true;
+
+    let winnerText = 'Tie — Reroll Required!';
+    if (winner === 'players') winnerText = 'Players Win Initiative!';
+    if (winner === 'opposition') winnerText = 'Opposition Wins Initiative!';
+
+    sendRollToServer({
+      type: 'initiative',
+      label: '⚡ Combat Initiative',
+      total: playerRoll,
+      breakdown: `Players: ${playerRoll} vs Opposition: ${oppRoll} — ${winnerText}`,
+      rollSummary: rollData
+    });
+
+    initiativeHudTimeout = setTimeout(() => {
+      showInitiativeHud.value = false;
+    }, 9000);
+  }
+}
+
 async function rollPercentile() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
   if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
+    showInitiativeHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
@@ -940,6 +1080,7 @@ async function rollDamage() {
   if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
+    showInitiativeHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
     showDmgMenu.value = false;
 
@@ -983,6 +1124,7 @@ async function clearDice() {
   }
   showPercentileHud.value = false;
   showDamageHud.value = false;
+  showInitiativeHud.value = false;
   if (percentileHudTimeout) {
     clearTimeout(percentileHudTimeout);
     percentileHudTimeout = null;
@@ -990,6 +1132,10 @@ async function clearDice() {
   if (damageHudTimeout) {
     clearTimeout(damageHudTimeout);
     damageHudTimeout = null;
+  }
+  if (initiativeHudTimeout) {
+    clearTimeout(initiativeHudTimeout);
+    initiativeHudTimeout = null;
   }
   showDmgMenu.value = false;
 }
@@ -1760,6 +1906,7 @@ async function onAdversaryRollDamage({ action, token }) {
   if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
+    showInitiativeHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
@@ -1929,6 +2076,7 @@ async function onVehicleRollDamage({ token } = {}) {
   if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
+    showInitiativeHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
@@ -2106,6 +2254,19 @@ function setupSocketListeners() {
         damageHudTimeout = setTimeout(() => {
           showDamageHud.value = false;
         }, 8000);
+      } else if (roll.type === 'initiative') {
+        lastInitiativeRoll.value = {
+          ...roll.rollSummary,
+          username: roll.username,
+          role: roll.role,
+        };
+        showInitiativeHud.value = true;
+        showPercentileHud.value = false;
+        showDamageHud.value = false;
+        if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
+        initiativeHudTimeout = setTimeout(() => {
+          showInitiativeHud.value = false;
+        }, 9000);
       }
     }
   });
@@ -2170,6 +2331,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown);
   if (damageHudTimeout) clearTimeout(damageHudTimeout);
   if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
   if (diceBoxInstance) {
     try {
       diceBoxInstance.clear();
@@ -2199,6 +2361,130 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* Initiative Floating HUD */
+.initiative-hud-banner {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(95, 159, 222, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(95, 159, 222, 0.2);
+  border-radius: 8px;
+  padding: 12px 18px;
+  min-width: 290px;
+  cursor: pointer;
+  z-index: 250;
+  backdrop-filter: blur(8px);
+}
+.init-hud-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 10px 0;
+}
+.init-die-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.init-player-die {
+  background: #17304a;
+  border: 2px solid #5f9fde;
+  color: #5f9fde;
+}
+.init-opp-die {
+  background: #400a22;
+  border: 2px solid #c9abb9;
+  color: #c9abb9;
+}
+.init-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+.init-val {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: monospace;
+}
+.init-vs {
+  font-size: 14px;
+  font-weight: 900;
+  color: #64748b;
+}
+.init-winner-banner {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.init-winner-banner.players {
+  background: rgba(23, 48, 74, 0.8);
+  color: #5f9fde;
+  border: 1px solid #5f9fde;
+}
+.init-winner-banner.opposition {
+  background: rgba(64, 10, 34, 0.8);
+  color: #c9abb9;
+  border: 1px solid #c9abb9;
+}
+.init-winner-banner.tie {
+  background: rgba(100, 116, 139, 0.4);
+  color: #cbd5e1;
+  border: 1px solid #cbd5e1;
+}
+
+/* Roll Log Initiative Pills */
+.init-log-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+.init-pill-player {
+  background: #17304a;
+  color: #5f9fde;
+  border: 1px solid #5f9fde;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.init-pill-opp {
+  background: #400a22;
+  color: #c9abb9;
+  border: 1px solid #c9abb9;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.init-pill-winner {
+  font-weight: 600;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.init-pill-winner.players {
+  color: #5f9fde;
+}
+.init-pill-winner.opposition {
+  color: #c9abb9;
+}
+.init-pill-winner.tie {
+  color: #94a3b8;
+}
+
 .modal-error-banner {
   background: rgba(220, 53, 69, 0.2);
   border: 1px solid #dc3545;

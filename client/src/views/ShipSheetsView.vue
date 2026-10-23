@@ -141,17 +141,23 @@
             </div>
           </div>
 
-          <div class="flip-burn-ship-banner" :class="{ capable: canFlipAndBurn(selectedShip.mr) }">
+          <div class="flip-burn-ship-banner" :class="{ capable: canFlipAndBurn(selectedShip.mr), 'multi-turn': canMultiTurnFlip(selectedShip.mr) }">
             <template v-if="canFlipAndBurn(selectedShip.mr)">
               <span class="fb-badge capable">🔄 Flip &amp; Burn Capable (MR {{ selectedShip.mr }} &ge; 3)</span>
               <span class="fb-rule-text">
-                Can execute a 180° Flip &amp; Burn in combat. Any strapped-in PCs on board must pass a STA check or pass out for <strong>1d10 × 10 seconds</strong>.
+                Can execute a 1-turn 180° Flip &amp; Burn. Any strapped-in PCs on board must pass a STA check or pass out for <strong>1d10 × 10 seconds</strong>.
+              </span>
+            </template>
+            <template v-else-if="canMultiTurnFlip(selectedShip.mr)">
+              <span class="fb-badge multi-turn">🔄 Multi-Turn Flip Capable (MR {{ selectedShip.mr }} &lt; 3)</span>
+              <span class="fb-rule-text">
+                Can execute a 180° Flip across <strong>2 combat turns</strong> (90° per turn). PCs must make <strong>2 separate STA checks</strong> (1 per turn) or pass out for <strong>1d10 × 10 seconds</strong>.
               </span>
             </template>
             <template v-else>
-              <span class="fb-badge incapable">🚫 Flip &amp; Burn Unavailable (Requires MR &ge; 3)</span>
+              <span class="fb-badge incapable">🚫 Flip &amp; Burn Unavailable (MR 0)</span>
               <span class="fb-rule-text">
-                Ships must have a Maneuver Rating (MR) of 3 or higher to perform a Flip &amp; Burn maneuver.
+                Vessel lacks sufficient maneuvering thrusters.
               </span>
             </template>
           </div>
@@ -645,7 +651,7 @@ import { SHIP_PRESETS } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../constants/shipWeapons.js';
-import { canFlipAndBurn } from '../utils/flipAndBurn.js';
+import { canFlipAndBurn, canMultiTurnFlip } from '../utils/flipAndBurn.js';
 
 export default {
   name: 'ShipSheetsView',
@@ -740,6 +746,7 @@ export default {
   },
   methods: {
     canFlipAndBurn,
+    canMultiTurnFlip,
     handleKeydown(e) {
       if (e.key === 'Escape' && this.showAddWeaponModal) {
         this.showAddWeaponModal = false;
@@ -1707,6 +1714,11 @@ export default {
   background: rgba(56, 189, 248, 0.05);
 }
 
+.flip-burn-ship-banner.multi-turn {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.05);
+}
+
 .fb-badge {
   display: inline-flex;
   align-items: center;
@@ -1723,6 +1735,12 @@ export default {
   background: rgba(56, 189, 248, 0.15);
   color: #38bdf8;
   border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.fb-badge.multi-turn {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .fb-badge.incapable {

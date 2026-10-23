@@ -68,9 +68,9 @@ describe('Shared Rolls & Roll Log Integration', () => {
 
   it('uses consistent &times; HTML entity for HUD banner close buttons', () => {
     const rpgMatches = rpgContent.match(/class="hud-close"[^>]*>&times;<\/button>/g);
-    expect(rpgMatches?.length).toBe(2);
+    expect(rpgMatches?.length).toBe(3);
     const spaceMatches = spaceContent.match(/class="hud-close"[^>]*>&times;<\/button>/g);
-    expect(spaceMatches?.length).toBe(2);
+    expect(spaceMatches?.length).toBe(3);
   });
 });
 

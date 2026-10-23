@@ -74,3 +74,59 @@ export function calculatePercentileRoll(results) {
     valid: true
   };
 }
+
+/**
+ * Processes settled die objects from @3d-dice/dice-box for combat initiative.
+ * Die #1 (Players): theme 'custom-init-player', themeColor '#17304a'.
+ * Die #2 (Opposition): theme 'custom-init-opp', themeColor '#400a22'.
+ * On a d10 face showing 0 (raw value 0 or 10), the roll value is 10 (range 1-10).
+ *
+ * @param {Array} results
+ * @returns {{ playerRoll: number, oppRoll: number, winner: 'players'|'opposition'|'tie', valid: boolean }}
+ */
+export function calculateInitiativeRoll(results) {
+  if (!Array.isArray(results) || results.length === 0) {
+    return { playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false };
+  }
+
+  const flat = results.flat(Infinity);
+  if (flat.length < 2) {
+    return { playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false };
+  }
+
+  // Find player die: theme 'custom-init-player', themeColor '#17304a', or groupId 0
+  const playerDie = flat.find(d =>
+    d?.theme === 'custom-init-player' ||
+    d?.themeColor?.toLowerCase() === '#17304a' ||
+    d?.groupId === 0
+  ) || flat[0];
+
+  // Find opposition die: theme 'custom-init-opp', themeColor '#400a22', or groupId 1
+  const oppDie = flat.find(d =>
+    d !== playerDie && (
+      d?.theme === 'custom-init-opp' ||
+      d?.themeColor?.toLowerCase() === '#400a22' ||
+      d?.groupId === 1
+    )
+  ) || flat.find(d => d !== playerDie) || flat[1];
+
+  const rawPlayer = Number(playerDie?.value) || 0;
+  const rawOpp = Number(oppDie?.value) || 0;
+
+  const playerRoll = (rawPlayer === 0 || rawPlayer === 10) ? 10 : (rawPlayer % 10 || 10);
+  const oppRoll = (rawOpp === 0 || rawOpp === 10) ? 10 : (rawOpp % 10 || 10);
+
+  let winner = 'tie';
+  if (playerRoll > oppRoll) {
+    winner = 'players';
+  } else if (oppRoll > playerRoll) {
+    winner = 'opposition';
+  }
+
+  return {
+    playerRoll,
+    oppRoll,
+    winner,
+    valid: true,
+  };
+}

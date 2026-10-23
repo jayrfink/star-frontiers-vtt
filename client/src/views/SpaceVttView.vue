@@ -50,6 +50,10 @@
           ✋ Pan
         </button>
         
+        <button class="btn-tool btn-initiative" @click="rollInitiative" title="Roll Combat Initiative (Players vs. Opposition 2d10)">
+          ⚡ Initiative
+        </button>
+
         <button class="btn-tool" @click="rollPercentile">
           🎲 Roll d%
         </button>
@@ -183,8 +187,19 @@
                     <span class="roll-item-badge">{{ item.label }}</span>
                   </div>
                   <div class="roll-item-result">
-                    <span class="roll-item-total">{{ item.total }}</span>
-                    <span class="roll-item-breakdown">{{ item.breakdown }}</span>
+                    <template v-if="item.type === 'initiative' && item.roll_summary">
+                      <div class="init-log-pills">
+                        <span class="init-pill-player">P: {{ item.roll_summary.playerRoll }}</span>
+                        <span class="init-pill-opp">O: {{ item.roll_summary.oppRoll }}</span>
+                        <span class="init-pill-winner" :class="item.roll_summary.winner">
+                          {{ item.roll_summary.winner === 'players' ? 'Players' : (item.roll_summary.winner === 'opposition' ? 'Opposition' : 'Tie') }}
+                        </span>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <span class="roll-item-total">{{ item.total }}</span>
+                      <span class="roll-item-breakdown">{{ item.breakdown }}</span>
+                    </template>
                   </div>
                 </li>
               </ul>
@@ -234,6 +249,47 @@
             <div class="hud-body">
               <span class="hud-total">{{ lastPercentileRoll.total }}</span>
               <span class="hud-dice">(<span class="hud-tens-val">Tens: {{ lastPercentileRoll.tens }}</span>, <span class="hud-ones-val">Ones: {{ lastPercentileRoll.ones }}</span>)</span>
+            </div>
+          </div>
+        </transition>
+
+        <!-- Floating Initiative HUD Banner -->
+        <transition name="hud-pop">
+          <div
+            v-if="showInitiativeHud && lastInitiativeRoll"
+            class="initiative-hud-banner"
+            @click="showInitiativeHud = false"
+          >
+            <div class="hud-header">
+              <div class="hud-title">
+                <span v-if="lastInitiativeRoll.username" class="hud-user-tag" :class="lastInitiativeRoll.role?.toLowerCase()">
+                  {{ lastInitiativeRoll.role === 'GameMaster' ? 'GM' : 'PLAYER' }} {{ lastInitiativeRoll.username }}
+                </span>
+                ⚡ Combat Initiative
+              </div>
+              <button class="hud-close" @click.stop="showInitiativeHud = false">&times;</button>
+            </div>
+            <div class="hud-body init-hud-body">
+              <div class="init-die-box init-player-die">
+                <span class="init-label">PLAYERS</span>
+                <span class="init-val">{{ lastInitiativeRoll.playerRoll }}</span>
+              </div>
+              <span class="init-vs">VS</span>
+              <div class="init-die-box init-opp-die">
+                <span class="init-label">OPPOSITION</span>
+                <span class="init-val">{{ lastInitiativeRoll.oppRoll }}</span>
+              </div>
+            </div>
+            <div class="init-winner-banner" :class="lastInitiativeRoll.winner">
+              <template v-if="lastInitiativeRoll.winner === 'players'">
+                🎉 PLAYERS WIN INITIATIVE
+              </template>
+              <template v-else-if="lastInitiativeRoll.winner === 'opposition'">
+                💀 OPPOSITION WINS INITIATIVE
+              </template>
+              <template v-else>
+                ⚖️ TIE — REROLL INITIATIVE
+              </template>
             </div>
           </div>
         </transition>
@@ -502,29 +558,62 @@
                 </div>
               </div>
 
-              <!-- Flip & Burn Maneuver (MR >= 3) -->
+              <!-- Flip & Burn Maneuver (MR >= 3 or Multi-Turn MR < 3) -->
               <div class="flip-burn-box">
                 <div class="flip-burn-header">
-                  <label>🔄 Flip &amp; Burn (MR &ge; 3)</label>
-                  <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanFlipAndBurn }">
+                  <label>🔄 Flip &amp; Burn</label>
+                  <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanFlipAndBurn || selectedTokenCanMultiTurnFlip }">
                     MR {{ selectedTokenLinkedShip.mr }}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  class="btn-flip-burn full-width"
-                  :disabled="!selectedTokenCanFlipAndBurn"
-                  :title="selectedTokenCanFlipAndBurn ? 'Reverse heading 180° and alert crew for STA check' : 'Requires ship with Maneuver Rating (MR) ≥ 3'"
-                  @click="executeFlipAndBurn"
-                >
-                  🔄 Execute Flip &amp; Burn (180°)
-                </button>
-                <small v-if="selectedTokenLinkedShip && !selectedTokenCanFlipAndBurn" class="flip-burn-ineligible">
-                  Requires MR &ge; 3 (Linked ship MR: {{ selectedTokenLinkedShip.mr }})
+
+                <!-- MR >= 3 Single-Turn Maneuver -->
+                <template v-if="selectedTokenCanFlipAndBurn">
+                  <button
+                    type="button"
+                    class="btn-flip-burn full-width"
+                    title="Reverse heading 180° in 1 turn and alert crew for STA check"
+                    @click="executeFlipAndBurn"
+                  >
+                    🔄 Execute Flip &amp; Burn (180° - 1 Turn)
+                  </button>
+                  <small class="flip-burn-hint">
+                    Fast vessel (MR &ge; 3): Strapped-in PCs must pass STA check or pass out for 1d10×10s.
+                  </small>
+                </template>
+
+                <!-- MR < 3 Multi-Turn Maneuver -->
+                <template v-else-if="selectedTokenCanMultiTurnFlip">
+                  <div v-if="selectedTokenInMultiTurnFlip" class="multi-turn-progress-banner">
+                    ⏳ Multi-Turn Flip in Progress (Turn 1/2 complete: +90°)
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-flip-burn full-width"
+                    :class="{ 'in-progress': selectedTokenInMultiTurnFlip }"
+                    :title="selectedTokenInMultiTurnFlip ? 'Complete Turn 2/2 (+90°, total 180°)' : 'Start Turn 1/2 (+90°)'"
+                    @click="executeFlipAndBurn"
+                  >
+                    {{ selectedTokenInMultiTurnFlip ? '🔄 Complete Flip & Burn (Turn 2/2: +90°)' : '🔄 Start Multi-Turn Flip (Turn 1/2: +90°)' }}
+                  </button>
+                  <button
+                    v-if="selectedTokenInMultiTurnFlip"
+                    type="button"
+                    class="btn-cancel-flip"
+                    @click="cancelMultiTurnFlip"
+                    title="Cancel multi-turn flip state"
+                  >
+                    ✕ Cancel Flip
+                  </button>
+                  <small class="flip-burn-hint">
+                    {{ selectedTokenInMultiTurnFlip ? 'Turn 2 of 2: Reverses final 90° (total 180°). Crew must make STA Check #2.' : 'Lower agility vessel (MR < 3): Takes 2 turns to flip. Crew makes a STA check on each turn.' }}
+                  </small>
+                </template>
+
+                <small v-else-if="selectedTokenLinkedShip" class="flip-burn-ineligible">
+                  Vessel lacks maneuvering thrusters (MR 0)
                 </small>
-                <small v-else class="flip-burn-hint">
-                  Strapped-in PCs must pass a STA check or pass out for 1d10×10s.
-                </small>
+
                 <div class="flip-burn-roll-btns">
                   <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll d% STA Check">
                     🎲 STA Check (d%)
@@ -588,19 +677,12 @@
                 </div>
               </div>
 
-              <!-- Token Size -->
+              <!-- Token Size (Star Frontiers 1-Hex Rule) -->
               <div class="form-group">
                 <label>Size:</label>
-                <select
-                  v-model.number="selectedTokenForm.size"
-                  class="size-select token-size-select"
-                  @change="updateSelectedToken"
-                >
-                  <option :value="1">1 Hex (Small / Medium)</option>
-                  <option :value="2">2 Hexes (Large)</option>
-                  <option :value="3">3 Hexes (Huge)</option>
-                  <option :value="4">4 Hexes (Gargantuan / Station)</option>
-                </select>
+                <div class="space-token-size-display" title="All ships and celestial bodies strictly occupy 1 hex under Star Frontiers rules">
+                  1 Hex (Standard)
+                </div>
               </div>
 
               <!-- Token Color -->
@@ -793,16 +875,6 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Size</label>
-            <select v-model.number="newTokenForm.size" class="ship-sheet-select token-size-select">
-              <option :value="1">1 Hex (Fighter / Scout / Frigate)</option>
-              <option :value="2">2 Hexes (Destroyer / Cruiser)</option>
-              <option :value="3">3 Hexes (Heavy Cruiser / Carrier)</option>
-              <option :value="4">4 Hexes (Dreadnought / Station)</option>
-            </select>
-          </div>
-
 
           <div class="form-row">
             <div class="form-group">
@@ -870,15 +942,19 @@ import SpaceVttCanvas from '../components/SpaceVttCanvas.vue';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
-import { calculateDamageRoll, calculatePercentileRoll } from '../utils/diceUtils.js';
+import { calculateDamageRoll, calculatePercentileRoll, calculateInitiativeRoll } from '../utils/diceUtils.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
 import { isCelestialToken, CELESTIAL_PRESET_NAMES } from '../utils/spaceTokens.js';
 import {
   canFlipAndBurn,
+  canMultiTurnFlip,
   calculateFlipHeading,
+  calculateTurnHeading,
   calculateBlackoutSeconds,
   formatFlipAndBurnAlert,
+  formatMultiTurnAlert,
+  MULTI_TURN_FLIP_STATUS,
 } from '../utils/flipAndBurn.js';
 
 
@@ -944,6 +1020,10 @@ let damageHudTimeout = null;
 const lastPercentileRoll = ref(null);
 const showPercentileHud = ref(false);
 let percentileHudTimeout = null;
+
+const lastInitiativeRoll = ref(null);
+const showInitiativeHud = ref(false);
+let initiativeHudTimeout = null;
 
 const SPACE_ROLL_LOG_KEY = 'sf_vtt_space_roll_log';
 const rollLog = ref([]);
@@ -1028,12 +1108,92 @@ function toggleDmgMenu() {
   showDmgMenu.value = !showDmgMenu.value;
 }
 
+async function rollInitiative() {
+  playDiceSound({ isRemote: false });
+  const diceBox = await getReadyDiceBox();
+  if (diceBox) {
+    showInitiativeHud.value = false;
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
+
+    try {
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-init-player', themeColor: '#17304a', qty: 1 },
+        { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
+      ]);
+      const initSummary = calculateInitiativeRoll(results);
+      if (initSummary.valid) {
+        const rollData = {
+          ...initSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role
+        };
+        lastInitiativeRoll.value = rollData;
+        showInitiativeHud.value = true;
+
+        let winnerText = 'Tie — Reroll Required!';
+        if (initSummary.winner === 'players') winnerText = 'Players Win Initiative!';
+        if (initSummary.winner === 'opposition') winnerText = 'Opposition Wins Initiative!';
+
+        sendRollToServer({
+          type: 'initiative',
+          label: '⚡ Combat Initiative',
+          total: initSummary.playerRoll,
+          breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll} — ${winnerText}`,
+          rollSummary: rollData
+        });
+
+        initiativeHudTimeout = setTimeout(() => {
+          showInitiativeHud.value = false;
+        }, 9000);
+      }
+    } catch (err) {
+      console.error('Initiative roll failed:', err);
+    }
+  } else {
+    const playerRoll = Math.floor(Math.random() * 10) + 1;
+    const oppRoll = Math.floor(Math.random() * 10) + 1;
+    let winner = 'tie';
+    if (playerRoll > oppRoll) winner = 'players';
+    else if (oppRoll > playerRoll) winner = 'opposition';
+
+    const rollData = {
+      playerRoll,
+      oppRoll,
+      winner,
+      valid: true,
+      username: authStore.user?.username,
+      role: authStore.user?.role
+    };
+    lastInitiativeRoll.value = rollData;
+    showInitiativeHud.value = true;
+
+    let winnerText = 'Tie — Reroll Required!';
+    if (winner === 'players') winnerText = 'Players Win Initiative!';
+    if (winner === 'opposition') winnerText = 'Opposition Wins Initiative!';
+
+    sendRollToServer({
+      type: 'initiative',
+      label: '⚡ Combat Initiative',
+      total: playerRoll,
+      breakdown: `Players: ${playerRoll} vs Opposition: ${oppRoll} — ${winnerText}`,
+      rollSummary: rollData
+    });
+
+    initiativeHudTimeout = setTimeout(() => {
+      showInitiativeHud.value = false;
+    }, 9000);
+  }
+}
+
 async function rollPercentile() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
   if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
+    showInitiativeHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
@@ -1072,6 +1232,7 @@ async function rollDamage() {
   if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
+    showInitiativeHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
     showDmgMenu.value = false;
 
@@ -1115,6 +1276,7 @@ async function clearDice() {
   }
   showPercentileHud.value = false;
   showDamageHud.value = false;
+  showInitiativeHud.value = false;
   if (percentileHudTimeout) {
     clearTimeout(percentileHudTimeout);
     percentileHudTimeout = null;
@@ -1122,6 +1284,10 @@ async function clearDice() {
   if (damageHudTimeout) {
     clearTimeout(damageHudTimeout);
     damageHudTimeout = null;
+  }
+  if (initiativeHudTimeout) {
+    clearTimeout(initiativeHudTimeout);
+    initiativeHudTimeout = null;
   }
   showDmgMenu.value = false;
 }
@@ -1275,6 +1441,18 @@ const selectedTokenCanFlipAndBurn = computed(() => {
   return true;
 });
 
+const selectedTokenCanMultiTurnFlip = computed(() => {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return false;
+  if (selectedTokenLinkedShip.value) {
+    return canMultiTurnFlip(selectedTokenLinkedShip.value.mr);
+  }
+  return false;
+});
+
+const selectedTokenInMultiTurnFlip = computed(() => {
+  return selectedTokenForm.status_effects.includes(MULTI_TURN_FLIP_STATUS);
+});
+
 // Watch selectedToken to sync reactive form (Bugs 12 & 31)
 watch(selectedToken, (newToken) => {
   if (newToken) {
@@ -1394,26 +1572,69 @@ function adjustSelectedSpeed(delta) {
 
 async function executeFlipAndBurn() {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
-  if (!selectedTokenCanFlipAndBurn.value) return;
+  const shipName = selectedToken.value.name || 'Ship';
 
-  const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
-  await rotateSelectedToken(180);
+  if (selectedTokenCanFlipAndBurn.value) {
+    // Fast vessel 1-turn maneuver (MR >= 3)
+    const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
+    await rotateSelectedToken(180);
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: 🔄 Flip & Burn (180°)`,
+      total: newRotation,
+      breakdown: formatFlipAndBurnAlert(shipName, newRotation),
+    });
+  } else if (selectedTokenCanMultiTurnFlip.value) {
+    // Lower agility vessel multi-turn maneuver (MR < 3)
+    if (!selectedTokenInMultiTurnFlip.value) {
+      // Turn 1: rotate +90 deg and set status effect
+      const newRotation = calculateTurnHeading(selectedToken.value.rotation || 0, 90);
+      await rotateSelectedToken(90);
+      if (!selectedTokenForm.status_effects.includes(MULTI_TURN_FLIP_STATUS)) {
+        selectedTokenForm.status_effects.push(MULTI_TURN_FLIP_STATUS);
+        await updateSelectedToken();
+      }
+      sendRollToServer({
+        type: 'percentile',
+        label: `${shipName}: 🔄 Multi-Turn Flip (Turn 1/2: +90°)`,
+        total: newRotation,
+        breakdown: formatMultiTurnAlert(shipName, 1, newRotation),
+      });
+    } else {
+      // Turn 2: rotate remaining +90 deg (total 180 deg) and clear status effect
+      const newRotation = calculateTurnHeading(selectedToken.value.rotation || 0, 90);
+      await rotateSelectedToken(90);
+      selectedTokenForm.status_effects = selectedTokenForm.status_effects.filter(
+        (s) => s !== MULTI_TURN_FLIP_STATUS
+      );
+      await updateSelectedToken();
+      sendRollToServer({
+        type: 'percentile',
+        label: `${shipName}: 🔄 Multi-Turn Flip Complete (Turn 2/2: +90°)`,
+        total: newRotation,
+        breakdown: formatMultiTurnAlert(shipName, 2, newRotation),
+      });
+    }
+  }
+}
 
-  sendRollToServer({
-    type: 'percentile',
-    label: `${selectedToken.value.name}: 🔄 Flip & Burn (180°)`,
-    total: newRotation,
-    breakdown: formatFlipAndBurnAlert(selectedToken.value.name, newRotation),
-  });
+async function cancelMultiTurnFlip() {
+  if (!selectedToken.value) return;
+  selectedTokenForm.status_effects = selectedTokenForm.status_effects.filter(
+    (s) => s !== MULTI_TURN_FLIP_STATUS
+  );
+  await updateSelectedToken();
 }
 
 async function rollFlipAndBurnStaCheck() {
   const shipName = selectedToken.value?.name || 'Ship';
+  const stageDesc = selectedTokenInMultiTurnFlip.value ? 'STA Check #2' : (selectedTokenCanMultiTurnFlip.value ? 'STA Check #1' : 'STA Check');
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
   if (diceBox) {
     showPercentileHud.value = false;
     showDamageHud.value = false;
+    showInitiativeHud.value = false;
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
@@ -1431,7 +1652,7 @@ async function rollFlipAndBurnStaCheck() {
         showPercentileHud.value = true;
         sendRollToServer({
           type: 'percentile',
-          label: `${shipName}: Flip & Burn STA Check (d%)`,
+          label: `${shipName}: Flip & Burn ${stageDesc} (d%)`,
           total: rollSummary.total,
           breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] Pass if <= STA, or pass out for 1d10×10s`,
           rollSummary,
@@ -1447,7 +1668,7 @@ async function rollFlipAndBurnStaCheck() {
     const roll = Math.floor(Math.random() * 100) + 1;
     sendRollToServer({
       type: 'percentile',
-      label: `${shipName}: Flip & Burn STA Check (d%)`,
+      label: `${shipName}: Flip & Burn ${stageDesc} (d%)`,
       total: roll,
       breakdown: `Roll: ${roll} (Pass if <= STA, or pass out for 1d10×10s)`,
     });
@@ -1461,6 +1682,7 @@ async function rollFlipAndBurnBlackout() {
   if (diceBox) {
     showDamageHud.value = false;
     showPercentileHud.value = false;
+    showInitiativeHud.value = false;
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
@@ -1824,7 +2046,7 @@ async function submitAddToken() {
         avatar_url: newTokenForm.avatar_url,
         x: newTokenForm.x,
         y: newTokenForm.y,
-        size: Number(newTokenForm.size) || 1,
+        size: 1, // Space tokens strictly occupy 1 hex under Star Frontiers rules
         rotation: isCelestial ? 0 : (newTokenForm.rotation || 0),
         current_speed: isCelestial ? null : (newTokenForm.current_speed || 0),
         layer: isCelestial ? 'celestial' : 'character',
@@ -2112,6 +2334,19 @@ function setupSocketListeners() {
         damageHudTimeout = setTimeout(() => {
           showDamageHud.value = false;
         }, 8000);
+      } else if (roll.type === 'initiative') {
+        lastInitiativeRoll.value = {
+          ...roll.rollSummary,
+          username: roll.username,
+          role: roll.role,
+        };
+        showInitiativeHud.value = true;
+        showPercentileHud.value = false;
+        showDamageHud.value = false;
+        if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
+        initiativeHudTimeout = setTimeout(() => {
+          showInitiativeHud.value = false;
+        }, 9000);
       }
     }
   });
@@ -2119,6 +2354,7 @@ function setupSocketListeners() {
   socket.on('roll:cleared', onSocketRollCleared = ({ mode }) => {
     if (mode === 'space') {
       rollLog.value = [];
+      showInitiativeHud.value = false;
       clearDice();
     }
   });
@@ -2168,6 +2404,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onDocClick);
   if (damageHudTimeout) clearTimeout(damageHudTimeout);
   if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
   if (diceBoxInstance) {
     try {
       diceBoxInstance.clear();
@@ -2197,6 +2434,171 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.space-token-size-display {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Initiative Floating HUD */
+.initiative-hud-banner {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(95, 159, 222, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(95, 159, 222, 0.2);
+  border-radius: 8px;
+  padding: 12px 18px;
+  min-width: 290px;
+  cursor: pointer;
+  z-index: 250;
+  backdrop-filter: blur(8px);
+}
+.init-hud-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 10px 0;
+}
+.init-die-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.init-player-die {
+  background: #17304a;
+  border: 2px solid #5f9fde;
+  color: #5f9fde;
+}
+.init-opp-die {
+  background: #400a22;
+  border: 2px solid #c9abb9;
+  color: #c9abb9;
+}
+.init-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+.init-val {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: monospace;
+}
+.init-vs {
+  font-size: 14px;
+  font-weight: 900;
+  color: #64748b;
+}
+.init-winner-banner {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.init-winner-banner.players {
+  background: rgba(23, 48, 74, 0.8);
+  color: #5f9fde;
+  border: 1px solid #5f9fde;
+}
+.init-winner-banner.opposition {
+  background: rgba(64, 10, 34, 0.8);
+  color: #c9abb9;
+  border: 1px solid #c9abb9;
+}
+.init-winner-banner.tie {
+  background: rgba(100, 116, 139, 0.4);
+  color: #cbd5e1;
+  border: 1px solid #cbd5e1;
+}
+
+/* Roll Log Initiative Pills */
+.init-log-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+.init-pill-player {
+  background: #17304a;
+  color: #5f9fde;
+  border: 1px solid #5f9fde;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.init-pill-opp {
+  background: #400a22;
+  color: #c9abb9;
+  border: 1px solid #c9abb9;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.init-pill-winner {
+  font-weight: 600;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.init-pill-winner.players {
+  color: #5f9fde;
+}
+.init-pill-winner.opposition {
+  color: #c9abb9;
+}
+.init-pill-winner.tie {
+  color: #94a3b8;
+}
+
+/* Multi-Turn Flip & Burn */
+.multi-turn-progress-banner {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+.btn-cancel-flip {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-cancel-flip:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+.btn-flip-burn.in-progress {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+}
 .modal-error-banner {
   background: rgba(220, 53, 69, 0.2);
   border: 1px solid #dc3545;

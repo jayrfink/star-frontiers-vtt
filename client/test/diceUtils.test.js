@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDamageRoll, calculatePercentileRoll } from '../src/utils/diceUtils.js';
+import { calculateDamageRoll, calculatePercentileRoll, calculateInitiativeRoll } from '../src/utils/diceUtils.js';
 
 describe('calculateDamageRoll', () => {
   it('calculates total for a single die', () => {
@@ -167,5 +167,98 @@ describe('calculatePercentileRoll', () => {
     expect(calculatePercentileRoll(null)).toEqual({ total: 0, tens: 0, ones: 0, valid: false });
     expect(calculatePercentileRoll([])).toEqual({ total: 0, tens: 0, ones: 0, valid: false });
     expect(calculatePercentileRoll([{ value: 5 }])).toEqual({ total: 0, tens: 0, ones: 0, valid: false });
+  });
+});
+
+describe('calculateInitiativeRoll', () => {
+  it('identifies players and opposition dice by theme name and determines player victory', () => {
+    const raw = [
+      { value: 8, theme: 'custom-init-player' },
+      { value: 5, theme: 'custom-init-opp' },
+    ];
+    const result = calculateInitiativeRoll(raw);
+    expect(result).toEqual({
+      playerRoll: 8,
+      oppRoll: 5,
+      winner: 'players',
+      valid: true,
+    });
+  });
+
+  it('determines opposition victory when opposition roll is higher', () => {
+    const raw = [
+      { value: 4, theme: 'custom-init-player' },
+      { value: 9, theme: 'custom-init-opp' },
+    ];
+    const result = calculateInitiativeRoll(raw);
+    expect(result).toEqual({
+      playerRoll: 4,
+      oppRoll: 9,
+      winner: 'opposition',
+      valid: true,
+    });
+  });
+
+  it('determines tie when rolls are equal', () => {
+    const raw = [
+      { value: 7, theme: 'custom-init-player' },
+      { value: 7, theme: 'custom-init-opp' },
+    ];
+    const result = calculateInitiativeRoll(raw);
+    expect(result).toEqual({
+      playerRoll: 7,
+      oppRoll: 7,
+      winner: 'tie',
+      valid: true,
+    });
+  });
+
+  it('maps 0 value to 10 for Star Frontiers d10 initiative', () => {
+    const raw = [
+      { value: 0, theme: 'custom-init-player' },
+      { value: 8, theme: 'custom-init-opp' },
+    ];
+    const result = calculateInitiativeRoll(raw);
+    expect(result).toEqual({
+      playerRoll: 10,
+      oppRoll: 8,
+      winner: 'players',
+      valid: true,
+    });
+  });
+
+  it('identifies dice by themeColor when theme name is not present', () => {
+    // Reverse order input
+    const raw = [
+      { value: 6, themeColor: '#400a22' },
+      { value: 9, themeColor: '#17304a' },
+    ];
+    const result = calculateInitiativeRoll(raw);
+    expect(result).toEqual({
+      playerRoll: 9,
+      oppRoll: 6,
+      winner: 'players',
+      valid: true,
+    });
+  });
+
+  it('handles nested group arrays from dice-box', () => {
+    const raw = [
+      [{ value: 3, theme: 'custom-init-player' }],
+      [{ value: 6, theme: 'custom-init-opp' }],
+    ];
+    const result = calculateInitiativeRoll(raw);
+    expect(result).toEqual({
+      playerRoll: 3,
+      oppRoll: 6,
+      winner: 'opposition',
+      valid: true,
+    });
+  });
+
+  it('handles empty or insufficient input safely', () => {
+    expect(calculateInitiativeRoll(null)).toEqual({ playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false });
+    expect(calculateInitiativeRoll([])).toEqual({ playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false });
+    expect(calculateInitiativeRoll([{ value: 5 }])).toEqual({ playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false });
   });
 });
