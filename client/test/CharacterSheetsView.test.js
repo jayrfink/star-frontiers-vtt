@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
+import * as characterExport from '../src/utils/characterExport.js';
 
 describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
   it('filters equipment list by name, category, or capability', () => {
@@ -589,6 +590,28 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vm.selectedChar.current_seu).toBe(25);
     });
   });
+
+  describe('Character ASCII Download Action', () => {
+    it('provides downloadAsciiSheet method calling export utility', () => {
+      expect(typeof CharacterSheetsView.methods.downloadAsciiSheet).toBe('function');
+      const spy = vi.spyOn(characterExport, 'downloadCharacterAscii');
+      const testChar = { name: 'Test Scout', race: 'Human', str: 50 };
+      const vm = { selectedChar: testChar };
+
+      CharacterSheetsView.methods.downloadAsciiSheet.call(vm);
+      expect(spy).toHaveBeenCalledWith(testChar);
+      spy.mockRestore();
+    });
+
+    it('handles downloadAsciiSheet gracefully when no character is selected', () => {
+      const spy = vi.spyOn(characterExport, 'downloadCharacterAscii');
+      const vm = { selectedChar: null };
+      CharacterSheetsView.methods.downloadAsciiSheet.call(vm);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
 });
+
 
 

@@ -82,6 +82,13 @@
                 <option value="Biosocial">Biosocial</option>
               </select>
             </div>
+            <button
+              class="btn-action-download"
+              @click="downloadAsciiSheet"
+              title="Download ASCII Character Record (.txt)"
+            >
+              📥 Download Sheet (.txt)
+            </button>
           </div>
           <div class="race-ability-banner">
             <strong>Species Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'Custom species without default species abilities.' }}
@@ -664,6 +671,7 @@ import {
 } from '../constants/characterRules.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
+import { downloadCharacterAscii } from '../utils/characterExport.js';
 
 export default {
   name: 'CharacterSheetsView',
@@ -1170,6 +1178,10 @@ export default {
       this.selectedChar.current_stamina = Math.min(max, (this.selectedChar.current_stamina || 0) + delta);
       this.staminaDelta = null;
       this.updateCharacter();
+    },
+    downloadAsciiSheet() {
+      if (!this.selectedChar) return;
+      downloadCharacterAscii(this.selectedChar);
     },
     resetCharacterStats() {
       if (!this.selectedChar) return;
@@ -1808,6 +1820,28 @@ export default {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.btn-action-download {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+.btn-action-download:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
 }
 
 .btn-sta,
