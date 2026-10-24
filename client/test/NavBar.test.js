@@ -72,6 +72,14 @@ describe('NavBar.vue', () => {
     expect(html).toContain('/dashboard/rulebooks');
   });
 
+  it('renders dark blue rocket icon for Space VTT tab and no rocket emoji', async () => {
+    const html = await renderNavBar({ username: 'PlayerOne', role: 'Player' });
+    expect(html).not.toContain('🚀');
+    expect(html).toContain('rocket-icon');
+    expect(html).toContain('tab-icon-svg');
+    expect(html).toMatch(/#1e3a8a|#1d4ed8|#2563eb/);
+  });
+
   it('does not render Admin tab for non-GM users', async () => {
     const html = await renderNavBar({ username: 'PlayerOne', role: 'Player' });
     expect(html).not.toContain('Admin');

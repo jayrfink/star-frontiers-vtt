@@ -9,7 +9,39 @@
         class="tab"
         active-class="tab-active"
       >
-        <span class="tab-icon">{{ tab.icon }}</span>
+        <svg
+          v-if="tab.path === '/dashboard/space-vtt'"
+          class="tab-icon-svg rocket-icon"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <!-- Rocket Body -->
+          <path
+            d="M12 2.5C9.5 7 8 11.5 8 16h8c0-4.5-1.5-9-4-13.5z"
+            fill="#1d4ed8"
+          />
+          <!-- Fins -->
+          <path
+            d="M8 13.5c-2.5 1-4.5 3-5 5.5 2 .5 4 0 5-2v-3.5zm8 0c2.5 1 4.5 3 5 5.5-2 .5-4 0-5-2v-3.5z"
+            fill="#1e3a8a"
+          />
+          <!-- Engine Nozzle -->
+          <path
+            d="M10 16h4v2h-4z"
+            fill="#1e3a8a"
+          />
+          <!-- Porthole Window -->
+          <circle
+            cx="12"
+            cy="9"
+            r="2"
+            fill="#60a5fa"
+          />
+        </svg>
+        <span v-else class="tab-icon">{{ tab.icon }}</span>
         {{ tab.label }}
       </router-link>
     </div>
@@ -59,7 +91,7 @@ defineExpose({
 
 const baseTabs = [
   { path: '/dashboard/rpg-vtt', label: 'RPG VTT', icon: '🗺️' },
-  { path: '/dashboard/space-vtt', label: 'Space VTT', icon: '🚀' },
+  { path: '/dashboard/space-vtt', label: 'Space VTT' },
   { path: '/dashboard/character-sheets', label: 'Character Sheets', icon: '📋' },
   { path: '/dashboard/ship-sheets', label: 'Ship Sheets', icon: '🛸' },
   { path: '/dashboard/rulebooks', label: 'Rulebooks', icon: '📖' },
@@ -141,6 +173,13 @@ async function handleLogout() {
 .tab-icon {
   margin-right: 6px;
   font-size: 14px;
+}
+
+.tab-icon-svg {
+  margin-right: 6px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .navbar-user {
