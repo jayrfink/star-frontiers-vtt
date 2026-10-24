@@ -16,7 +16,7 @@ export function clearAllActivePings() {
  * @returns {Array<Object>}
  */
 export function getActivePings(mapId) {
-  const mapPings = activePingsByMap.get(mapId);
+  const mapPings = activePingsByMap.get(String(mapId));
   return mapPings ? Array.from(mapPings.values()) : [];
 }
 
@@ -42,6 +42,7 @@ export function registerPingHandlers(io, db) {
       if (mapId === undefined || mapId === null || mapId === '') return;
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 
+      const cleanMapId = String(mapId);
       const userRow = getUser.get(userId);
       const username = userRow?.username || 'Unknown';
       const updatedAt = Date.now();
@@ -55,10 +56,10 @@ export function registerPingHandlers(io, db) {
         updatedAt,
       };
 
-      if (!activePingsByMap.has(mapId)) {
-        activePingsByMap.set(mapId, new Map());
+      if (!activePingsByMap.has(cleanMapId)) {
+        activePingsByMap.set(cleanMapId, new Map());
       }
-      activePingsByMap.get(mapId).set(userId, ping);
+      activePingsByMap.get(cleanMapId).set(userId, ping);
 
       io.emit('ping:updated', { mapId, ping });
     });
@@ -68,26 +69,28 @@ export function registerPingHandlers(io, db) {
       const { mapId, targetUserId, all } = payload;
 
       if (mapId === undefined || mapId === null || mapId === '') return;
+      const cleanMapId = String(mapId);
 
       const isGM = isGameMaster(db, userId);
 
       if (all === true) {
         if (!isGM) return;
-        activePingsByMap.delete(mapId);
+        activePingsByMap.delete(cleanMapId);
         io.emit('ping:cleared', { mapId, all: true });
         return;
       }
 
       if (targetUserId !== undefined && targetUserId !== null) {
         const targetId = Number(targetUserId);
+        if (!Number.isFinite(targetId)) return;
         if (targetId !== userId && !isGM) {
           return;
         }
-        const mapPings = activePingsByMap.get(mapId);
+        const mapPings = activePingsByMap.get(cleanMapId);
         if (mapPings) {
           mapPings.delete(targetId);
           if (mapPings.size === 0) {
-            activePingsByMap.delete(mapId);
+            activePingsByMap.delete(cleanMapId);
           }
         }
         io.emit('ping:cleared', { mapId, userId: targetId });
@@ -95,11 +98,11 @@ export function registerPingHandlers(io, db) {
       }
 
       // Default: clear own ping
-      const mapPings = activePingsByMap.get(mapId);
+      const mapPings = activePingsByMap.get(cleanMapId);
       if (mapPings) {
         mapPings.delete(userId);
         if (mapPings.size === 0) {
-          activePingsByMap.delete(mapId);
+          activePingsByMap.delete(cleanMapId);
         }
       }
       io.emit('ping:cleared', { mapId, userId });
@@ -109,8 +112,9 @@ export function registerPingHandlers(io, db) {
       if (!payload || typeof payload !== 'object') return;
       const { mapId } = payload;
       if (mapId === undefined || mapId === null || mapId === '') return;
+      const cleanMapId = String(mapId);
 
-      const mapPings = activePingsByMap.get(mapId);
+      const mapPings = activePingsByMap.get(cleanMapId);
       const pings = mapPings ? Array.from(mapPings.values()) : [];
       socket.emit('pings:sync', { mapId, pings });
     });
