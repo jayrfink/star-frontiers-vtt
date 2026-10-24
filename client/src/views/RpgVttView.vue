@@ -64,6 +64,29 @@
         >
           📏 Ruler
         </button>
+        <button
+          :class="{ active: activeTool === 'ping' }"
+          title="Tactical Ping (Click or drag on map)"
+          @click="activeTool = 'ping'"
+        >
+          📍 Ping
+        </button>
+        <button
+          v-if="hasMyActivePing"
+          class="btn-tool btn-clear-ping"
+          title="Clear your tactical ping"
+          @click="clearMyPing"
+        >
+          ✕ Clear Ping
+        </button>
+        <button
+          v-if="isGm && activePingsList.length > 0"
+          class="btn-tool btn-clear-all-pings"
+          title="Clear all tactical pings"
+          @click="clearAllPings"
+        >
+          🧹 Clear All Pings
+        </button>
 
         <button class="btn-tool btn-initiative" @click="rollInitiative" title="Roll Combat Initiative (Players vs. Opposition 2d10)">
           ⚡ Initiative
@@ -295,6 +318,7 @@
         <VttCanvas
           :map="activeMap"
           :tokens="tokens"
+          :pings="activePingsList"
           :active-tool="activeTool"
           v-model:zoom-level="zoomLevel"
           v-model:pan-x="panX"
@@ -305,6 +329,8 @@
           @token-selected="onTokenSelected"
           @tokens-updated="tokens = $event"
           @map-updated="activeMap = $event"
+          @ping-update="onPingUpdate"
+          @ping-dismiss="onPingDismiss"
         />
 
         <!-- Click-to-Open Adversary Token HUD -->
@@ -1137,6 +1163,87 @@ const panY = ref(initialVttState.panY ?? 50);
 const activeTool = ref(initialVttState.activeTool || 'select');
 const zoomLevel = ref(initialVttState.zoomLevel ?? 1.0);
 const selectedTokenId = ref(initialVttState.selectedTokenId ?? null);
+
+// Tactical Pings State
+const activePings = ref({});
+const activePingsList = computed(() => Object.values(activePings.value));
+const hasMyActivePing = computed(() => {
+  const myId = authStore.user?.id;
+  return myId ? !!activePings.value[myId] : false;
+});
+
+watch(
+  () => activeMap.value?.id,
+  (newId) => {
+    activePings.value = {};
+    if (newId) {
+      socket.emit('ping:request_sync', { mapId: newId });
+    }
+  }
+);
+
+function onPingUpdate({ x, y, isDragging }) {
+  if (!activeMap.value?.id) return;
+  const currentUserId = authStore.user?.id;
+  const currentUsername = authStore.user?.username || 'Player';
+
+  socket.emit('ping:update', {
+    mapId: activeMap.value.id,
+    x,
+    y,
+    isDragging,
+  });
+
+  if (currentUserId) {
+    activePings.value = {
+      ...activePings.value,
+      [currentUserId]: {
+        userId: currentUserId,
+        username: currentUsername,
+        x,
+        y,
+        isDragging,
+        updatedAt: Date.now(),
+      },
+    };
+  }
+}
+
+function onPingDismiss({ userId }) {
+  if (!activeMap.value?.id) return;
+  socket.emit('ping:clear', {
+    mapId: activeMap.value.id,
+    targetUserId: userId,
+  });
+  if (userId && activePings.value[userId]) {
+    const next = { ...activePings.value };
+    delete next[userId];
+    activePings.value = next;
+  }
+}
+
+function clearMyPing() {
+  if (!activeMap.value?.id) return;
+  const currentUserId = authStore.user?.id;
+  socket.emit('ping:clear', {
+    mapId: activeMap.value.id,
+    targetUserId: currentUserId,
+  });
+  if (currentUserId && activePings.value[currentUserId]) {
+    const next = { ...activePings.value };
+    delete next[currentUserId];
+    activePings.value = next;
+  }
+}
+
+function clearAllPings() {
+  if (!activeMap.value?.id) return;
+  socket.emit('ping:clear', {
+    mapId: activeMap.value.id,
+    all: true,
+  });
+  activePings.value = {};
+}
 
 let persistStateTimer = null;
 
@@ -2131,6 +2238,10 @@ let onSocketTokenUpdated = null;
 let onSocketTokenDeleted = null;
 let onSocketRollCreated = null;
 let onSocketRollCleared = null;
+let onSocketPingUpdated = null;
+let onSocketPingCleared = null;
+let onSocketPingsSync = null;
+let onSocketConnect = null;
 
 function setupSocketListeners() {
   socket.on('map:activated', onSocketMapActivated = ({ map, tokens: newTokens }) => {
@@ -2138,6 +2249,8 @@ function setupSocketListeners() {
       activeMap.value = map;
       tokens.value = newTokens || [];
       selectedTokenId.value = null;
+      activePings.value = {};
+      socket.emit('ping:request_sync', { mapId: map.id });
     }
   });
 
@@ -2157,6 +2270,7 @@ function setupSocketListeners() {
       activeMap.value = null;
       tokens.value = [];
       selectedTokenId.value = null;
+      activePings.value = {};
     }
   });
 
@@ -2190,6 +2304,45 @@ function setupSocketListeners() {
     tokens.value = tokens.value.filter((t) => t.id !== id);
     if (selectedTokenId.value === id) {
       selectedTokenId.value = null;
+    }
+  });
+
+  socket.on('ping:updated', onSocketPingUpdated = ({ mapId, ping }) => {
+    if (activeMap.value && mapId === activeMap.value.id && ping?.userId) {
+      activePings.value = {
+        ...activePings.value,
+        [ping.userId]: ping,
+      };
+    }
+  });
+
+  socket.on('ping:cleared', onSocketPingCleared = ({ mapId, userId, all }) => {
+    if (activeMap.value && mapId === activeMap.value.id) {
+      if (all) {
+        activePings.value = {};
+      } else if (userId) {
+        const next = { ...activePings.value };
+        delete next[userId];
+        activePings.value = next;
+      }
+    }
+  });
+
+  socket.on('pings:sync', onSocketPingsSync = ({ mapId, pings }) => {
+    if (activeMap.value && mapId === activeMap.value.id) {
+      const next = {};
+      if (Array.isArray(pings)) {
+        for (const p of pings) {
+          if (p?.userId) next[p.userId] = p;
+        }
+      }
+      activePings.value = next;
+    }
+  });
+
+  socket.on('connect', onSocketConnect = () => {
+    if (activeMap.value?.id) {
+      socket.emit('ping:request_sync', { mapId: activeMap.value.id });
     }
   });
 
@@ -2269,6 +2422,10 @@ function cleanupSocketListeners() {
   if (onSocketTokenDeleted) socket.off('token:deleted', onSocketTokenDeleted);
   if (onSocketRollCreated) socket.off('roll:created', onSocketRollCreated);
   if (onSocketRollCleared) socket.off('roll:cleared', onSocketRollCleared);
+  if (onSocketPingUpdated) socket.off('ping:updated', onSocketPingUpdated);
+  if (onSocketPingCleared) socket.off('ping:cleared', onSocketPingCleared);
+  if (onSocketPingsSync) socket.off('pings:sync', onSocketPingsSync);
+  if (onSocketConnect) socket.off('connect', onSocketConnect);
 }
 
 function onKeyDown(e) {
@@ -2595,6 +2752,28 @@ onBeforeUnmount(() => {
   height: 1px;
   background: var(--border);
   margin: 4px 0;
+}
+
+.btn-clear-ping {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.btn-clear-ping:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.btn-clear-all-pings {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.btn-clear-all-pings:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+  color: #fde68a;
 }
 
 /* Damage Dice Roller */
