@@ -8,12 +8,14 @@ import { formatAdversary } from './adversaries.js';
  */
 export function findOpenCoordinates(mapWidth, mapHeight, occupiedSet, count, tokenSize = 1) {
   const result = [];
-  const size = Math.max(1, tokenSize);
-  const centerX = Math.max(0, Math.floor((mapWidth - size) / 2));
-  const centerY = Math.max(0, Math.floor((mapHeight - size) / 2));
+  const safeMapW = Math.max(1, mapWidth);
+  const safeMapH = Math.max(1, mapHeight);
+  const size = Math.min(Math.max(1, tokenSize), safeMapW, safeMapH);
+  const centerX = Math.max(0, Math.floor((safeMapW - size) / 2));
+  const centerY = Math.max(0, Math.floor((safeMapH - size) / 2));
 
   const canPlaceToken = (x, y) => {
-    if (x < 0 || x + size > mapWidth || y < 0 || y + size > mapHeight) return false;
+    if (x < 0 || x + size > safeMapW || y < 0 || y + size > safeMapH) return false;
     for (let dx = 0; dx < size; dx++) {
       for (let dy = 0; dy < size; dy++) {
         if (occupiedSet.has(`${x + dx},${y + dy}`)) return false;

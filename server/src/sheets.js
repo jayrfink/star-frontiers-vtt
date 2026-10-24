@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, isGameMaster } from './middleware.js';
+import { formatToken } from './maps.js';
 
 function safeJsonParse(str, fallback) {
   if (!str) return fallback;
@@ -246,8 +247,15 @@ export function createCharacterRouter(db, io) {
           db.prepare('UPDATE tokens SET seu_current = ? WHERE character_id = ?').run(curSeuVal, existing.id);
           if (io) {
             for (const t of linkedTokens) {
-              const updatedToken = db.prepare('SELECT * FROM tokens WHERE id = ?').get(t.id);
-              io.emit('token:updated', { token: updatedToken });
+              const updatedRow = db.prepare('SELECT * FROM tokens WHERE id = ?').get(t.id);
+              if (updatedRow) {
+                const formatted = formatToken(updatedRow);
+                if (formatted.layer === 'gm') {
+                  io.to('role:GameMaster').emit('token:updated', { token: formatted });
+                } else {
+                  io.emit('token:updated', { token: formatted });
+                }
+              }
             }
           }
         }
@@ -443,6 +451,36 @@ export function createShipRouter(db, io) {
         clampedAdf, clampedMr, clampedDcr, weaponsStr, defensesStr, notes, avatarUrl,
         req.params.id
       );
+
+      // Sync linked space tokens if HP or max HP changed (tokens on space maps link via character_id to ship_sheets)
+      const linkedShipTokens = db.prepare(`
+        SELECT t.id FROM tokens t
+        JOIN maps m ON t.map_id = m.id
+        WHERE m.map_type = 'space' AND t.character_id = ?
+      `).all(req.params.id);
+      if (linkedShipTokens.length > 0) {
+        db.prepare(`
+          UPDATE tokens SET current_hp = ?, max_hp = ?
+          WHERE id IN (
+            SELECT t.id FROM tokens t
+            JOIN maps m ON t.map_id = m.id
+            WHERE m.map_type = 'space' AND t.character_id = ?
+          )
+        `).run(clampedCurrentHp, clampedHullPoints, req.params.id);
+        if (io) {
+          for (const t of linkedShipTokens) {
+            const updatedRow = db.prepare('SELECT * FROM tokens WHERE id = ?').get(t.id);
+            if (updatedRow) {
+              const formatted = formatToken(updatedRow);
+              if (formatted.layer === 'gm') {
+                io.to('role:GameMaster').emit('token:updated', { token: formatted });
+              } else {
+                io.emit('token:updated', { token: formatted });
+              }
+            }
+          }
+        }
+      }
 
       const updated = db.prepare('SELECT * FROM ship_sheets WHERE id = ?').get(req.params.id);
       const sheet = formatShipSheet(updated);

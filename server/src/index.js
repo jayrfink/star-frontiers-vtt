@@ -58,10 +58,16 @@ export function isPrivateNetworkOrigin(origin) {
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
       hostname === '::1' ||
-      hostname === '[::1]' ||
-      hostname.endsWith('.local')
+      hostname === '[::1]'
     ) {
       return true;
+    }
+
+    if (hostname === 'local' || (hostname.endsWith('.local') && hostname !== '.local')) {
+      const prefix = hostname.endsWith('.local') ? hostname.slice(0, -6) : '';
+      if (!prefix || (!prefix.includes('/') && !prefix.includes('\\'))) {
+        return true;
+      }
     }
 
     // Check RFC 1918 private IPv4 ranges and link-local:

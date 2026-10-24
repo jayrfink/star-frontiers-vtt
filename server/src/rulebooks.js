@@ -35,7 +35,11 @@ export function createRulebooksRouter() {
   const router = Router();
 
   router.get('/pdf/:bookId', requireAuth, (req, res) => {
-    const fileName = BOOK_FILES[req.params.bookId];
+    const bookId = req.params.bookId;
+    if (!bookId || !Object.prototype.hasOwnProperty.call(BOOK_FILES, bookId)) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    const fileName = BOOK_FILES[bookId];
     if (!fileName) {
       return res.status(404).json({ error: 'Book not found' });
     }
