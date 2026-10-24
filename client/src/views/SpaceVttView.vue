@@ -626,7 +626,7 @@
                     type="button"
                     class="btn-snap-flip full-width"
                     title="Overload RCS thrusters for 1-turn flip (requires pilot check and crew STA check)"
-                    @click="executeSnapFlip"
+                    @click="executeSnapFlip()"
                   >
                     ⚠️ Emergency Snap Flip (180° - 1 Turn)
                   </button>
@@ -1175,7 +1175,7 @@
               Impact Damage: {{ crewCheckLastResult.damageDice }} HP
             </div>
             <div v-if="crewCheckLastResult.unconsciousTurnsDice" class="effect-tag danger">
-              Unconscious: {{ crewCheckLastResult.unconsciousTurnsDice }} turns (6–36s)
+              Unconscious: {{ crewCheckLastResult.unconsciousTurnsDice }} turns (6–30s)
             </div>
             <div v-if="crewCheckLastResult.displacementMetersDice" class="effect-tag danger">
               Hurled: {{ crewCheckLastResult.displacementMetersDice }}m forward
@@ -2402,7 +2402,16 @@ async function executeBrakingBurn() {
 function openSlingshotModal(preset = {}) {
   const nearest = nearestCelestialBody.value;
   slingshotBodyType.value = preset.bodyType || (nearest ? nearest.bodyType : 'PLANET');
-  slingshotDistance.value = preset.distance ?? (nearest ? nearest.distance : (slingshotBodyType.value === 'MOON' ? 0 : 1));
+  const maxDistance = slingshotBodyType.value === 'GAS_GIANT' ? 2 : (slingshotBodyType.value === 'PLANET' ? 1 : 0);
+  const defaultEligibleDistance = slingshotBodyType.value === 'MOON' ? 0 : 1;
+
+  if (preset.distance !== undefined) {
+    slingshotDistance.value = preset.distance;
+  } else if (nearest && Number.isFinite(nearest.distance) && nearest.distance <= maxDistance) {
+    slingshotDistance.value = nearest.distance;
+  } else {
+    slingshotDistance.value = defaultEligibleDistance;
+  }
   const currentSpeed = Number(selectedTokenForm.current_speed ?? selectedToken.value?.current_speed) || 4;
   slingshotEntrySpeed.value = preset.entrySpeed ?? Math.max(4, currentSpeed);
   slingshotPilotSkill.value = preset.pilotSkill ?? 50;
@@ -2410,6 +2419,13 @@ function openSlingshotModal(preset = {}) {
   slingshotLastResult.value = null;
   showSlingshotModal.value = true;
 }
+
+watch(slingshotBodyType, (newType) => {
+  const maxDist = newType === 'GAS_GIANT' ? 2 : (newType === 'PLANET' ? 1 : 0);
+  if (slingshotDistance.value > maxDist) {
+    slingshotDistance.value = maxDist;
+  }
+});
 
 function openSlingshotModalFromNearest() {
   if (!nearestCelestialBody.value) {

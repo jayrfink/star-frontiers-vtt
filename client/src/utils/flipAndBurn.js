@@ -517,7 +517,7 @@ export function calculateSlingshotParameters(bodyType, distanceHexes, entrySpeed
   // Oberth burn only applies inside Distance 0 hex
   const oberthExitSpeed = dist === 0 ? adf * 2 : 0;
   const totalExitSpeed = speed + freeExitSpeed + oberthExitSpeed;
-  const totalDeltaV = dist === 0 ? baseGravityDeltaV + oberthExitSpeed : baseGravityDeltaV;
+  const totalDeltaV = calculateCompoundDeltaV(baseGravityDeltaV, dist === 0 ? adf : 0);
 
   const isHighG = totalDeltaV > SAFE_COMPENSATOR_DELTA_V;
   const gPenalty = isHighG ? (totalDeltaV - SAFE_COMPENSATOR_DELTA_V) * -10 : 0;

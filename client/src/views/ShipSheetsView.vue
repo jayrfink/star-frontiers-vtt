@@ -164,13 +164,13 @@
             <template v-if="canStandardFlip(selectedShip.mr)">
               <span class="fb-badge capable">🔄 Standard Flip Capable (MR {{ selectedShip.mr }} &ge; 3)</span>
               <span class="fb-rule-text">
-                Can execute <strong>1-Turn (6s) 180° in-hex pivot</strong> (spends 3 MR). Inertial compensators safely absorb up to <strong>3 points of total ΔV (3 ADF braking)</strong> with no STA check required. <strong>High-G braking</strong> (<strong>4+ ADF spent in a single turn</strong>) requires crew STA checks (<strong>-10% per point of ADF spent above 3</strong>).
+                Can execute <strong>1-Turn (6s) 180° in-hex pivot</strong> (spends 3 MR). Inertial compensators safely absorb up to <strong>{{ SAFE_COMPENSATOR_DELTA_V }} points of total ΔV ({{ SAFE_COMPENSATOR_DELTA_V }} ADF braking)</strong> with no STA check required. <strong>High-G braking</strong> (<strong>{{ SAFE_COMPENSATOR_DELTA_V + 1 }}+ ADF spent in a single turn</strong>) requires crew STA checks (<strong>-10% per point of ADF spent above {{ SAFE_COMPENSATOR_DELTA_V }}</strong>).
               </span>
             </template>
             <template v-else-if="canLumberingFlip(selectedShip.mr) || canSnapFlip(selectedShip.mr)">
               <span class="fb-badge multi-turn">🔄 Lumbering &amp; Snap Flip Capable (MR {{ selectedShip.mr }} &lt; 3)</span>
               <span class="fb-rule-text">
-                Can execute <strong>2-Turn Lumbering Flip</strong> (drifts at speed rotating native MR 60°–120° on Turn 1, completing 180° on Turn 2) or <strong>1-Turn Emergency Snap Flip</strong> (Pilot check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships). Safe braking up to 3 ADF; <strong>High-G braking</strong> (4+ ADF) requires crew STA checks (-10% per point above 3).
+                Can execute <strong>2-Turn Lumbering Flip</strong> (drifts at speed rotating native MR 60°–120° on Turn 1, completing 180° on Turn 2) or <strong>1-Turn Emergency Snap Flip</strong> (Pilot check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships). Safe braking up to {{ SAFE_COMPENSATOR_DELTA_V }} ADF; <strong>High-G braking</strong> ({{ SAFE_COMPENSATOR_DELTA_V + 1 }}+ ADF) requires crew STA checks (-10% per point above {{ SAFE_COMPENSATOR_DELTA_V }}).
               </span>
             </template>
             <template v-else>
