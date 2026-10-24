@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   canFlipAndBurn,
   canMultiTurnFlip,
@@ -18,6 +18,13 @@ import {
   formatSnapFlipAlert,
   formatBrakingBurnAlert,
   formatGLocResultAlert,
+  SAFE_COMPENSATOR_DELTA_V,
+  rollD5,
+  calculateSlingshotParameters,
+  calculateCompoundDeltaV,
+  resolveSlingshotPilotCheck,
+  formatSlingshotSuccessAlert,
+  formatSlingshotHazardAlert,
 } from '../src/utils/flipAndBurn.js';
 
 describe('Space Combat: Flip and Burn Mechanics', () => {
@@ -178,6 +185,45 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
     });
   });
 
+  describe('SAFE_COMPENSATOR_DELTA_V constant', () => {
+    it('defines safe threshold as 3 ΔV', () => {
+      expect(SAFE_COMPENSATOR_DELTA_V).toBe(3);
+    });
+  });
+
+  describe('rollD5 helper', () => {
+    it('returns an integer between 1 and 5', () => {
+      for (let i = 0; i < 50; i++) {
+        const val = rollD5();
+        expect(val).toBeGreaterThanOrEqual(1);
+        expect(val).toBeLessThanOrEqual(5);
+        expect(Number.isInteger(val)).toBe(true);
+      }
+    });
+
+    it('maps native 1d10 rolls 1-10 to ceil(d10 / 2)', () => {
+      // Mock Math.random to test 1..10 values
+      const testCases = [
+        { rand: 0.0, expected: 1 }, // d10 = 1 -> ceil(1/2) = 1
+        { rand: 0.15, expected: 1 }, // d10 = 2 -> ceil(2/2) = 1
+        { rand: 0.25, expected: 2 }, // d10 = 3 -> ceil(3/2) = 2
+        { rand: 0.35, expected: 2 }, // d10 = 4 -> ceil(4/2) = 2
+        { rand: 0.45, expected: 3 }, // d10 = 5 -> ceil(5/2) = 3
+        { rand: 0.55, expected: 3 }, // d10 = 6 -> ceil(6/2) = 3
+        { rand: 0.65, expected: 4 }, // d10 = 7 -> ceil(7/2) = 4
+        { rand: 0.75, expected: 4 }, // d10 = 8 -> ceil(8/2) = 4
+        { rand: 0.85, expected: 5 }, // d10 = 9 -> ceil(9/2) = 5
+        { rand: 0.95, expected: 5 }, // d10 = 10 -> ceil(10/2) = 5
+      ];
+
+      for (const { rand, expected } of testCases) {
+        const spy = vi.spyOn(Math, 'random').mockReturnValue(rand);
+        expect(rollD5()).toBe(expected);
+        spy.mockRestore();
+      }
+    });
+  });
+
   describe('calculateStaCheckTarget', () => {
     it('calculates target without modifiers for braced posture and safe burn', () => {
       const res = calculateStaCheckTarget(60, { deltaV: 1, posture: 'braced' });
@@ -188,27 +234,30 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
       expect(typeof res.breakdown).toBe('string');
     });
 
-    it('calculates target for safe burn threshold (ΔV 1-2 gives 0 penalty)', () => {
+    it('calculates target for safe burn threshold (ΔV 1, 2, 3 gives 0 penalty)', () => {
       const res1 = calculateStaCheckTarget(50, { deltaV: 1 });
       const res2 = calculateStaCheckTarget(50, { deltaV: 2 });
+      const res3 = calculateStaCheckTarget(50, { deltaV: 3 });
       expect(res1.gPenalty).toBe(0);
       expect(res2.gPenalty).toBe(0);
+      expect(res3.gPenalty).toBe(0);
       expect(res1.target).toBe(50);
       expect(res2.target).toBe(50);
+      expect(res3.target).toBe(50);
     });
 
-    it('applies -10% per hex of ΔV > 2 for high-G burns', () => {
-      const res3 = calculateStaCheckTarget(50, { deltaV: 3 });
-      expect(res3.gPenalty).toBe(-10);
-      expect(res3.target).toBe(40);
-
+    it('applies -10% per hex of ΔV > 3 for high-G burns', () => {
       const res4 = calculateStaCheckTarget(50, { deltaV: 4 });
-      expect(res4.gPenalty).toBe(-20);
-      expect(res4.target).toBe(30);
+      expect(res4.gPenalty).toBe(-10);
+      expect(res4.target).toBe(40);
 
       const res5 = calculateStaCheckTarget(50, { deltaV: 5 });
-      expect(res5.gPenalty).toBe(-30);
-      expect(res5.target).toBe(20);
+      expect(res5.gPenalty).toBe(-20);
+      expect(res5.target).toBe(30);
+
+      const res6 = calculateStaCheckTarget(50, { deltaV: 6 });
+      expect(res6.gPenalty).toBe(-30);
+      expect(res6.target).toBe(20);
     });
 
     it('applies posture modifiers correctly', () => {
@@ -246,24 +295,23 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
       expect(mid.target).toBe(50);
     });
 
-    it('computes exact spec test case: base 60 with ΔV 4 (-20%), couch (+20%), stern (-10%) = 50%', () => {
+    it('computes exact spec test case: base 60 with ΔV 4 (-10%), couch (+20%), stern (-10%) = 60%', () => {
       const res = calculateStaCheckTarget(60, {
         deltaV: 4,
         posture: 'couch',
         location: 'stern',
       });
-      expect(res.gPenalty).toBe(-20);
+      expect(res.gPenalty).toBe(-10);
       expect(res.postureMod).toBe(20);
       expect(res.extremityMod).toBe(-10);
-      expect(res.target).toBe(50);
+      expect(res.target).toBe(60);
       expect(res.breakdown).toContain('60');
-      expect(res.breakdown).toContain('50');
     });
 
     it('clamps target STA between 1 and 99', () => {
       // Underflow clamped to 1
       const low = calculateStaCheckTarget(20, {
-        deltaV: 6, // -40%
+        deltaV: 7, // -40%
         posture: 'unbraced', // -20%
         location: 'stern', // -10%
       });
@@ -294,6 +342,7 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
       expect(res.margin).toBe(0);
       expect(res.severity).toBe('none');
       expect(res.condition).toBe('Normal');
+      expect(res.isProne).toBe(false);
       expect(res.stunnedTurns).toBe(0);
       expect(res.checkPenalty).toBe(0);
       expect(res.damageDice).toBeNull();
@@ -303,12 +352,13 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
     });
 
     describe('Margin 1-19: Grey-Out / G-Stun', () => {
-      it('resolves secured crew (couch or braced): stunned 1 turn, -20% next turn, no damage', () => {
+      it('resolves secured crew (couch or braced): stunned 1 turn, -20% next turn, no damage, not prone', () => {
         const res = resolveStaCheckResult(65, 50, 'couch');
         expect(res.success).toBe(false);
         expect(res.margin).toBe(15);
         expect(res.severity).toBe('stun');
         expect(res.condition).toBe('G-Stun');
+        expect(res.isProne).toBe(false);
         expect(res.stunnedTurns).toBe(1);
         expect(res.checkPenalty).toBe(-20);
         expect(res.damageDice).toBeNull();
@@ -317,45 +367,293 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
         expect(res.summaryText).toContain('stunned');
       });
 
-      it('resolves unbraced crew: stunned 1 turn, knocked prone, takes 1d3 damage', () => {
+      it('resolves unbraced crew: stunned 1 turn, knocked prone, takes ceil(1d10 / 2) damage', () => {
         const res = resolveStaCheckResult(55, 50, 'unbraced');
         expect(res.success).toBe(false);
         expect(res.margin).toBe(5);
         expect(res.severity).toBe('stun');
         expect(res.condition).toContain('Prone');
+        expect(res.isProne).toBe(true);
         expect(res.stunnedTurns).toBe(1);
-        expect(res.damageDice).toBe('1d3');
+        expect(res.checkPenalty).toBe(-20);
+        expect(res.damageDice).toBe('ceil(1d10 / 2)');
         expect(res.unconsciousTurnsDice).toBeNull();
         expect(res.displacementMetersDice).toBeNull();
-        expect(res.summaryText).toContain('1d3');
+        expect(res.summaryText).toContain('ceil(1d10 / 2)');
         expect(res.summaryText).toContain('prone');
       });
     });
 
     describe('Margin 20+: Full G-LOC Blackout', () => {
-      it('resolves secured crew: passes out cold for 1d6 turns, no impact damage', () => {
+      it('resolves secured crew: passes out cold for ceil(1d10 / 2) turns, no impact damage', () => {
         const res = resolveStaCheckResult(70, 50, 'braced');
         expect(res.success).toBe(false);
         expect(res.margin).toBe(20);
         expect(res.severity).toBe('g-loc');
         expect(res.condition).toBe('G-LOC Blackout');
-        expect(res.unconsciousTurnsDice).toBe('1d6');
+        expect(res.isProne).toBe(false);
+        expect(res.unconsciousTurnsDice).toBe('ceil(1d10 / 2)');
         expect(res.damageDice).toBeNull();
         expect(res.displacementMetersDice).toBeNull();
-        expect(res.summaryText).toContain('1d6');
+        expect(res.summaryText).toContain('ceil(1d10 / 2)');
       });
 
-      it('resolves unbraced crew: hurled 1d3m, 1d6 damage, 1d6 turns unconscious', () => {
+      it('resolves unbraced crew: hurled ceil(1d10 / 2)m, 1d10 damage, ceil(1d10 / 2) turns unconscious', () => {
         const res = resolveStaCheckResult(85, 50, 'unbraced');
         expect(res.success).toBe(false);
         expect(res.margin).toBe(35);
         expect(res.severity).toBe('g-loc');
         expect(res.condition).toContain('Hurled');
-        expect(res.unconsciousTurnsDice).toBe('1d6');
-        expect(res.damageDice).toBe('1d6');
-        expect(res.displacementMetersDice).toBe('1d3');
-        expect(res.summaryText).toContain('1d6');
-        expect(res.summaryText).toContain('1d3');
+        expect(res.isProne).toBe(true);
+        expect(res.unconsciousTurnsDice).toBe('ceil(1d10 / 2)');
+        expect(res.damageDice).toBe('1d10');
+        expect(res.displacementMetersDice).toBe('ceil(1d10 / 2)');
+        expect(res.summaryText).toContain('1d10');
+        expect(res.summaryText).toContain('ceil(1d10 / 2)');
+      });
+    });
+  });
+
+  describe('Slingshot Calculations', () => {
+    describe('calculateSlingshotParameters', () => {
+      it('rejects entries with speed < 4 hexes/turn', () => {
+        const res = calculateSlingshotParameters('PLANET', 0, 3);
+        expect(res.eligible).toBe(false);
+        expect(res.reason).toContain('Minimum entry speed 4');
+      });
+
+      describe('Moon Slingshot', () => {
+        it('calculates Crater Skim (Distance 0)', () => {
+          const res = calculateSlingshotParameters('MOON', 0, 8);
+          expect(res.eligible).toBe(true);
+          expect(res.zoneName).toBe('Crater Skim');
+          expect(res.bonusMr).toBe(1);
+          expect(res.freeExitSpeed).toBe(1);
+          expect(res.baseGravityDeltaV).toBe(2);
+          expect(res.requiresPilotCheck).toBe(true);
+          expect(res.pilotModifier).toBe(0);
+          expect(res.totalExitSpeed).toBe(9);
+          expect(res.totalDeltaV).toBe(2);
+          expect(res.isHighG).toBe(false);
+          expect(res.gPenalty).toBe(0);
+        });
+
+        it('applies pilot check penalty for Moon speed > 8', () => {
+          const res = calculateSlingshotParameters('MOON', 0, 10);
+          expect(res.pilotModifier).toBe(-10); // (10 - 8) * -5
+        });
+
+        it('rejects Moon distance > 0', () => {
+          const res = calculateSlingshotParameters('MOON', 1, 6);
+          expect(res.eligible).toBe(false);
+          expect(res.reason).toMatch(/shallow/i);
+        });
+      });
+
+      describe('Planet Slingshot', () => {
+        it('calculates Outer Well (Distance 1)', () => {
+          const res = calculateSlingshotParameters('PLANET', 1, 6);
+          expect(res.eligible).toBe(true);
+          expect(res.zoneName).toBe('Outer Well');
+          expect(res.bonusMr).toBe(1);
+          expect(res.freeExitSpeed).toBe(1);
+          expect(res.baseGravityDeltaV).toBe(1);
+          expect(res.requiresPilotCheck).toBe(false);
+          expect(res.pilotModifier).toBe(0);
+          expect(res.totalExitSpeed).toBe(7);
+          expect(res.totalDeltaV).toBe(1);
+          expect(res.isHighG).toBe(false);
+        });
+
+        it('calculates Low-Orbit Skim (Distance 0)', () => {
+          const res = calculateSlingshotParameters('PLANET', 0, 6);
+          expect(res.eligible).toBe(true);
+          expect(res.zoneName).toBe('Low-Orbit Skim');
+          expect(res.bonusMr).toBe(2);
+          expect(res.freeExitSpeed).toBe(2);
+          expect(res.baseGravityDeltaV).toBe(3);
+          expect(res.requiresPilotCheck).toBe(true);
+          expect(res.pilotModifier).toBe(0);
+          expect(res.totalExitSpeed).toBe(8);
+          expect(res.totalDeltaV).toBe(3);
+          expect(res.isHighG).toBe(false);
+        });
+
+        it('applies pilot check penalty for Planet Low-Orbit Skim speed > 6', () => {
+          const res = calculateSlingshotParameters('PLANET', 0, 8);
+          expect(res.pilotModifier).toBe(-10); // (8 - 6) * -5
+        });
+
+        it('rejects Planet distance > 1', () => {
+          const res = calculateSlingshotParameters('PLANET', 2, 6);
+          expect(res.eligible).toBe(false);
+        });
+      });
+
+      describe('Gas Giant Slingshot', () => {
+        it('calculates Outer Well (Distance 1 and 2)', () => {
+          const res1 = calculateSlingshotParameters('GAS_GIANT', 1, 5);
+          expect(res1.eligible).toBe(true);
+          expect(res1.zoneName).toBe('Outer Well');
+          expect(res1.bonusMr).toBe(1);
+          expect(res1.freeExitSpeed).toBe(1);
+          expect(res1.baseGravityDeltaV).toBe(2);
+          expect(res1.requiresPilotCheck).toBe(false);
+
+          const res2 = calculateSlingshotParameters('gas giant', 2, 5);
+          expect(res2.eligible).toBe(true);
+          expect(res2.zoneName).toBe('Outer Well');
+          expect(res2.bonusMr).toBe(1);
+          expect(res2.freeExitSpeed).toBe(1);
+          expect(res2.baseGravityDeltaV).toBe(2);
+          expect(res2.requiresPilotCheck).toBe(false);
+        });
+
+        it('calculates Deep Skim (Distance 0)', () => {
+          const res = calculateSlingshotParameters('GAS_GIANT', 0, 6);
+          expect(res.eligible).toBe(true);
+          expect(res.zoneName).toBe('Deep Skim');
+          expect(res.bonusMr).toBe(3);
+          expect(res.freeExitSpeed).toBe(3);
+          expect(res.baseGravityDeltaV).toBe(4);
+          expect(res.requiresPilotCheck).toBe(true);
+          expect(res.pilotModifier).toBe(-20); // base -20%
+          expect(res.totalExitSpeed).toBe(9);
+          expect(res.totalDeltaV).toBe(4);
+          expect(res.isHighG).toBe(true);
+          expect(res.gPenalty).toBe(-10); // (4 - 3) * -10
+        });
+
+        it('applies speed scaling to Gas Giant Deep Skim pilot check when speed > 6', () => {
+          const res = calculateSlingshotParameters('GAS_GIANT', 0, 8);
+          expect(res.pilotModifier).toBe(-30); // -20 + (8 - 6) * -5 = -30
+        });
+
+        it('rejects Gas Giant distance > 2', () => {
+          const res = calculateSlingshotParameters('GAS_GIANT', 3, 5);
+          expect(res.eligible).toBe(false);
+        });
+      });
+
+      describe('Oberth Powered Slingshot (ADF spent at Distance 0)', () => {
+        it('calculates Oberth compound ΔV: Planet Dist 0 (base 3) + 2 ADF (4 exit speed) = 7 ΔV (-40% penalty)', () => {
+          const res = calculateSlingshotParameters('PLANET', 0, 6, 2);
+          expect(res.eligible).toBe(true);
+          expect(res.baseGravityDeltaV).toBe(3);
+          expect(res.oberthExitSpeed).toBe(4); // 2 ADF * 2
+          expect(res.totalExitSpeed).toBe(12); // entry 6 + free 2 + oberth 4
+          expect(res.totalDeltaV).toBe(7); // base 3 + oberth 4
+          expect(res.isHighG).toBe(true);
+          expect(res.gPenalty).toBe(-40); // (7 - 3) * -10
+        });
+
+        it('ignores ADF spent outside Distance 0', () => {
+          const res = calculateSlingshotParameters('PLANET', 1, 6, 2);
+          expect(res.oberthExitSpeed).toBe(0);
+          expect(res.totalExitSpeed).toBe(7); // entry 6 + free 1
+          expect(res.totalDeltaV).toBe(1); // base 1
+          expect(res.isHighG).toBe(false);
+          expect(res.gPenalty).toBe(0);
+        });
+      });
+    });
+
+    describe('calculateCompoundDeltaV helper', () => {
+      it('calculates compound ΔV from base gravity ΔV and ADF spent', () => {
+        expect(calculateCompoundDeltaV(3, 2)).toBe(7);
+        expect(calculateCompoundDeltaV(2, 1)).toBe(4);
+        expect(calculateCompoundDeltaV(4, 0)).toBe(4);
+      });
+    });
+
+    describe('resolveSlingshotPilotCheck', () => {
+      it('resolves successful check (roll <= targetSkill)', () => {
+        const res = resolveSlingshotPilotCheck(35, 50, 'PLANET');
+        expect(res.success).toBe(true);
+        expect(res.margin).toBe(0);
+        expect(res.isMinorHazard).toBe(false);
+        expect(res.isMajorHazard).toBe(false);
+        expect(res.hullDamageDice).toBeNull();
+        expect(res.ignoresScreens).toBe(false);
+        expect(res.crewDamageDice).toBeNull();
+        expect(res.crewProne).toBe(false);
+        expect(res.speedMultiplier).toBe(1);
+        expect(res.losesFreeExitSpeed).toBe(false);
+        expect(res.summaryText).toContain('flawlessly');
+      });
+
+      describe('Minor Hazard (Margin 1-19)', () => {
+        it('resolves Moon Crater Skim minor hazard: loses free speed, 1d10 hull (screens absorb), crew prone + ceil(1d10 / 2)', () => {
+          const res = resolveSlingshotPilotCheck(60, 50, 'MOON');
+          expect(res.success).toBe(false);
+          expect(res.margin).toBe(10);
+          expect(res.isMinorHazard).toBe(true);
+          expect(res.isMajorHazard).toBe(false);
+          expect(res.hullDamageDice).toBe('1d10');
+          expect(res.ignoresScreens).toBe(false);
+          expect(res.crewDamageDice).toBe('ceil(1d10 / 2)');
+          expect(res.crewProne).toBe(true);
+          expect(res.losesFreeExitSpeed).toBe(true);
+          expect(res.speedMultiplier).toBe(1);
+        });
+
+        it('resolves Planet Low-Orbit Skim minor hazard: loses free speed, 2d10 structural hull (ignores screens), crew prone + ceil(1d10 / 2)', () => {
+          const res = resolveSlingshotPilotCheck(65, 50, 'PLANET');
+          expect(res.success).toBe(false);
+          expect(res.margin).toBe(15);
+          expect(res.isMinorHazard).toBe(true);
+          expect(res.isMajorHazard).toBe(false);
+          expect(res.hullDamageDice).toBe('2d10');
+          expect(res.ignoresScreens).toBe(true);
+          expect(res.crewDamageDice).toBe('ceil(1d10 / 2)');
+          expect(res.crewProne).toBe(true);
+          expect(res.losesFreeExitSpeed).toBe(true);
+        });
+
+        it('resolves Gas Giant Deep Skim minor hazard: 2d10 structural hull (ignores screens)', () => {
+          const res = resolveSlingshotPilotCheck(60, 50, 'GAS_GIANT');
+          expect(res.hullDamageDice).toBe('2d10');
+          expect(res.ignoresScreens).toBe(true);
+        });
+      });
+
+      describe('Major Hazard (Margin 20+)', () => {
+        it('resolves Moon Ridge Impact: 3d10 structural (ignores screens), scatter 1 face, halves speed', () => {
+          const res = resolveSlingshotPilotCheck(75, 50, 'MOON');
+          expect(res.success).toBe(false);
+          expect(res.margin).toBe(25);
+          expect(res.isMinorHazard).toBe(false);
+          expect(res.isMajorHazard).toBe(true);
+          expect(res.hullDamageDice).toBe('3d10');
+          expect(res.ignoresScreens).toBe(true);
+          expect(res.scatterFaces).toBe(1);
+          expect(res.speedMultiplier).toBe(0.5);
+          expect(res.trappedInHex).toBe(false);
+          expect(res.requiresEscapeAdf).toBe(0);
+        });
+
+        it('resolves Planet Sub-Orbital Decay: 4d10 structural (ignores screens), trapped in hex, requires 2 ADF escape, halves speed', () => {
+          const res = resolveSlingshotPilotCheck(80, 50, 'PLANET');
+          expect(res.success).toBe(false);
+          expect(res.margin).toBe(30);
+          expect(res.isMinorHazard).toBe(false);
+          expect(res.isMajorHazard).toBe(true);
+          expect(res.hullDamageDice).toBe('4d10');
+          expect(res.ignoresScreens).toBe(true);
+          expect(res.speedMultiplier).toBe(0.5);
+          expect(res.trappedInHex).toBe(true);
+          expect(res.requiresEscapeAdf).toBe(2);
+          expect(res.statusEffect).toBe('ORBITAL_DECAY_REQUIRES_2_ADF_ESCAPE');
+        });
+
+        it('resolves Gas Giant Gravity Capture: 4d10 structural, trapped in hex with escape status', () => {
+          const res = resolveSlingshotPilotCheck(90, 50, 'GAS_GIANT');
+          expect(res.hullDamageDice).toBe('4d10');
+          expect(res.ignoresScreens).toBe(true);
+          expect(res.trappedInHex).toBe(true);
+          expect(res.requiresEscapeAdf).toBe(2);
+          expect(res.statusEffect).toBe('ORBITAL_DECAY_REQUIRES_2_ADF_ESCAPE');
+        });
       });
     });
   });
@@ -401,21 +699,30 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
     });
 
     describe('formatBrakingBurnAlert', () => {
-      it('formats safe deceleration (ΔV <= 2) requiring no crew check', () => {
-        const msg = formatBrakingBurnAlert('Explorer', 2);
-        expect(msg).toContain('Explorer');
-        expect(msg).toContain('2');
-        expect(msg).toMatch(/safe/i);
-        expect(msg).toMatch(/no crew (?:STA )?check/i);
+      it('formats safe deceleration (ΔV <= 3) requiring no crew check', () => {
+        const msg2 = formatBrakingBurnAlert('Explorer', 2);
+        expect(msg2).toContain('Explorer');
+        expect(msg2).toContain('2');
+        expect(msg2).toMatch(/safe/i);
+        expect(msg2).toMatch(/no crew (?:STA )?check/i);
+
+        const msg3 = formatBrakingBurnAlert('Explorer', 3);
+        expect(msg3).toContain('Explorer');
+        expect(msg3).toContain('3');
+        expect(msg3).toMatch(/safe/i);
+        expect(msg3).toMatch(/no crew (?:STA )?check/i);
       });
 
-      it('formats High-G deceleration (ΔV >= 3) with penalty and check warning', () => {
-        const msg = formatBrakingBurnAlert('Explorer', 4);
-        expect(msg).toContain('Explorer');
-        expect(msg).toContain('4');
-        expect(msg).toMatch(/high-g/i);
-        expect(msg).toContain('-20%');
-        expect(msg).toMatch(/STA check/i);
+      it('formats High-G deceleration (ΔV > 3) with penalty and check warning', () => {
+        const msg4 = formatBrakingBurnAlert('Explorer', 4);
+        expect(msg4).toContain('Explorer');
+        expect(msg4).toContain('4');
+        expect(msg4).toMatch(/high-g/i);
+        expect(msg4).toContain('-10%');
+        expect(msg4).toMatch(/STA check/i);
+
+        const msg5 = formatBrakingBurnAlert('Explorer', 5);
+        expect(msg5).toContain('-20%');
       });
     });
 
@@ -441,6 +748,43 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
         expect(msg).toContain('Ensign Ricky');
         expect(msg).toContain('FAILED');
         expect(msg).toContain('G-LOC');
+      });
+    });
+
+    describe('formatSlingshotSuccessAlert', () => {
+      it('formats success alert with ship name, body, zone, exit speed, bonus MR, and safe ΔV note', () => {
+        const msg = formatSlingshotSuccessAlert('UPF Exeter', 'PLANET', 'Low-Orbit Skim', 2, 8, 3);
+        expect(msg).toContain('UPF Exeter');
+        expect(msg).toContain('PLANET');
+        expect(msg).toContain('Low-Orbit Skim');
+        expect(msg).toContain('8');
+        expect(msg).toContain('+2');
+        expect(msg).toContain('3 ΔV');
+        expect(msg).toMatch(/safe/i);
+      });
+
+      it('formats success alert with High-G warning for ΔV > 3', () => {
+        const msg = formatSlingshotSuccessAlert('UPF Exeter', 'GAS_GIANT', 'Deep Skim', 3, 9, 4);
+        expect(msg).toContain('HIGH-G');
+        expect(msg).toContain('-10%');
+      });
+    });
+
+    describe('formatSlingshotHazardAlert', () => {
+      it('formats hazard alert with ship name, body, damage dice, and summary', () => {
+        const msg = formatSlingshotHazardAlert('Sathari Scout', 'MOON', false, '1d10', 'Scraped lunar crater');
+        expect(msg).toContain('Sathari Scout');
+        expect(msg).toContain('MOON');
+        expect(msg).toContain('HAZARD');
+        expect(msg).toContain('1d10');
+        expect(msg).toContain('Scraped lunar crater');
+      });
+
+      it('formats critical hazard alert for major failure', () => {
+        const msg = formatSlingshotHazardAlert('Sathari Scout', 'PLANET', true, '4d10', 'Trapped in decay orbit');
+        expect(msg).toContain('CRITICAL HAZARD');
+        expect(msg).toContain('4d10');
+        expect(msg).toContain('Trapped in decay orbit');
       });
     });
   });
