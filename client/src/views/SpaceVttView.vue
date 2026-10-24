@@ -571,32 +571,32 @@
                 </div>
               </div>
 
-              <!-- Flip & Burn Maneuver (MR >= 3 or Multi-Turn MR < 3) -->
+              <!-- Flip & Burn Maneuver (MR >= 3, MR 1-2, Braking Burns & Crew Checks) -->
               <div class="flip-burn-box">
                 <div class="flip-burn-header">
                   <label>🔄 Flip &amp; Burn</label>
-                  <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanFlipAndBurn || selectedTokenCanMultiTurnFlip }">
+                  <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanStandardFlip || selectedTokenCanLumberingFlip }">
                     MR {{ selectedTokenLinkedShip.mr }}
                   </span>
                 </div>
 
-                <!-- MR >= 3 Single-Turn Maneuver -->
-                <template v-if="selectedTokenCanFlipAndBurn">
+                <!-- MR >= 3 Single-Turn Standard Maneuver -->
+                <template v-if="selectedTokenCanStandardFlip">
                   <button
                     type="button"
                     class="btn-flip-burn full-width"
-                    title="Reverse heading 180° in 1 turn and alert crew for STA check"
-                    @click="executeFlipAndBurn"
+                    title="Reverse heading 180° in 1 turn (no STA check required)"
+                    @click="executeStandardFlip"
                   >
-                    🔄 Execute Flip &amp; Burn (180° - 1 Turn)
+                    🔄 Standard Flip (180° - 1 Turn)
                   </button>
                   <small class="flip-burn-hint">
-                    Fast vessel (MR &ge; 3): Strapped-in PCs must pass STA check or pass out for 1d10×10s.
+                    Fast vessel (MR &ge; 3): 1-turn in-hex pivot. Compensators absorb rotation; no crew check required.
                   </small>
                 </template>
 
-                <!-- MR < 3 Multi-Turn Maneuver -->
-                <template v-else-if="selectedTokenCanMultiTurnFlip">
+                <!-- MR 1-2 Vessels: Lumbering Flip or Emergency Snap Flip -->
+                <template v-else-if="selectedTokenCanLumberingFlip || selectedTokenCanSnapFlip">
                   <div v-if="selectedTokenInMultiTurnFlip" class="multi-turn-progress-banner">
                     ⏳ Multi-Turn Flip in Progress (Turn 1/2 complete: +90°)
                   </div>
@@ -605,9 +605,9 @@
                     class="btn-flip-burn full-width"
                     :class="{ 'in-progress': selectedTokenInMultiTurnFlip }"
                     :title="selectedTokenInMultiTurnFlip ? 'Complete Turn 2/2 (+90°, total 180°)' : 'Start Turn 1/2 (+90°)'"
-                    @click="executeFlipAndBurn"
+                    @click="executeLumberingFlip"
                   >
-                    {{ selectedTokenInMultiTurnFlip ? '🔄 Complete Flip & Burn (Turn 2/2: +90°)' : '🔄 Start Multi-Turn Flip (Turn 1/2: +90°)' }}
+                    {{ selectedTokenInMultiTurnFlip ? '🔄 Complete Lumbering Flip (Turn 2/2: +90°)' : '🔄 Start Lumbering Flip (Turn 1/2: +90°)' }}
                   </button>
                   <button
                     v-if="selectedTokenInMultiTurnFlip"
@@ -619,7 +619,19 @@
                     ✕ Cancel Flip
                   </button>
                   <small class="flip-burn-hint">
-                    {{ selectedTokenInMultiTurnFlip ? 'Turn 2 of 2: Reverses final 90° (total 180°). Crew must make STA Check #2.' : 'Lower agility vessel (MR < 3): Takes 2 turns to flip. Crew makes a STA check on each turn.' }}
+                    {{ selectedTokenInMultiTurnFlip ? 'Turn 2 of 2: Reverses final 90° (total 180°). No STA check required.' : 'Lower agility vessel (MR 1–2): Takes 2 turns to flip at drift speed. No STA check required.' }}
+                  </small>
+
+                  <button
+                    type="button"
+                    class="btn-snap-flip full-width"
+                    title="Overload RCS thrusters for 1-turn flip (requires pilot check and crew STA check)"
+                    @click="executeSnapFlip"
+                  >
+                    ⚠️ Emergency Snap Flip (180° - 1 Turn)
+                  </button>
+                  <small class="flip-burn-hint warning">
+                    Overloads RCS thrusters: Reverses in 1 turn, but crew suffers centrifugal whip (-10% at extremities).
                   </small>
                 </template>
 
@@ -627,9 +639,52 @@
                   Vessel lacks maneuvering thrusters (MR 0)
                 </small>
 
+                <!-- Braking Burn Deceleration Section -->
+                <div class="braking-burn-controls">
+                  <div class="braking-header">
+                    <label>Braking Burn (Deceleration)</label>
+                    <div class="braking-input-group">
+                      <span class="dv-label">ΔV</span>
+                      <input
+                        type="number"
+                        v-model.number="brakingDeltaV"
+                        min="1"
+                        max="20"
+                        step="1"
+                        class="braking-dv-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div v-if="brakingDeltaV <= 2" class="braking-indicator safe">
+                    ✅ Safe Deceleration: Compensators active, 0% penalty
+                  </div>
+                  <div v-else class="braking-indicator high-g">
+                    ⚠️ HIGH-G BRAKING BURN: -{{ (brakingDeltaV - 2) * 10 }}% STA check penalty
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn-braking-burn full-width"
+                    :class="{ 'high-g': brakingDeltaV >= 3 }"
+                    @click="executeBrakingBurn"
+                  >
+                    🚀 Execute Braking Burn (ΔV {{ brakingDeltaV }})
+                  </button>
+                </div>
+
+                <!-- Direct button to open Crew G-Load Check Dialog -->
+                <button
+                  type="button"
+                  class="btn-crew-gcheck-trigger full-width"
+                  @click="openCrewGCheckModal('Manual Check')"
+                >
+                  🩺 Crew G-Load Check
+                </button>
+
                 <div class="flip-burn-roll-btns">
-                  <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll d% STA Check">
-                    🎲 STA Check (d%)
+                  <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll quick d% STA Check">
+                    🎲 Quick STA (d%)
                   </button>
                   <button type="button" class="btn-fb-roll blackout" @click="rollFlipAndBurnBlackout" title="Roll 1d10 × 10 seconds blackout duration">
                     💫 Blackout (1d10×10s)
@@ -939,6 +994,167 @@
       </div>
     </div>
 
+    <!-- Modal: Crew G-Load Check Dialog -->
+    <div
+      v-if="showCrewGCheckModal"
+      class="modal-backdrop crew-gcheck-modal-backdrop"
+      @click.self="showCrewGCheckModal = false"
+    >
+      <div class="modal-card crew-gcheck-modal">
+        <div class="crew-gcheck-header">
+          <h3>🩺 Crew G-Load STA Check</h3>
+          <span class="crew-gcheck-ship-name">{{ selectedToken?.name || 'Vessel' }}</span>
+        </div>
+
+        <div class="crew-gcheck-trigger-badge">
+          <strong>Trigger:</strong> {{ crewCheckReason }}
+          <span v-if="crewCheckDeltaV > 2" class="trigger-dv-tag">ΔV {{ crewCheckDeltaV }} (-{{ (crewCheckDeltaV - 2) * 10 }}%)</span>
+        </div>
+
+        <div class="form-group">
+          <label>Character / Crew Member Name</label>
+          <input
+            type="text"
+            v-model="crewCheckCharName"
+            placeholder="e.g. Capt. Wilhemina or Ensign Ricky"
+            class="crew-char-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Base Stamina (STA %)</label>
+          <div class="sta-input-row">
+            <input
+              type="number"
+              v-model.number="crewCheckBaseSta"
+              min="1"
+              max="99"
+              step="1"
+              class="crew-sta-input"
+            />
+            <span class="input-unit">%</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Posture / Restraint</label>
+          <div class="posture-options">
+            <label class="radio-option" :class="{ selected: crewCheckPosture === 'couch' }">
+              <input type="radio" v-model="crewCheckPosture" value="couch" />
+              <div class="option-content">
+                <span class="option-title">Crash Couch / Strapped-in</span>
+                <span class="option-mod bonus">+20%</span>
+              </div>
+            </label>
+            <label class="radio-option" :class="{ selected: crewCheckPosture === 'braced' }">
+              <input type="radio" v-model="crewCheckPosture" value="braced" />
+              <div class="option-content">
+                <span class="option-title">Braced at Console / Bulkhead</span>
+                <span class="option-mod neutral">0%</span>
+              </div>
+            </label>
+            <label class="radio-option" :class="{ selected: crewCheckPosture === 'unbraced' }">
+              <input type="radio" v-model="crewCheckPosture" value="unbraced" />
+              <div class="option-content">
+                <span class="option-title">Unbraced / Moving / Boarding</span>
+                <span class="option-mod penalty">-20%</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Station / Ship Location</label>
+          <div class="location-options">
+            <label class="radio-option" :class="{ selected: crewCheckLocation === 'midships' }">
+              <input type="radio" v-model="crewCheckLocation" value="midships" />
+              <div class="option-content">
+                <span class="option-title">Midships (Center of Gravity)</span>
+                <span class="option-mod neutral">0%</span>
+              </div>
+            </label>
+            <label class="radio-option" :class="{ selected: crewCheckLocation === 'extremity' }">
+              <input type="radio" v-model="crewCheckLocation" value="extremity" />
+              <div class="option-content">
+                <span class="option-title">Bow / Stern Extremity</span>
+                <span class="option-mod penalty">-10%</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Target STA Breakdown Display -->
+        <div class="sta-target-display">
+          <div class="sta-formula-row">
+            <span class="formula-label">Modified Target STA:</span>
+            <span class="formula-breakdown">{{ crewCheckTargetSta.breakdown }}</span>
+          </div>
+          <div class="sta-target-badge">
+            Target: <strong>{{ crewCheckTargetSta.target }}%</strong>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="modal-actions crew-gcheck-actions">
+          <button
+            type="button"
+            class="btn-roll-gcheck"
+            @click="rollCrewGCheck"
+          >
+            🎲 Roll STA Check (d100)
+          </button>
+          <button
+            type="button"
+            class="btn-modal-cancel btn-crew-gcheck-close"
+            @click="showCrewGCheckModal = false"
+          >
+            Close
+          </button>
+        </div>
+
+        <!-- Result Outcome Display -->
+        <div v-if="crewCheckLastResult" class="crew-gcheck-result-card" :class="crewCheckLastResult.severity">
+          <div class="result-banner">
+            <span class="result-icon">
+              {{ crewCheckLastResult.success ? '✅' : (crewCheckLastResult.severity === 'stun' ? '💫' : '⚡') }}
+            </span>
+            <div class="result-titles">
+              <div class="result-headline">
+                {{ crewCheckLastResult.success ? 'Check Succeeded!' : 'Check Failed!' }}
+                (Roll: {{ crewCheckLastResult.roll }} vs Target: {{ crewCheckLastResult.target }}%)
+              </div>
+              <div class="result-condition">Condition: {{ crewCheckLastResult.condition }}</div>
+            </div>
+            <span v-if="!crewCheckLastResult.success" class="margin-pill">
+              Margin: +{{ crewCheckLastResult.margin }}
+            </span>
+          </div>
+
+          <div class="result-summary-text">
+            {{ crewCheckLastResult.summaryText }}
+          </div>
+
+          <div v-if="!crewCheckLastResult.success" class="result-effects-grid">
+            <div v-if="crewCheckLastResult.checkPenalty" class="effect-tag penalty">
+              Penalty: {{ crewCheckLastResult.checkPenalty }}% next turn
+            </div>
+            <div v-if="crewCheckLastResult.stunnedTurns" class="effect-tag warning">
+              Stunned: {{ crewCheckLastResult.stunnedTurns }} turn(s)
+            </div>
+            <div v-if="crewCheckLastResult.damageDice" class="effect-tag damage">
+              Impact Damage: {{ crewCheckLastResult.damageDice }} HP
+            </div>
+            <div v-if="crewCheckLastResult.unconsciousTurnsDice" class="effect-tag danger">
+              Unconscious: {{ crewCheckLastResult.unconsciousTurnsDice }} turns (6–36s)
+            </div>
+            <div v-if="crewCheckLastResult.displacementMetersDice" class="effect-tag danger">
+              Hurled: {{ crewCheckLastResult.displacementMetersDice }}m forward
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Image Browser Modal -->
     <ImageBrowserModal
       v-model="showImageBrowser"
@@ -962,9 +1178,19 @@ import { isCelestialToken, CELESTIAL_PRESET_NAMES } from '../utils/spaceTokens.j
 import {
   canFlipAndBurn,
   canMultiTurnFlip,
+  canStandardFlip,
+  canLumberingFlip,
+  canSnapFlip,
   calculateFlipHeading,
   calculateTurnHeading,
   calculateBlackoutSeconds,
+  calculateStaCheckTarget,
+  resolveStaCheckResult,
+  formatStandardFlipAlert,
+  formatLumberingFlipAlert,
+  formatSnapFlipAlert,
+  formatBrakingBurnAlert,
+  formatGLocResultAlert,
   formatFlipAndBurnAlert,
   formatMultiTurnAlert,
   MULTI_TURN_FLIP_STATUS,
@@ -1436,6 +1662,20 @@ const selectedShipId = ref(null);
 const tokenFileInput = ref(null);
 const uploadingAvatar = ref(false);
 
+// Braking Burn Deceleration (ΔV)
+const brakingDeltaV = ref(2);
+
+// Interactive Crew G-Load Check Dialog State
+const showCrewGCheckModal = ref(false);
+const crewCheckReason = ref('Manual Check');
+const crewCheckDeltaV = ref(0);
+const crewCheckIsSnapFlip = ref(false);
+const crewCheckCharName = ref('Crew Member');
+const crewCheckBaseSta = ref(60);
+const crewCheckPosture = ref('braced'); // 'couch', 'braced', 'unbraced'
+const crewCheckLocation = ref('midships'); // 'midships', 'extremity'
+const crewCheckLastResult = ref(null);
+
 // Forms
 const gridLineWidthOptions = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
 const gridDimensionOptions = [10, 15, 20, 25, 30, 40, 50, 60, 80, 100];
@@ -1519,24 +1759,47 @@ const selectedTokenLinkedShip = computed(() => {
   return ships.value.find((s) => s.id === selectedToken.value.character_id) || null;
 });
 
-const selectedTokenCanFlipAndBurn = computed(() => {
+const selectedTokenCanStandardFlip = computed(() => {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return false;
   if (selectedTokenLinkedShip.value) {
-    return canFlipAndBurn(selectedTokenLinkedShip.value.mr);
+    return canStandardFlip(selectedTokenLinkedShip.value.mr);
   }
   return true;
 });
 
-const selectedTokenCanMultiTurnFlip = computed(() => {
+const selectedTokenCanLumberingFlip = computed(() => {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return false;
   if (selectedTokenLinkedShip.value) {
-    return canMultiTurnFlip(selectedTokenLinkedShip.value.mr);
+    return canLumberingFlip(selectedTokenLinkedShip.value.mr);
   }
   return false;
 });
 
+const selectedTokenCanSnapFlip = computed(() => {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return false;
+  if (selectedTokenLinkedShip.value) {
+    return canSnapFlip(selectedTokenLinkedShip.value.mr);
+  }
+  return false;
+});
+
+const selectedTokenCanFlipAndBurn = selectedTokenCanStandardFlip;
+const selectedTokenCanMultiTurnFlip = selectedTokenCanLumberingFlip;
+
 const selectedTokenInMultiTurnFlip = computed(() => {
   return selectedTokenForm.status_effects.includes(MULTI_TURN_FLIP_STATUS);
+});
+
+// Crew G-Load Check live target calculation
+const crewCheckTargetSta = computed(() => {
+  const isExtremity = crewCheckLocation.value === 'extremity';
+  return calculateStaCheckTarget(crewCheckBaseSta.value, {
+    deltaV: crewCheckDeltaV.value,
+    posture: crewCheckPosture.value,
+    location: isExtremity ? 'bow' : 'midships',
+    extremity: isExtremity ? 'bow' : 'midships',
+    extremityMod: isExtremity ? -10 : 0,
+  });
 });
 
 // Watch selectedToken to sync reactive form (Bugs 12 & 31)
@@ -1594,9 +1857,13 @@ function onKeyDown(e) {
   }
 
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (showCreateMapModal.value || showAddTokenModal.value) return;
+  if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value) return;
 
   if (e.key === 'Escape') {
+    if (showCrewGCheckModal.value) {
+      showCrewGCheckModal.value = false;
+      return;
+    }
     if (showPercentileHud.value || showDamageHud.value || showDmgMenu.value) {
       clearDice();
       return;
@@ -1656,52 +1923,190 @@ function adjustSelectedSpeed(delta) {
   updateSelectedToken();
 }
 
-async function executeFlipAndBurn() {
+function openCrewGCheckModal(reason = 'Manual Check', options = {}) {
+  crewCheckReason.value = reason;
+  crewCheckDeltaV.value = Number(options.deltaV) || 0;
+  crewCheckIsSnapFlip.value = Boolean(options.isSnapFlip);
+  if (
+    options.extremity === 'extremity' ||
+    options.extremity === 'bow' ||
+    options.extremity === 'stern' ||
+    options.location === 'bow' ||
+    options.location === 'stern' ||
+    options.location === 'extremity'
+  ) {
+    crewCheckLocation.value = 'extremity';
+  } else if (options.location) {
+    crewCheckLocation.value = options.location;
+  }
+  if (options.posture) {
+    crewCheckPosture.value = options.posture;
+  }
+  if (options.charName) {
+    crewCheckCharName.value = options.charName;
+  } else if (!crewCheckCharName.value) {
+    crewCheckCharName.value = 'Crew Member';
+  }
+  crewCheckLastResult.value = null;
+  showCrewGCheckModal.value = true;
+}
+
+async function executeStandardFlip() {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
+  const shipName = selectedToken.value.name || 'Ship';
+  const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
+  await rotateSelectedToken(180);
+  sendRollToServer({
+    type: 'percentile',
+    label: `${shipName}: 🔄 Standard Flip (180°)`,
+    total: newRotation,
+    breakdown: formatStandardFlipAlert(shipName, newRotation),
+  });
+}
+
+async function executeLumberingFlip() {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
   const shipName = selectedToken.value.name || 'Ship';
 
-  if (selectedTokenCanFlipAndBurn.value) {
-    // Fast vessel 1-turn maneuver (MR >= 3)
-    const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
-    await rotateSelectedToken(180);
+  if (!selectedTokenInMultiTurnFlip.value) {
+    // Turn 1: rotate +90 deg and set status effect
+    const newRotation = calculateTurnHeading(selectedToken.value.rotation || 0, 90);
+    await rotateSelectedToken(90);
+    if (!selectedTokenForm.status_effects.includes(MULTI_TURN_FLIP_STATUS)) {
+      selectedTokenForm.status_effects.push(MULTI_TURN_FLIP_STATUS);
+      await updateSelectedToken();
+    }
     sendRollToServer({
       type: 'percentile',
-      label: `${shipName}: 🔄 Flip & Burn (180°)`,
+      label: `${shipName}: 🔄 Lumbering Flip (Turn 1/2: +90°)`,
       total: newRotation,
-      breakdown: formatFlipAndBurnAlert(shipName, newRotation),
+      breakdown: formatLumberingFlipAlert(shipName, 1, newRotation),
     });
-  } else if (selectedTokenCanMultiTurnFlip.value) {
-    // Lower agility vessel multi-turn maneuver (MR < 3)
-    if (!selectedTokenInMultiTurnFlip.value) {
-      // Turn 1: rotate +90 deg and set status effect
-      const newRotation = calculateTurnHeading(selectedToken.value.rotation || 0, 90);
-      await rotateSelectedToken(90);
-      if (!selectedTokenForm.status_effects.includes(MULTI_TURN_FLIP_STATUS)) {
-        selectedTokenForm.status_effects.push(MULTI_TURN_FLIP_STATUS);
-        await updateSelectedToken();
+  } else {
+    // Turn 2: rotate remaining +90 deg (total 180 deg) and clear status effect
+    const newRotation = calculateTurnHeading(selectedToken.value.rotation || 0, 90);
+    await rotateSelectedToken(90);
+    selectedTokenForm.status_effects = selectedTokenForm.status_effects.filter(
+      (s) => s !== MULTI_TURN_FLIP_STATUS
+    );
+    await updateSelectedToken();
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: 🔄 Lumbering Flip Complete (Turn 2/2: +90°)`,
+      total: newRotation,
+      breakdown: formatLumberingFlipAlert(shipName, 2, newRotation),
+    });
+  }
+}
+
+async function executeSnapFlip() {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
+  const shipName = selectedToken.value.name || 'Ship';
+  const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
+  await rotateSelectedToken(180);
+  sendRollToServer({
+    type: 'percentile',
+    label: `${shipName}: ⚠️ Emergency Snap Flip (180°)`,
+    total: newRotation,
+    breakdown: formatSnapFlipAlert(shipName, newRotation),
+  });
+  openCrewGCheckModal('Emergency Snap Flip', {
+    isSnapFlip: true,
+    extremity: 'extremity',
+    deltaV: 0,
+  });
+}
+
+async function executeBrakingBurn() {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
+  const shipName = selectedToken.value.name || 'Ship';
+  const dv = Math.max(1, Number(brakingDeltaV.value) || 1);
+  const isHighG = dv >= 3;
+
+  selectedTokenForm.current_speed = Math.max(0, (selectedTokenForm.current_speed || 0) - dv);
+  await updateSelectedToken();
+
+  const labelPrefix = isHighG ? '⚠️ HIGH-G Braking Burn' : 'Braking Burn';
+  sendRollToServer({
+    type: 'percentile',
+    label: `${shipName}: ${labelPrefix} (ΔV ${dv})`,
+    total: selectedTokenForm.current_speed,
+    breakdown: formatBrakingBurnAlert(shipName, dv),
+  });
+
+  if (isHighG) {
+    openCrewGCheckModal(`High-G Braking Burn (ΔV ${dv})`, {
+      deltaV: dv,
+      isSnapFlip: false,
+      extremity: 'midships',
+    });
+  }
+}
+
+async function executeFlipAndBurn() {
+  if (selectedTokenCanStandardFlip.value) {
+    await executeStandardFlip();
+  } else if (selectedTokenCanLumberingFlip.value) {
+    await executeLumberingFlip();
+  }
+}
+
+async function rollCrewGCheck() {
+  const shipName = selectedToken.value?.name || 'Ship';
+  const charName = crewCheckCharName.value || 'Crew Member';
+  const target = crewCheckTargetSta.value.target;
+  const posture = crewCheckPosture.value;
+
+  playDiceSound({ isRemote: false });
+  const diceBox = await getReadyDiceBox();
+  let roll = null;
+
+  if (diceBox) {
+    showPercentileHud.value = false;
+    showDamageHud.value = false;
+    showInitiativeHud.value = false;
+    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+
+    try {
+      const results = await diceBox.roll([
+        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+      ]);
+      const rollSummary = calculatePercentileRoll(results);
+      if (rollSummary.valid) {
+        roll = rollSummary.total;
+        lastPercentileRoll.value = {
+          ...rollSummary,
+          username: authStore.user?.username,
+          role: authStore.user?.role,
+        };
+        showPercentileHud.value = true;
+        percentileHudTimeout = setTimeout(() => {
+          showPercentileHud.value = false;
+        }, 8000);
       }
-      sendRollToServer({
-        type: 'percentile',
-        label: `${shipName}: 🔄 Multi-Turn Flip (Turn 1/2: +90°)`,
-        total: newRotation,
-        breakdown: formatMultiTurnAlert(shipName, 1, newRotation),
-      });
-    } else {
-      // Turn 2: rotate remaining +90 deg (total 180 deg) and clear status effect
-      const newRotation = calculateTurnHeading(selectedToken.value.rotation || 0, 90);
-      await rotateSelectedToken(90);
-      selectedTokenForm.status_effects = selectedTokenForm.status_effects.filter(
-        (s) => s !== MULTI_TURN_FLIP_STATUS
-      );
-      await updateSelectedToken();
-      sendRollToServer({
-        type: 'percentile',
-        label: `${shipName}: 🔄 Multi-Turn Flip Complete (Turn 2/2: +90°)`,
-        total: newRotation,
-        breakdown: formatMultiTurnAlert(shipName, 2, newRotation),
-      });
+    } catch (err) {
+      console.error('Crew G check 3D dice roll failed:', err);
     }
   }
+
+  if (roll === null) {
+    roll = Math.floor(Math.random() * 100) + 1;
+  }
+
+  const result = resolveStaCheckResult(roll, target, posture);
+  crewCheckLastResult.value = {
+    roll,
+    target,
+    ...result,
+  };
+
+  sendRollToServer({
+    type: 'percentile',
+    label: `${shipName} Crew (${charName}): STA Check`,
+    total: roll,
+    breakdown: formatGLocResultAlert(charName, result),
+  });
 }
 
 async function cancelMultiTurnFlip() {
@@ -4497,6 +4902,495 @@ onBeforeUnmount(() => {
   background: rgba(245, 158, 11, 0.25);
   border-color: #fbbf24;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn-snap-flip {
+  background: linear-gradient(135deg, #78350f 0%, #b45309 100%);
+  color: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btn-snap-flip:hover {
+  background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  color: #ffffff;
+}
+
+.flip-burn-hint.warning {
+  color: #fbbf24;
+}
+
+/* Braking Burn Deceleration Section */
+.braking-burn-controls {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.braking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.braking-header label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.braking-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dv-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.braking-dv-input {
+  width: 44px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.braking-dv-input:focus {
+  border-color: #38bdf8;
+  outline: none;
+}
+
+.braking-indicator {
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.braking-indicator.safe {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.braking-indicator.high-g {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.btn-braking-burn {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-braking-burn:hover {
+  background: linear-gradient(135deg, #334155 0%, #475569 100%);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.3);
+}
+
+.btn-braking-burn.high-g {
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+  border-color: #ef4444;
+  color: #fee2e2;
+}
+
+.btn-braking-burn.high-g:hover {
+  background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+}
+
+.btn-crew-gcheck-trigger {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-crew-gcheck-trigger:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+  color: #ffffff;
+}
+
+/* Crew G-Load Check Dialog */
+.crew-gcheck-modal {
+  max-width: 500px;
+  width: 90vw;
+  background: #0f172a;
+  border: 1px solid #38bdf8;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.crew-gcheck-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.crew-gcheck-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #38bdf8;
+}
+
+.crew-gcheck-ship-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.crew-gcheck-trigger-badge {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid #334155;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trigger-dv-tag {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.crew-char-input {
+  width: 100%;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+.crew-char-input:focus {
+  border-color: #38bdf8;
+  outline: none;
+}
+
+.sta-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crew-sta-input {
+  width: 80px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.crew-sta-input:focus {
+  border-color: #38bdf8;
+  outline: none;
+}
+
+.input-unit {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.posture-options,
+.location-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.radio-option:hover {
+  background: #253349;
+  border-color: #475569;
+}
+
+.radio-option.selected {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.radio-option input[type="radio"] {
+  cursor: pointer;
+}
+
+.option-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.option-title {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.option-mod {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.option-mod.bonus {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.option-mod.neutral {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.option-mod.penalty {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.sta-target-display {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sta-formula-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formula-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.formula-breakdown {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  font-family: monospace;
+}
+
+.sta-target-badge {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  border: 1px solid #38bdf8;
+}
+
+.crew-gcheck-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-roll-gcheck {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  border: 1px solid #34d399;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.btn-roll-gcheck:hover {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.5);
+  color: #064e3b;
+}
+
+.crew-gcheck-result-card {
+  margin-top: 14px;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.crew-gcheck-result-card.none {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+}
+
+.crew-gcheck-result-card.stun {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+}
+
+.crew-gcheck-result-card.g-loc {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+}
+
+.result-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.result-icon {
+  font-size: 1.5rem;
+}
+
+.result-titles {
+  flex: 1;
+}
+
+.result-headline {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.result-condition {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.margin-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.result-summary-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #e2e8f0;
+}
+
+.result-effects-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.effect-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.effect-tag.penalty {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.effect-tag.warning {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fef08a;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.effect-tag.damage {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.effect-tag.danger {
+  background: rgba(185, 28, 28, 0.3);
+  color: #fecaca;
+  border: 1px solid #ef4444;
 }
 
 /* Token Weapons Section */
