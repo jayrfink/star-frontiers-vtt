@@ -321,10 +321,11 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
     expect(ShipSheetsView.methods.canFlipAndBurn(0)).toBe(false);
   });
 
-  it('exposes canStandardFlip, canLumberingFlip, and canSnapFlip methods', () => {
+  it('exposes canStandardFlip, canLumberingFlip, and canSnapFlip methods and SAFE_COMPENSATOR_DELTA_V', () => {
     expect(typeof ShipSheetsView.methods.canStandardFlip).toBe('function');
     expect(typeof ShipSheetsView.methods.canLumberingFlip).toBe('function');
     expect(typeof ShipSheetsView.methods.canSnapFlip).toBe('function');
+    expect(ShipSheetsView.data().SAFE_COMPENSATOR_DELTA_V).toBe(3);
 
     expect(ShipSheetsView.methods.canStandardFlip(4)).toBe(true);
     expect(ShipSheetsView.methods.canStandardFlip(3)).toBe(true);
@@ -366,9 +367,9 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
       expect(banner.classes()).toContain('capable');
       expect(banner.text()).toContain('Standard Flip Capable');
       expect(banner.text()).toContain('MR 4 ≥ 3');
-      expect(banner.text()).toContain('1-Turn (6s) 180° in-hex pivot');
-      expect(banner.text()).toContain('No crew STA check required (inertial compensators absorb up to 2 hexes of braking)');
-      expect(banner.text()).toContain('High-G braking (3+ hexes deceleration) requires crew STA checks (-10% per hex > 2)');
+      expect(banner.text()).toContain('1-Turn (6s) 180° in-hex pivot (spends 3 MR)');
+      expect(banner.text()).toContain('Inertial compensators safely absorb up to 3 points of total ΔV (3 ADF braking) with no STA check required');
+      expect(banner.text()).toContain('High-G braking (4+ ADF spent in a single turn) requires crew STA checks (-10% per point of ADF spent above 3)');
     } finally {
       if (wrapper) wrapper.unmount();
       global.fetch = origFetch;
@@ -400,9 +401,9 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
       expect(banner.classes()).toContain('multi-turn');
       expect(banner.text()).toContain('Lumbering & Snap Flip Capable');
       expect(banner.text()).toContain('MR 2 < 3');
-      expect(banner.text()).toContain('2-Turn Lumbering Flip (drifts at current speed while rotating 90°/turn; no STA check)');
-      expect(banner.text()).toContain('1-Turn Emergency Snap Flip (Pilot skill check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships)');
-      expect(banner.text()).toContain('High-G braking (3+ hexes deceleration) requires crew STA checks');
+      expect(banner.text()).toContain('2-Turn Lumbering Flip (drifts at speed rotating native MR 60°–120° on Turn 1, completing 180° on Turn 2)');
+      expect(banner.text()).toContain('1-Turn Emergency Snap Flip (Pilot check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships)');
+      expect(banner.text()).toContain('Safe braking up to 3 ADF; High-G braking (4+ ADF) requires crew STA checks (-10% per point above 3)');
     } finally {
       if (wrapper) wrapper.unmount();
       global.fetch = origFetch;
@@ -434,7 +435,7 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
       expect(banner.classes()).not.toContain('capable');
       expect(banner.classes()).not.toContain('multi-turn');
       expect(banner.text()).toContain('Flip & Burn Unavailable (MR 0)');
-      expect(banner.text()).toContain('Vessel lacks sufficient maneuvering thrusters. Cannot pivot or rotate.');
+      expect(banner.text()).toContain('Vessel lacks maneuvering thrusters. Cannot pivot or rotate.');
     } finally {
       if (wrapper) wrapper.unmount();
       global.fetch = origFetch;
