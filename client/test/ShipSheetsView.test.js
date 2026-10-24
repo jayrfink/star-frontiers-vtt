@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { describe, it, expect, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
 import fs from 'fs';
 import path from 'path';
 import ShipSheetsView from '../src/views/ShipSheetsView.vue';
@@ -315,6 +319,126 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
     expect(ShipSheetsView.methods.canFlipAndBurn(2)).toBe(false);
     expect(ShipSheetsView.methods.canFlipAndBurn(1)).toBe(false);
     expect(ShipSheetsView.methods.canFlipAndBurn(0)).toBe(false);
+  });
+
+  it('exposes canStandardFlip, canLumberingFlip, and canSnapFlip methods', () => {
+    expect(typeof ShipSheetsView.methods.canStandardFlip).toBe('function');
+    expect(typeof ShipSheetsView.methods.canLumberingFlip).toBe('function');
+    expect(typeof ShipSheetsView.methods.canSnapFlip).toBe('function');
+
+    expect(ShipSheetsView.methods.canStandardFlip(4)).toBe(true);
+    expect(ShipSheetsView.methods.canStandardFlip(3)).toBe(true);
+    expect(ShipSheetsView.methods.canStandardFlip(2)).toBe(false);
+
+    expect(ShipSheetsView.methods.canLumberingFlip(2)).toBe(true);
+    expect(ShipSheetsView.methods.canLumberingFlip(1)).toBe(true);
+    expect(ShipSheetsView.methods.canLumberingFlip(3)).toBe(false);
+    expect(ShipSheetsView.methods.canLumberingFlip(0)).toBe(false);
+
+    expect(ShipSheetsView.methods.canSnapFlip(2)).toBe(true);
+    expect(ShipSheetsView.methods.canSnapFlip(1)).toBe(true);
+    expect(ShipSheetsView.methods.canSnapFlip(3)).toBe(false);
+    expect(ShipSheetsView.methods.canSnapFlip(0)).toBe(false);
+  });
+
+  it('renders the Standard Flip Capable banner and High-G braking rule when selected ship has MR >= 3', async () => {
+    const origFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 'ship-1', name: 'Assault Scout', mr: 4, adf: 5, dcr: 35, hull_points: 15, current_hp: 15, weapons: [], defenses: {} },
+      ],
+    });
+
+    try {
+      const wrapper = mount(ShipSheetsView, {
+        global: {
+          stubs: {
+            ImageBrowserModal: true,
+          },
+        },
+      });
+      await flushPromises();
+
+      const banner = wrapper.find('.flip-burn-ship-banner');
+      expect(banner.exists()).toBe(true);
+      expect(banner.classes()).toContain('capable');
+      expect(banner.text()).toContain('Standard Flip Capable');
+      expect(banner.text()).toContain('MR 4 ≥ 3');
+      expect(banner.text()).toContain('1-Turn (6s) 180° in-hex pivot');
+      expect(banner.text()).toContain('No crew STA check required (inertial compensators absorb up to 2 hexes of braking)');
+      expect(banner.text()).toContain('High-G braking (3+ hexes deceleration) requires crew STA checks (-10% per hex > 2)');
+
+      wrapper.unmount();
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+
+  it('renders the Lumbering & Snap Flip Capable banner when selected ship has MR 1-2', async () => {
+    const origFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 'ship-2', name: 'Heavy Cruiser', mr: 2, adf: 2, dcr: 70, hull_points: 80, current_hp: 80, weapons: [], defenses: {} },
+      ],
+    });
+
+    try {
+      const wrapper = mount(ShipSheetsView, {
+        global: {
+          stubs: {
+            ImageBrowserModal: true,
+          },
+        },
+      });
+      await flushPromises();
+
+      const banner = wrapper.find('.flip-burn-ship-banner');
+      expect(banner.exists()).toBe(true);
+      expect(banner.classes()).toContain('multi-turn');
+      expect(banner.text()).toContain('Lumbering & Snap Flip Capable');
+      expect(banner.text()).toContain('MR 2 < 3');
+      expect(banner.text()).toContain('2-Turn Lumbering Flip (drifts at current speed while rotating 90°/turn; no STA check)');
+      expect(banner.text()).toContain('1-Turn Emergency Snap Flip (Pilot skill check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships)');
+      expect(banner.text()).toContain('High-G braking (3+ hexes deceleration) requires crew STA checks');
+
+      wrapper.unmount();
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+
+  it('renders the Flip & Burn Unavailable banner when selected ship has MR 0', async () => {
+    const origFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 'ship-0', name: 'Fortress Station', mr: 0, adf: 0, dcr: 100, hull_points: 120, current_hp: 120, weapons: [], defenses: {} },
+      ],
+    });
+
+    try {
+      const wrapper = mount(ShipSheetsView, {
+        global: {
+          stubs: {
+            ImageBrowserModal: true,
+          },
+        },
+      });
+      await flushPromises();
+
+      const banner = wrapper.find('.flip-burn-ship-banner');
+      expect(banner.exists()).toBe(true);
+      expect(banner.classes()).not.toContain('capable');
+      expect(banner.classes()).not.toContain('multi-turn');
+      expect(banner.text()).toContain('Flip & Burn Unavailable (MR 0)');
+      expect(banner.text()).toContain('Vessel lacks sufficient maneuvering thrusters. Cannot pivot or rotate.');
+
+      wrapper.unmount();
+    } finally {
+      global.fetch = origFetch;
+    }
   });
 });
 

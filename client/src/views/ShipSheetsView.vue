@@ -160,23 +160,23 @@
             </div>
           </div>
 
-          <div class="flip-burn-ship-banner" :class="{ capable: canFlipAndBurn(selectedShip.mr), 'multi-turn': canMultiTurnFlip(selectedShip.mr) }">
-            <template v-if="canFlipAndBurn(selectedShip.mr)">
-              <span class="fb-badge capable">🔄 Flip &amp; Burn Capable (MR {{ selectedShip.mr }} &ge; 3)</span>
+          <div class="flip-burn-ship-banner" :class="{ capable: canStandardFlip(selectedShip.mr), 'multi-turn': canLumberingFlip(selectedShip.mr) || canSnapFlip(selectedShip.mr) }">
+            <template v-if="canStandardFlip(selectedShip.mr)">
+              <span class="fb-badge capable">🔄 Standard Flip Capable (MR {{ selectedShip.mr }} &ge; 3)</span>
               <span class="fb-rule-text">
-                Can execute a 1-turn 180° Flip &amp; Burn. Any strapped-in PCs on board must pass a STA check or pass out for <strong>1d10 × 10 seconds</strong>.
+                Can execute <strong>1-Turn (6s) 180° in-hex pivot</strong>. No crew STA check required (inertial compensators absorb up to 2 hexes of braking). <strong>High-G braking</strong> (3+ hexes deceleration) requires crew STA checks (-10% per hex &gt; 2).
               </span>
             </template>
-            <template v-else-if="canMultiTurnFlip(selectedShip.mr)">
-              <span class="fb-badge multi-turn">🔄 Multi-Turn Flip Capable (MR {{ selectedShip.mr }} &lt; 3)</span>
+            <template v-else-if="canLumberingFlip(selectedShip.mr) || canSnapFlip(selectedShip.mr)">
+              <span class="fb-badge multi-turn">🔄 Lumbering &amp; Snap Flip Capable (MR {{ selectedShip.mr }} &lt; 3)</span>
               <span class="fb-rule-text">
-                Can execute a 180° Flip across <strong>2 combat turns</strong> (90° per turn). PCs must make <strong>2 separate STA checks</strong> (1 per turn) or pass out for <strong>1d10 × 10 seconds</strong>.
+                Can execute <strong>2-Turn Lumbering Flip</strong> (drifts at current speed while rotating 90°/turn; no STA check) or <strong>1-Turn Emergency Snap Flip</strong> (Pilot skill check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships). <strong>High-G braking</strong> (3+ hexes deceleration) requires crew STA checks.
               </span>
             </template>
             <template v-else>
               <span class="fb-badge incapable">🚫 Flip &amp; Burn Unavailable (MR 0)</span>
               <span class="fb-rule-text">
-                Vessel lacks sufficient maneuvering thrusters.
+                Vessel lacks sufficient maneuvering thrusters. Cannot pivot or rotate.
               </span>
             </template>
           </div>
@@ -670,7 +670,13 @@ import { SHIP_PRESETS } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../constants/shipWeapons.js';
-import { canFlipAndBurn, canMultiTurnFlip } from '../utils/flipAndBurn.js';
+import {
+  canFlipAndBurn,
+  canMultiTurnFlip,
+  canStandardFlip,
+  canLumberingFlip,
+  canSnapFlip,
+} from '../utils/flipAndBurn.js';
 
 export default {
   name: 'ShipSheetsView',
@@ -767,6 +773,9 @@ export default {
   methods: {
     canFlipAndBurn,
     canMultiTurnFlip,
+    canStandardFlip,
+    canLumberingFlip,
+    canSnapFlip,
     handleKeydown(e) {
       if (e.key === 'Escape' && this.showAddWeaponModal) {
         this.showAddWeaponModal = false;
