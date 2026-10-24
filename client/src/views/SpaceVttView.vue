@@ -656,17 +656,17 @@
                     </div>
                   </div>
 
-                  <div v-if="brakingDeltaV <= 2" class="braking-indicator safe">
+                  <div v-if="brakingDeltaV <= 3" class="braking-indicator safe">
                     ✅ Safe Deceleration: Compensators active, 0% penalty
                   </div>
                   <div v-else class="braking-indicator high-g">
-                    ⚠️ HIGH-G BRAKING BURN: -{{ (brakingDeltaV - 2) * 10 }}% STA check penalty
+                    ⚠️ HIGH-G BRAKING BURN: -{{ (brakingDeltaV - 3) * 10 }}% STA check penalty
                   </div>
 
                   <button
                     type="button"
                     class="btn-braking-burn full-width"
-                    :class="{ 'high-g': brakingDeltaV >= 3 }"
+                    :class="{ 'high-g': brakingDeltaV >= 4 }"
                     @click="executeBrakingBurn"
                   >
                     🚀 Execute Braking Burn (ΔV {{ brakingDeltaV }})
@@ -682,6 +682,16 @@
                   🩺 Crew G-Load Check
                 </button>
 
+                <!-- Direct button to open Orbital Slingshot Modal -->
+                <button
+                  type="button"
+                  class="btn-slingshot-trigger full-width"
+                  @click="openSlingshotModal()"
+                  title="Open Orbital Slingshot & Gravity Well Calculator"
+                >
+                  🪐 Orbital Slingshot
+                </button>
+
                 <div class="flip-burn-roll-btns">
                   <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll quick d% STA Check">
                     🎲 Quick STA (d%)
@@ -690,6 +700,26 @@
                     💫 Blackout (1d10×10s)
                   </button>
                 </div>
+              </div>
+
+              <!-- Orbital Slingshot Proximity Box -->
+              <div v-if="isSelectedTokenSlingshotEligible" class="slingshot-box">
+                <div class="slingshot-header">
+                  <label>🪐 Orbital Slingshot</label>
+                  <span class="slingshot-badge" v-if="nearestCelestialBody">
+                    {{ nearestCelestialBody.name }} (d={{ nearestCelestialBody.distance }})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-execute-slingshot full-width"
+                  @click="openSlingshotModalFromNearest"
+                >
+                  🪐 Execute Orbital Slingshot
+                </button>
+                <small class="slingshot-hint">
+                  Celestial gravity well detected within slingshot parameters (Speed &ge; 4).
+                </small>
               </div>
 
               <!-- Ship Weapons Section -->
@@ -1008,7 +1038,7 @@
 
         <div class="crew-gcheck-trigger-badge">
           <strong>Trigger:</strong> {{ crewCheckReason }}
-          <span v-if="crewCheckDeltaV > 2" class="trigger-dv-tag">ΔV {{ crewCheckDeltaV }} (-{{ (crewCheckDeltaV - 2) * 10 }}%)</span>
+          <span v-if="crewCheckDeltaV > 3" class="trigger-dv-tag">ΔV {{ crewCheckDeltaV }} (-{{ (crewCheckDeltaV - 3) * 10 }}%)</span>
         </div>
 
         <div class="form-group">
@@ -1155,6 +1185,192 @@
       </div>
     </div>
 
+    <!-- Modal: Orbital Slingshot Calculator Dialog -->
+    <div
+      v-if="showSlingshotModal"
+      class="modal-backdrop slingshot-modal-backdrop"
+      @click.self="showSlingshotModal = false"
+    >
+      <div class="modal-card slingshot-modal">
+        <div class="slingshot-modal-header">
+          <h3>🪐 Orbital Slingshot Calculator</h3>
+          <span class="slingshot-ship-name">{{ selectedToken?.name || 'Vessel' }}</span>
+        </div>
+
+        <div class="slingshot-grid">
+          <!-- Body Type Selection -->
+          <div class="form-group">
+            <label>Celestial Body Type</label>
+            <select v-model="slingshotBodyType" class="slingshot-select">
+              <option value="MOON">Moon (Crater Skim: d=0 only)</option>
+              <option value="PLANET">Planet (Outer Well: d=1, Skim: d=0)</option>
+              <option value="GAS_GIANT">Gas Giant (Outer Well: d=1-2, Deep Skim: d=0)</option>
+            </select>
+          </div>
+
+          <!-- Hex Distance Selection -->
+          <div class="form-group">
+            <label>Distance from Body (Hexes)</label>
+            <div class="stepper-row">
+              <input
+                type="number"
+                v-model.number="slingshotDistance"
+                min="0"
+                :max="slingshotBodyType === 'GAS_GIANT' ? 2 : (slingshotBodyType === 'PLANET' ? 1 : 0)"
+                class="stepper-input"
+              />
+              <div class="btn-group-sm">
+                <button type="button" @click="slingshotDistance = Math.max(0, slingshotDistance - 1)" :disabled="slingshotDistance <= 0">-1</button>
+                <button
+                  type="button"
+                  @click="slingshotDistance = slingshotDistance + 1"
+                  :disabled="slingshotDistance >= (slingshotBodyType === 'GAS_GIANT' ? 2 : (slingshotBodyType === 'PLANET' ? 1 : 0))"
+                >+1</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Entry Speed Input -->
+          <div class="form-group">
+            <label>Entry Speed (Hexes/Turn, Min 4)</label>
+            <div class="stepper-row">
+              <input
+                type="number"
+                v-model.number="slingshotEntrySpeed"
+                min="4"
+                max="50"
+                class="stepper-input"
+              />
+              <div class="btn-group-sm">
+                <button type="button" @click="slingshotEntrySpeed = Math.max(4, slingshotEntrySpeed - 1)" :disabled="slingshotEntrySpeed <= 4">-1</button>
+                <button type="button" @click="slingshotEntrySpeed = slingshotEntrySpeed + 1">+1</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pilot Skill Input -->
+          <div class="form-group">
+            <label>Pilot Skill (%)</label>
+            <input
+              type="number"
+              v-model.number="slingshotPilotSkill"
+              min="1"
+              max="99"
+              class="stepper-input full-width"
+            />
+          </div>
+
+          <!-- Oberth ADF Spent Stepper (Distance 0 only) -->
+          <div class="form-group">
+            <div class="label-with-hint">
+              <label>Oberth Thrust Burn (ADF Spent)</label>
+              <span class="hint-text">Dist 0 only (Max {{ maxSlingshotAdf }})</span>
+            </div>
+            <div class="stepper-row">
+              <input
+                type="number"
+                v-model.number="slingshotAdfSpent"
+                min="0"
+                :max="maxSlingshotAdf"
+                :disabled="slingshotDistance !== 0"
+                class="stepper-input"
+              />
+              <div class="btn-group-sm">
+                <button
+                  type="button"
+                  @click="slingshotAdfSpent = Math.max(0, slingshotAdfSpent - 1)"
+                  :disabled="slingshotDistance !== 0 || slingshotAdfSpent <= 0"
+                >-1</button>
+                <button
+                  type="button"
+                  @click="slingshotAdfSpent = Math.min(maxSlingshotAdf, slingshotAdfSpent + 1)"
+                  :disabled="slingshotDistance !== 0 || slingshotAdfSpent >= maxSlingshotAdf"
+                >+1</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Parameters Display -->
+        <div v-if="liveSlingshotParams.eligible" class="slingshot-preview-card">
+          <div class="preview-header">
+            <span class="zone-name-badge">Zone: {{ liveSlingshotParams.zoneName }}</span>
+            <span
+              class="g-load-pill"
+              :class="{ 'safe': !liveSlingshotParams.isHighG, 'high-g': liveSlingshotParams.isHighG }"
+            >
+              {{ liveSlingshotParams.isHighG ? `⚠️ HIGH-G (Total ΔV ${liveSlingshotParams.totalDeltaV})` : `✅ Safe (Total ΔV ${liveSlingshotParams.totalDeltaV})` }}
+            </span>
+          </div>
+
+          <div class="preview-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Vector Bend</span>
+              <span class="metric-value">+{{ liveSlingshotParams.bonusMr }} MR ({{ liveSlingshotParams.bonusMr * 60 }}°)</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Free Exit Speed</span>
+              <span class="metric-value">+{{ liveSlingshotParams.freeExitSpeed }}</span>
+            </div>
+            <div class="metric-item" v-if="liveSlingshotParams.oberthExitSpeed > 0">
+              <span class="metric-label">Oberth Exit Boost</span>
+              <span class="metric-value">+{{ liveSlingshotParams.oberthExitSpeed }}</span>
+            </div>
+            <div class="metric-item total">
+              <span class="metric-label">Total Exit Speed</span>
+              <span class="metric-value highlight">{{ liveSlingshotParams.totalExitSpeed }} hexes/turn</span>
+            </div>
+            <div class="metric-item pilot">
+              <span class="metric-label">Pilot Check</span>
+              <span class="metric-value" v-if="liveSlingshotParams.requiresPilotCheck">
+                {{ liveSlingshotPilotTarget }}%
+                <small v-if="liveSlingshotParams.pilotModifier !== 0">({{ liveSlingshotParams.pilotModifier > 0 ? '+' : '' }}{{ liveSlingshotParams.pilotModifier }}%)</small>
+              </span>
+              <span class="metric-value routine" v-else>Routine (No Roll)</span>
+            </div>
+          </div>
+
+          <div v-if="liveSlingshotParams.isHighG" class="high-g-warning">
+            ⚠️ Total G-load exceeds safe threshold (ΔV {{ liveSlingshotParams.totalDeltaV }} &gt; 3). Requires Crew STA Check at {{ liveSlingshotParams.gPenalty }}% upon completion.
+          </div>
+        </div>
+
+        <div v-else class="slingshot-ineligible-banner">
+          ⚠️ Ineligible Slingshot: {{ liveSlingshotParams.reason }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="modal-actions slingshot-actions">
+          <button
+            type="button"
+            class="btn-execute-slingshot-roll"
+            :disabled="!liveSlingshotParams.eligible"
+            @click="executeSlingshot"
+          >
+            {{ liveSlingshotParams.requiresPilotCheck ? '🎲 Execute Slingshot & Roll Pilot Check' : '🪐 Execute Orbital Slingshot' }}
+          </button>
+          <button
+            type="button"
+            class="btn-modal-cancel btn-slingshot-close"
+            @click="showSlingshotModal = false"
+          >
+            Close
+          </button>
+        </div>
+
+        <!-- Result Outcome Display -->
+        <div v-if="slingshotLastResult" class="slingshot-result-card" :class="{ 'success': slingshotLastResult.success, 'hazard': slingshotLastResult.isMinorHazard, 'critical': slingshotLastResult.isMajorHazard }">
+          <div class="result-headline">
+            {{ slingshotLastResult.success ? '✅ Pilot Check Succeeded!' : (slingshotLastResult.isMinorHazard ? '⚠️ Minor Hazard (Atmospheric Skip)' : '💥 Critical Hazard (Capture / Impact)') }}
+            (Roll: {{ slingshotLastResult.roll }} vs Target: {{ slingshotLastResult.target }}%)
+          </div>
+          <div class="result-summary-text">
+            {{ slingshotLastResult.summaryText }}
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Image Browser Modal -->
     <ImageBrowserModal
       v-model="showImageBrowser"
@@ -1194,6 +1410,11 @@ import {
   formatFlipAndBurnAlert,
   formatMultiTurnAlert,
   MULTI_TURN_FLIP_STATUS,
+  calculateSlingshotParameters,
+  resolveSlingshotPilotCheck,
+  formatSlingshotSuccessAlert,
+  formatSlingshotHazardAlert,
+  SAFE_COMPENSATOR_DELTA_V,
 } from '../utils/flipAndBurn.js';
 
 
@@ -1676,6 +1897,15 @@ const crewCheckPosture = ref('braced'); // 'couch', 'braced', 'unbraced'
 const crewCheckLocation = ref('midships'); // 'midships', 'extremity'
 const crewCheckLastResult = ref(null);
 
+// Orbital Slingshot Modal State
+const showSlingshotModal = ref(false);
+const slingshotBodyType = ref('PLANET'); // 'MOON', 'PLANET', 'GAS_GIANT'
+const slingshotDistance = ref(0);
+const slingshotEntrySpeed = ref(4);
+const slingshotPilotSkill = ref(50);
+const slingshotAdfSpent = ref(0);
+const slingshotLastResult = ref(null);
+
 // Forms
 const gridLineWidthOptions = [0.25, 0.5, 0.75, 1, 1.5, 2, 3];
 const gridDimensionOptions = [10, 15, 20, 25, 30, 40, 50, 60, 80, 100];
@@ -1802,6 +2032,88 @@ const crewCheckTargetSta = computed(() => {
   });
 });
 
+// Hex distance calculations in odd-r coordinates
+function offsetToCube(col, row) {
+  const c = Number(col) || 0;
+  const r = Number(row) || 0;
+  const q = c - (r - (r & 1)) / 2;
+  const s = -q - r;
+  return { q, r, s };
+}
+
+function hexDistance(a, b) {
+  if (!a || !b) return Infinity;
+  const ac = offsetToCube(a.x, a.y);
+  const bc = offsetToCube(b.x, b.y);
+  return (Math.abs(ac.q - bc.q) + Math.abs(ac.r - bc.r) + Math.abs(ac.s - bc.s)) / 2;
+}
+
+function getCelestialBodyType(token) {
+  if (!token) return 'PLANET';
+  const target = String(token.body_type || token.name || token.label || '').trim();
+  if (/moon/i.test(target)) return 'MOON';
+  if (/gas giant|giant|jupiter|saturn/i.test(target)) return 'GAS_GIANT';
+  return 'PLANET';
+}
+
+const nearestCelestialBody = computed(() => {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return null;
+  const celestials = tokens.value.filter((t) => isCelestialToken(t));
+  if (celestials.length === 0) return null;
+
+  let nearest = null;
+  let minDistance = Infinity;
+  for (const c of celestials) {
+    const dist = hexDistance(selectedToken.value, c);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearest = c;
+    }
+  }
+
+  if (!nearest) return null;
+  return {
+    token: nearest,
+    name: nearest.name || 'Celestial Body',
+    bodyType: getCelestialBodyType(nearest),
+    distance: minDistance,
+  };
+});
+
+const isSlingshotZoneEligible = computed(() => {
+  if (!nearestCelestialBody.value) return false;
+  const { bodyType, distance } = nearestCelestialBody.value;
+  if (bodyType === 'MOON') return distance === 0;
+  if (bodyType === 'PLANET') return distance <= 1;
+  if (bodyType === 'GAS_GIANT') return distance <= 2;
+  return false;
+});
+
+const isSelectedTokenSlingshotEligible = computed(() => {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return false;
+  const speed = Number(selectedTokenForm.current_speed ?? selectedToken.value?.current_speed) || 0;
+  return speed >= 4 && isSlingshotZoneEligible.value;
+});
+
+const maxSlingshotAdf = computed(() => {
+  return Number(selectedTokenLinkedShip.value?.adf) || 5;
+});
+
+const liveSlingshotParams = computed(() => {
+  return calculateSlingshotParameters(
+    slingshotBodyType.value,
+    slingshotDistance.value,
+    slingshotEntrySpeed.value,
+    slingshotDistance.value === 0 ? slingshotAdfSpent.value : 0
+  );
+});
+
+const liveSlingshotPilotTarget = computed(() => {
+  const base = Number(slingshotPilotSkill.value) || 0;
+  const mod = liveSlingshotParams.value?.pilotModifier || 0;
+  return Math.max(1, Math.min(99, base + mod));
+});
+
 // Watch selectedToken to sync reactive form (Bugs 12 & 31)
 watch(selectedToken, (newToken) => {
   if (newToken) {
@@ -1863,13 +2175,17 @@ function onKeyDown(e) {
       showCrewGCheckModal.value = false;
       return;
     }
+    if (showSlingshotModal.value) {
+      showSlingshotModal.value = false;
+      return;
+    }
     if (showPercentileHud.value || showDamageHud.value || showDmgMenu.value) {
       clearDice();
       return;
     }
   }
 
-  if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value) return;
+  if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value || showSlingshotModal.value) return;
 
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
 
@@ -1990,29 +2306,75 @@ async function executeLumberingFlip() {
   }
 }
 
-async function executeSnapFlip() {
+async function executeSnapFlip(options = {}) {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
   const shipName = selectedToken.value.name || 'Ship';
-  const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
-  await rotateSelectedToken(180);
-  sendRollToServer({
-    type: 'percentile',
-    label: `${shipName}: ⚠️ Emergency Snap Flip (180°)`,
-    total: newRotation,
-    breakdown: formatSnapFlipAlert(shipName, newRotation),
-  });
-  openCrewGCheckModal('Emergency Snap Flip', {
-    isSnapFlip: true,
-    extremity: 'extremity',
-    deltaV: 0,
-  });
+  const mr = Number(selectedTokenLinkedShip.value?.mr) || 1;
+  const pilotTarget = options.pilotSkill ?? 50;
+  let roll = options.roll ?? null;
+
+  if (roll === null) {
+    playDiceSound({ isRemote: false });
+    const diceBox = await getReadyDiceBox();
+    if (diceBox) {
+      try {
+        const results = await diceBox.roll([
+          { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+          { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+        ]);
+        const rollSummary = calculatePercentileRoll(results);
+        if (rollSummary.valid) roll = rollSummary.total;
+      } catch (err) {
+        console.error('Snap Flip 3D roll failed:', err);
+      }
+    }
+  }
+
+  if (roll === null) {
+    roll = Math.floor(Math.random() * 100) + 1;
+  }
+
+  const success = roll <= pilotTarget;
+
+  if (success) {
+    const newRotation = calculateFlipHeading(selectedToken.value.rotation || 0);
+    await rotateSelectedToken(180);
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: ⚠️ Emergency Snap Flip (180°)`,
+      total: newRotation,
+      breakdown: formatSnapFlipAlert(shipName, newRotation),
+    });
+    openCrewGCheckModal('Emergency Snap Flip', {
+      isSnapFlip: true,
+      extremity: 'extremity',
+      deltaV: 0,
+    });
+  } else {
+    // Failed Snap Flip: Rotates native MR only (1-2 faces / 60° or 120°), speed unchanged, prompts crew whip STA check
+    const nativeTurnDegrees = mr * 60;
+    const currentRot = selectedToken.value.rotation || 0;
+    const partialRotation = calculateTurnHeading(currentRot, nativeTurnDegrees);
+    await rotateSelectedToken(nativeTurnDegrees);
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: ⚠️ Emergency Snap Flip FAILED (Pilot Check: ${roll} vs ${pilotTarget}%)`,
+      total: partialRotation,
+      breakdown: `${shipName}: Emergency Snap Flip FAILED (Roll ${roll} vs ${pilotTarget}%). RCS thrusters fail to complete 180° pivot; rotates native MR only (${nativeTurnDegrees}°, heading: ${partialRotation}°). Main engine braking blocked this turn! Crew suffers centrifugal whip.`,
+    });
+    openCrewGCheckModal('Emergency Snap Flip (Failed)', {
+      isSnapFlip: true,
+      extremity: 'extremity',
+      deltaV: 0,
+    });
+  }
 }
 
 async function executeBrakingBurn() {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
   const shipName = selectedToken.value.name || 'Ship';
   const dv = Math.max(1, Number(brakingDeltaV.value) || 1);
-  const isHighG = dv >= 3;
+  const isHighG = dv >= 4;
 
   selectedTokenForm.current_speed = Math.max(0, (selectedTokenForm.current_speed || 0) - dv);
   await updateSelectedToken();
@@ -2030,6 +2392,179 @@ async function executeBrakingBurn() {
       deltaV: dv,
       isSnapFlip: false,
       extremity: 'midships',
+    });
+  }
+}
+
+function openSlingshotModal(preset = {}) {
+  const nearest = nearestCelestialBody.value;
+  slingshotBodyType.value = preset.bodyType || (nearest ? nearest.bodyType : 'PLANET');
+  slingshotDistance.value = preset.distance ?? (nearest ? nearest.distance : (slingshotBodyType.value === 'MOON' ? 0 : 1));
+  const currentSpeed = Number(selectedTokenForm.current_speed ?? selectedToken.value?.current_speed) || 4;
+  slingshotEntrySpeed.value = preset.entrySpeed ?? Math.max(4, currentSpeed);
+  slingshotPilotSkill.value = preset.pilotSkill ?? 50;
+  slingshotAdfSpent.value = preset.adfSpent ?? 0;
+  slingshotLastResult.value = null;
+  showSlingshotModal.value = true;
+}
+
+function openSlingshotModalFromNearest() {
+  if (!nearestCelestialBody.value) {
+    openSlingshotModal();
+    return;
+  }
+  openSlingshotModal({
+    bodyType: nearestCelestialBody.value.bodyType,
+    distance: nearestCelestialBody.value.distance,
+    entrySpeed: Math.max(4, Number(selectedTokenForm.current_speed ?? selectedToken.value?.current_speed) || 4),
+  });
+}
+
+async function executeSlingshot(options = {}) {
+  if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
+  const shipName = selectedToken.value.name || 'Ship';
+  const params = liveSlingshotParams.value;
+
+  if (!params.eligible) return;
+
+  // Routine Slingshot (Planet Dist 1 / Gas Giant Dist 1-2): No Pilot Check
+  if (!params.requiresPilotCheck) {
+    selectedTokenForm.current_speed = params.totalExitSpeed;
+    await updateSelectedToken();
+
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: 🪐 Orbital Slingshot (${slingshotBodyType.value})`,
+      total: params.totalExitSpeed,
+      breakdown: formatSlingshotSuccessAlert(
+        shipName,
+        slingshotBodyType.value,
+        params.zoneName,
+        params.bonusMr,
+        params.totalExitSpeed,
+        params.totalDeltaV
+      ),
+    });
+
+    showSlingshotModal.value = false;
+    return;
+  }
+
+  // Distance 0 Slingshot: Requires Pilot Check (d100)
+  playDiceSound({ isRemote: false });
+  let roll = options.roll ?? null;
+
+  if (roll === null) {
+    const diceBox = await getReadyDiceBox();
+    if (diceBox) {
+      showPercentileHud.value = false;
+      showDamageHud.value = false;
+      showInitiativeHud.value = false;
+      if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+
+      try {
+        const results = await diceBox.roll([
+          { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+          { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+        ]);
+        const rollSummary = calculatePercentileRoll(results);
+        if (rollSummary.valid) {
+          roll = rollSummary.total;
+          lastPercentileRoll.value = {
+            ...rollSummary,
+            username: authStore.user?.username,
+            role: authStore.user?.role,
+          };
+          showPercentileHud.value = true;
+          percentileHudTimeout = setTimeout(() => {
+            showPercentileHud.value = false;
+          }, 8000);
+        }
+      } catch (err) {
+        console.error('Slingshot 3D dice roll failed:', err);
+      }
+    }
+  }
+
+  if (roll === null) {
+    roll = Math.floor(Math.random() * 100) + 1;
+  }
+
+  const target = liveSlingshotPilotTarget.value;
+  const result = resolveSlingshotPilotCheck(roll, target, slingshotBodyType.value);
+  slingshotLastResult.value = {
+    roll,
+    target,
+    ...result,
+  };
+
+  if (result.success) {
+    selectedTokenForm.current_speed = params.totalExitSpeed;
+    await updateSelectedToken();
+
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: 🪐 Orbital Slingshot SUCCESS`,
+      total: roll,
+      breakdown: formatSlingshotSuccessAlert(
+        shipName,
+        slingshotBodyType.value,
+        params.zoneName,
+        params.bonusMr,
+        params.totalExitSpeed,
+        params.totalDeltaV
+      ),
+    });
+
+    if (params.totalDeltaV > SAFE_COMPENSATOR_DELTA_V) {
+      showSlingshotModal.value = false;
+      openCrewGCheckModal('High-G Orbital Slingshot', {
+        deltaV: params.totalDeltaV,
+      });
+    }
+  } else if (result.isMinorHazard) {
+    // Minor Hazard (01-19): loses free exit speed
+    const exitSpeed = slingshotEntrySpeed.value + (slingshotDistance.value === 0 ? params.oberthExitSpeed : 0);
+    selectedTokenForm.current_speed = exitSpeed;
+    await updateSelectedToken();
+
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: ⚠️ Orbital Slingshot HAZARD`,
+      total: roll,
+      breakdown: formatSlingshotHazardAlert(
+        shipName,
+        slingshotBodyType.value,
+        false,
+        result.hullDamageDice,
+        result.summaryText
+      ),
+    });
+  } else if (result.isMajorHazard) {
+    // Major Hazard (20+): speed halved, structural damage, Moon scatters 60°, Planet/Gas Giant trapped
+    const postSpeed = Math.floor(slingshotEntrySpeed.value * 0.5);
+    selectedTokenForm.current_speed = postSpeed;
+
+    if (slingshotBodyType.value === 'MOON') {
+      await rotateSelectedToken(60);
+    } else {
+      if (!selectedTokenForm.status_effects.includes('ORBITAL_DECAY_REQUIRES_2_ADF_ESCAPE')) {
+        selectedTokenForm.status_effects.push('ORBITAL_DECAY_REQUIRES_2_ADF_ESCAPE');
+      }
+    }
+    await updateSelectedToken();
+
+    sendRollToServer({
+      type: 'percentile',
+      label: `${shipName}: ⚠️ Orbital Slingshot CRITICAL HAZARD`,
+      total: roll,
+      breakdown: formatSlingshotHazardAlert(
+        shipName,
+        slingshotBodyType.value,
+        true,
+        result.hullDamageDice,
+        result.summaryText
+      ),
     });
   }
 }
@@ -5479,5 +6014,298 @@ onBeforeUnmount(() => {
   border-color: rgba(171, 71, 188, 0.4);
   color: #ba68c8;
   background-color: rgba(171, 71, 188, 0.1);
+}
+
+/* Orbital Slingshot & Gravity Well Styling */
+.btn-slingshot-trigger {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+
+.btn-slingshot-trigger:hover {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: #c084fc;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
+  color: #ffffff;
+}
+
+.slingshot-box {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slingshot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slingshot-header label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #c084fc;
+  margin: 0;
+}
+
+.slingshot-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(168, 85, 247, 0.2);
+  color: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.btn-execute-slingshot {
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
+  color: #ffffff;
+  border: 1px solid #a855f7;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-execute-slingshot:hover {
+  background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+.slingshot-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* Orbital Slingshot Modal */
+.slingshot-modal {
+  max-width: 520px;
+  width: 92vw;
+  background: #0f172a;
+  border: 1px solid #a855f7;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.slingshot-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.slingshot-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #c084fc;
+}
+
+.slingshot-ship-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(168, 85, 247, 0.15);
+  color: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.slingshot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.slingshot-select {
+  width: 100%;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+.slingshot-select:focus {
+  border-color: #a855f7;
+  outline: none;
+}
+
+.slingshot-preview-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.zone-name-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.g-load-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.g-load-pill.safe {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid #10b981;
+}
+
+.g-load-pill.high-g {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+.preview-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.metric-item {
+  background: #0f172a;
+  border: 1px solid #243248;
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-item.total,
+.metric-item.pilot {
+  grid-column: span 1;
+}
+
+.metric-label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.metric-value.highlight {
+  color: #38bdf8;
+}
+
+.metric-value.routine {
+  color: #34d399;
+}
+
+.high-g-warning {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.slingshot-ineligible-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+}
+
+.slingshot-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-execute-slingshot-roll {
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
+  color: #ffffff;
+  border: 1px solid #a855f7;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.btn-execute-slingshot-roll:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+}
+
+.btn-execute-slingshot-roll:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slingshot-result-card {
+  margin-top: 14px;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fadeIn 0.2s ease;
+}
+
+.slingshot-result-card.success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+}
+
+.slingshot-result-card.hazard {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+}
+
+.slingshot-result-card.critical {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
 }
 </style>

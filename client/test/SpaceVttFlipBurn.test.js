@@ -15,6 +15,7 @@ import {
   MULTI_TURN_FLIP_STATUS,
   calculateFlipHeading,
   calculateTurnHeading,
+  SAFE_COMPENSATOR_DELTA_V,
 } from '../src/utils/flipAndBurn.js';
 
 describe('SpaceVttView Flip & Burn and Crew G-Load Check Integration', () => {
@@ -126,7 +127,7 @@ describe('SpaceVttView Flip & Burn and Crew G-Load Check Integration', () => {
     it('handles Escape key before general modal guard so crew G-check modal can close', () => {
       const onKeyDownSource = content.slice(content.indexOf('function onKeyDown(e) {'));
       const escapeIndex = onKeyDownSource.indexOf("e.key === 'Escape'");
-      const guardIndex = onKeyDownSource.indexOf('if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value) return;');
+      const guardIndex = onKeyDownSource.search(/if\s*\(showCreateMapModal\.value\s*\|\|\s*showAddTokenModal\.value\s*\|\|\s*showCrewGCheckModal\.value(\s*\|\|\s*showSlingshotModal\.value)?\)\s*return;/);
       expect(escapeIndex).toBeGreaterThan(-1);
       expect(guardIndex).toBeGreaterThan(-1);
       expect(escapeIndex).toBeLessThan(guardIndex);
@@ -264,15 +265,19 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
   });
 
   describe('Braking Burn execution and threshold triggers', () => {
-    it('handles Safe Deceleration (ΔV <= 2) without triggering modal', () => {
+    it('asserts SAFE_COMPENSATOR_DELTA_V is 3', () => {
+      expect(SAFE_COMPENSATOR_DELTA_V).toBe(3);
+    });
+
+    it('handles Safe Deceleration (ΔV <= 3) without triggering modal', () => {
       const shipName = 'Explorer';
       let currentSpeed = 5;
-      const deltaV = 2;
+      const deltaV = 3;
 
       currentSpeed = Math.max(0, currentSpeed - deltaV);
-      expect(currentSpeed).toBe(3);
+      expect(currentSpeed).toBe(2);
 
-      const isHighG = deltaV >= 3;
+      const isHighG = deltaV >= 4;
       expect(isHighG).toBe(false);
 
       const alert = formatBrakingBurnAlert(shipName, deltaV);
@@ -288,7 +293,7 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       expect(mockServerRolls[0].breakdown).toMatch(/no crew (?:STA )?check/i);
     });
 
-    it('handles High-G Deceleration (ΔV >= 3) and alerts STA penalty', () => {
+    it('handles High-G Deceleration (ΔV >= 4) and alerts STA penalty', () => {
       const shipName = 'Explorer';
       let currentSpeed = 5;
       const deltaV = 4;
@@ -296,7 +301,7 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       currentSpeed = Math.max(0, currentSpeed - deltaV);
       expect(currentSpeed).toBe(1);
 
-      const isHighG = deltaV >= 3;
+      const isHighG = deltaV >= 4;
       expect(isHighG).toBe(true);
 
       const alert = formatBrakingBurnAlert(shipName, deltaV);
@@ -309,7 +314,7 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
 
       expect(mockServerRolls.length).toBe(1);
       expect(mockServerRolls[0].breakdown).toMatch(/high-g/i);
-      expect(mockServerRolls[0].breakdown).toContain('-20%');
+      expect(mockServerRolls[0].breakdown).toContain('-10%');
     });
   });
 
@@ -317,7 +322,7 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
     it('calculates target for high-g burn with crash couch at stern extremity', () => {
       const baseSta = 60;
       const targetData = calculateStaCheckTarget(baseSta, {
-        deltaV: 4,
+        deltaV: 5,
         posture: 'couch',
         extremity: 'bow',
       });
@@ -357,7 +362,7 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       expect(logMsg).toContain('G-Stun');
     });
 
-    it('resolves G-Stun for unbraced crew with 1d3 damage and prone condition', () => {
+    it('resolves G-Stun for unbraced crew with ceil(1d10 / 2) damage and prone condition', () => {
       const target = 50;
       const roll = 55; // margin 5
       const res = resolveStaCheckResult(roll, target, 'unbraced');
@@ -365,7 +370,7 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       expect(res.success).toBe(false);
       expect(res.severity).toBe('stun');
       expect(res.condition).toContain('Prone');
-      expect(res.damageDice).toBe('1d3');
+      expect(res.damageDice).toBe('ceil(1d10 / 2)');
       expect(res.stunnedTurns).toBe(1);
     });
 
@@ -377,11 +382,11 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       expect(res.success).toBe(false);
       expect(res.severity).toBe('g-loc');
       expect(res.condition).toBe('G-LOC Blackout');
-      expect(res.unconsciousTurnsDice).toBe('1d6');
+      expect(res.unconsciousTurnsDice).toBe('ceil(1d10 / 2)');
       expect(res.damageDice).toBeNull();
     });
 
-    it('resolves full G-LOC Blackout for unbraced crew with 1d6 damage and 1d3m hurled', () => {
+    it('resolves full G-LOC Blackout for unbraced crew with 1d10 damage and ceil(1d10 / 2)m hurled', () => {
       const target = 50;
       const roll = 85; // margin 35
       const res = resolveStaCheckResult(roll, target, 'unbraced');
@@ -389,9 +394,9 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       expect(res.success).toBe(false);
       expect(res.severity).toBe('g-loc');
       expect(res.condition).toContain('Hurled');
-      expect(res.damageDice).toBe('1d6');
-      expect(res.unconsciousTurnsDice).toBe('1d6');
-      expect(res.displacementMetersDice).toBe('1d3');
+      expect(res.damageDice).toBe('1d10');
+      expect(res.unconsciousTurnsDice).toBe('ceil(1d10 / 2)');
+      expect(res.displacementMetersDice).toBe('ceil(1d10 / 2)');
     });
   });
 
