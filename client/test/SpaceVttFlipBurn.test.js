@@ -121,6 +121,23 @@ describe('SpaceVttView Flip & Burn and Crew G-Load Check Integration', () => {
       expect(content).toContain('btn-crew-gcheck-close');
     });
   });
+
+  describe('Modal Keydown & Escape Handling in SpaceVttView', () => {
+    it('handles Escape key before general modal guard so crew G-check modal can close', () => {
+      const onKeyDownSource = content.slice(content.indexOf('function onKeyDown(e) {'));
+      const escapeIndex = onKeyDownSource.indexOf("e.key === 'Escape'");
+      const guardIndex = onKeyDownSource.indexOf('if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value) return;');
+      expect(escapeIndex).toBeGreaterThan(-1);
+      expect(guardIndex).toBeGreaterThan(-1);
+      expect(escapeIndex).toBeLessThan(guardIndex);
+      expect(onKeyDownSource).toMatch(/if\s*\(showCrewGCheckModal\.value\)\s*\{\s*showCrewGCheckModal\.value\s*=\s*false;\s*return;\s*\}/);
+    });
+
+    it('normalizes location and resets to midships in openCrewGCheckModal', () => {
+      expect(content).toMatch(/const loc = String\(options\.location \|\| options\.extremity \|\| 'midships'\)\.toLowerCase\(\);/);
+      expect(content).toMatch(/crewCheckLocation\.value = \(loc === 'bow' \|\| loc === 'stern' \|\| loc === 'extremity'\) \? 'extremity' : 'midships';/);
+    });
+  });
 });
 
 describe('Maneuver & Crew G-Check Logic Simulation', () => {
@@ -375,6 +392,55 @@ describe('Maneuver & Crew G-Check Logic Simulation', () => {
       expect(res.damageDice).toBe('1d6');
       expect(res.unconsciousTurnsDice).toBe('1d6');
       expect(res.displacementMetersDice).toBe('1d3');
+    });
+  });
+
+  describe('Modal state & Escape key handling simulation', () => {
+    it('closes showCrewGCheckModal when Escape key is pressed', () => {
+      let showCrewGCheckModal = true;
+      let showCreateMapModal = false;
+      let showAddTokenModal = false;
+
+      function simulateOnKeyDown(e) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        if (e.key === 'Escape') {
+          if (showCrewGCheckModal) {
+            showCrewGCheckModal = false;
+            return;
+          }
+        }
+
+        if (showCreateMapModal || showAddTokenModal || showCrewGCheckModal) return;
+      }
+
+      simulateOnKeyDown({ key: 'Escape' });
+      expect(showCrewGCheckModal).toBe(false);
+    });
+
+    it('openCrewGCheckModal resets location to midships when subsequent check passes extremity: midships', () => {
+      let crewCheckLocation = 'midships';
+
+      function simulateOpenCrewGCheckModal(options = {}) {
+        const loc = String(options.location || options.extremity || 'midships').toLowerCase();
+        crewCheckLocation = (loc === 'bow' || loc === 'stern' || loc === 'extremity') ? 'extremity' : 'midships';
+      }
+
+      // Initial check at bow extremity
+      simulateOpenCrewGCheckModal({ extremity: 'bow' });
+      expect(crewCheckLocation).toBe('extremity');
+
+      // Subsequent check specifying midships
+      simulateOpenCrewGCheckModal({ extremity: 'midships' });
+      expect(crewCheckLocation).toBe('midships');
+
+      // Subsequent check specifying stern extremity
+      simulateOpenCrewGCheckModal({ location: 'stern' });
+      expect(crewCheckLocation).toBe('extremity');
+
+      // Subsequent check without location defaults to midships
+      simulateOpenCrewGCheckModal({});
+      expect(crewCheckLocation).toBe('midships');
     });
   });
 });

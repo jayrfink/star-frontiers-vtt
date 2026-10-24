@@ -343,6 +343,7 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
 
   it('renders the Standard Flip Capable banner and High-G braking rule when selected ship has MR >= 3', async () => {
     const origFetch = global.fetch;
+    let wrapper;
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [
@@ -351,7 +352,7 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
     });
 
     try {
-      const wrapper = mount(ShipSheetsView, {
+      wrapper = mount(ShipSheetsView, {
         global: {
           stubs: {
             ImageBrowserModal: true,
@@ -368,15 +369,15 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
       expect(banner.text()).toContain('1-Turn (6s) 180° in-hex pivot');
       expect(banner.text()).toContain('No crew STA check required (inertial compensators absorb up to 2 hexes of braking)');
       expect(banner.text()).toContain('High-G braking (3+ hexes deceleration) requires crew STA checks (-10% per hex > 2)');
-
-      wrapper.unmount();
     } finally {
+      if (wrapper) wrapper.unmount();
       global.fetch = origFetch;
     }
   });
 
   it('renders the Lumbering & Snap Flip Capable banner when selected ship has MR 1-2', async () => {
     const origFetch = global.fetch;
+    let wrapper;
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [
@@ -385,7 +386,7 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
     });
 
     try {
-      const wrapper = mount(ShipSheetsView, {
+      wrapper = mount(ShipSheetsView, {
         global: {
           stubs: {
             ImageBrowserModal: true,
@@ -402,15 +403,15 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
       expect(banner.text()).toContain('2-Turn Lumbering Flip (drifts at current speed while rotating 90°/turn; no STA check)');
       expect(banner.text()).toContain('1-Turn Emergency Snap Flip (Pilot skill check; crew centrifugal whip STA check: -10% Bow/Stern, 0% Midships)');
       expect(banner.text()).toContain('High-G braking (3+ hexes deceleration) requires crew STA checks');
-
-      wrapper.unmount();
     } finally {
+      if (wrapper) wrapper.unmount();
       global.fetch = origFetch;
     }
   });
 
   it('renders the Flip & Burn Unavailable banner when selected ship has MR 0', async () => {
     const origFetch = global.fetch;
+    let wrapper;
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [
@@ -419,7 +420,7 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
     });
 
     try {
-      const wrapper = mount(ShipSheetsView, {
+      wrapper = mount(ShipSheetsView, {
         global: {
           stubs: {
             ImageBrowserModal: true,
@@ -434,9 +435,8 @@ describe('ShipSheetsView - Flip and Burn Maneuver Capability', () => {
       expect(banner.classes()).not.toContain('multi-turn');
       expect(banner.text()).toContain('Flip & Burn Unavailable (MR 0)');
       expect(banner.text()).toContain('Vessel lacks sufficient maneuvering thrusters. Cannot pivot or rotate.');
-
-      wrapper.unmount();
     } finally {
+      if (wrapper) wrapper.unmount();
       global.fetch = origFetch;
     }
   });

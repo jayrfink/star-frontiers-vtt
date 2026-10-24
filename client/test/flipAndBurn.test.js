@@ -279,6 +279,15 @@ describe('Space Combat: Flip and Burn Mechanics', () => {
   });
 
   describe('resolveStaCheckResult', () => {
+    it('defensively handles 0 and non-finite numeric values', () => {
+      const resZero = resolveStaCheckResult(0, 50, 'braced');
+      expect(resZero.success).toBe(true);
+      expect(resZero.margin).toBe(0);
+
+      const resNaN = resolveStaCheckResult('invalid', 'invalid', 'braced');
+      expect(resNaN.success).toBe(true);
+    });
+
     it('handles successful STA check (roll <= target)', () => {
       const res = resolveStaCheckResult(45, 50, 'braced');
       expect(res.success).toBe(true);

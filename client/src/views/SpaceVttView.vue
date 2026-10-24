@@ -1857,7 +1857,6 @@ function onKeyDown(e) {
   }
 
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value) return;
 
   if (e.key === 'Escape') {
     if (showCrewGCheckModal.value) {
@@ -1869,6 +1868,8 @@ function onKeyDown(e) {
       return;
     }
   }
+
+  if (showCreateMapModal.value || showAddTokenModal.value || showCrewGCheckModal.value) return;
 
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return;
 
@@ -1927,18 +1928,8 @@ function openCrewGCheckModal(reason = 'Manual Check', options = {}) {
   crewCheckReason.value = reason;
   crewCheckDeltaV.value = Number(options.deltaV) || 0;
   crewCheckIsSnapFlip.value = Boolean(options.isSnapFlip);
-  if (
-    options.extremity === 'extremity' ||
-    options.extremity === 'bow' ||
-    options.extremity === 'stern' ||
-    options.location === 'bow' ||
-    options.location === 'stern' ||
-    options.location === 'extremity'
-  ) {
-    crewCheckLocation.value = 'extremity';
-  } else if (options.location) {
-    crewCheckLocation.value = options.location;
-  }
+  const loc = String(options.location || options.extremity || 'midships').toLowerCase();
+  crewCheckLocation.value = (loc === 'bow' || loc === 'stern' || loc === 'extremity') ? 'extremity' : 'midships';
   if (options.posture) {
     crewCheckPosture.value = options.posture;
   }

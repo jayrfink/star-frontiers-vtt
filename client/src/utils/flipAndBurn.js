@@ -183,8 +183,8 @@ export function calculateStaCheckTarget(baseSta, options = {}) {
  * }}
  */
 export function resolveStaCheckResult(roll, targetSta, posture = 'braced') {
-  const r = Number(roll) || 1;
-  const target = Number(targetSta) || 1;
+  const r = Number.isFinite(Number(roll)) ? Number(roll) : 1;
+  const target = Number.isFinite(Number(targetSta)) ? Number(targetSta) : 1;
   const post = (posture || 'braced').toLowerCase();
   const isUnbraced =
     post.includes('unbraced') ||
