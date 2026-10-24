@@ -9,9 +9,10 @@ import {
   SAFE_COMPENSATOR_DELTA_V,
 } from '../src/utils/flipAndBurn.js';
 
+const filePath = path.resolve(__dirname, '../src/views/SpaceVttView.vue');
+const content = fs.readFileSync(filePath, 'utf8');
+
 describe('SpaceVttView Orbital Slingshot & Celestial Proximity Integration', () => {
-  const filePath = path.resolve(__dirname, '../src/views/SpaceVttView.vue');
-  const content = fs.readFileSync(filePath, 'utf8');
 
   describe('Source Code & Import Verification', () => {
     it('imports slingshot helpers and constants from flipAndBurn.js', () => {
@@ -43,6 +44,12 @@ describe('SpaceVttView Orbital Slingshot & Celestial Proximity Integration', () 
       expect(content).toMatch(/isSelectedTokenSlingshotEligible\s*=/);
       expect(content).toMatch(/liveSlingshotParams\s*=/);
       expect(content).toMatch(/liveSlingshotPilotTarget\s*=/);
+    });
+
+    it('filters non-gravitational celestial tokens and bounds maxSlingshotAdf safely in SpaceVttView.vue', () => {
+      expect(content).toMatch(/asteroid|debris|station/i);
+      expect(content).toMatch(/filter\(\(t\)\s*=>\s*isCelestialToken\(t\)\s*&&\s*getCelestialBodyType\(t\)\s*!==\s*null\)/);
+      expect(content).toMatch(/val\s*!==\s*undefined\s*&&\s*val\s*!==\s*null\s*\?\s*Math\.max\(0,\s*Number\(val\)\)\s*:\s*5/);
     });
   });
 
@@ -113,16 +120,18 @@ describe('Space VTT Slingshot Behavioral Simulation', () => {
   }
 
   function getCelestialBodyType(token) {
-    if (!token) return 'PLANET';
+    if (!token) return null;
     const target = String(token.body_type || token.name || token.label || '').trim();
+    if (/asteroid|debris|station/i.test(target)) return null;
     if (/moon/i.test(target)) return 'MOON';
     if (/gas giant|giant|jupiter|saturn/i.test(target)) return 'GAS_GIANT';
-    return 'PLANET';
+    if (/planet|earth|mars|venus|terra|world/i.test(target) || (token.layer === 'celestial' || token.token_type === 'celestial')) return 'PLANET';
+    return null;
   }
 
   function findNearestCelestial(shipToken, tokensList) {
     const celestials = tokensList.filter(
-      (t) => t.layer === 'celestial' || t.token_type === 'celestial'
+      (t) => (t.layer === 'celestial' || t.token_type === 'celestial') && getCelestialBodyType(t) !== null
     );
     if (!celestials.length) return null;
 
@@ -212,6 +221,28 @@ describe('Space VTT Slingshot Behavioral Simulation', () => {
       expect(isZoneEligible('GAS_GIANT', findNearestCelestial(shipAt0, tokensList).distance)).toBe(true);
       expect(isZoneEligible('GAS_GIANT', findNearestCelestial(shipAt2, tokensList).distance)).toBe(true);
       expect(isZoneEligible('GAS_GIANT', findNearestCelestial(shipAt3, tokensList).distance)).toBe(false);
+    });
+
+    it('ignores Asteroid, space debris, and station tokens in getCelestialBodyType and findNearestCelestial', () => {
+      const asteroidToken = { id: 'a1', name: 'Asteroid', token_type: 'celestial', x: 10, y: 10 };
+      const debrisToken = { id: 'd1', name: 'Space Debris Field', layer: 'celestial', x: 10, y: 10 };
+      const stationToken = { id: 's1', name: 'Mining Station Alpha', token_type: 'celestial', x: 10, y: 10 };
+
+      expect(getCelestialBodyType(asteroidToken)).toBeNull();
+      expect(getCelestialBodyType(debrisToken)).toBeNull();
+      expect(getCelestialBodyType(stationToken)).toBeNull();
+
+      const ship = { x: 10, y: 10 };
+      const nearest = findNearestCelestial(ship, [asteroidToken, debrisToken, stationToken]);
+      expect(nearest).toBeNull();
+
+      // When a genuine gravitational body (Planet) is also present, ignores the closer Asteroid
+      const planetToken = { id: 'p1', name: 'Volturn (Planet)', token_type: 'celestial', x: 11, y: 10 };
+      const nearestWithPlanet = findNearestCelestial(ship, [asteroidToken, planetToken]);
+      expect(nearestWithPlanet).not.toBeNull();
+      expect(nearestWithPlanet.token.id).toBe('p1');
+      expect(nearestWithPlanet.bodyType).toBe('PLANET');
+      expect(nearestWithPlanet.distance).toBe(1);
     });
   });
 
@@ -399,6 +430,35 @@ describe('Space VTT Slingshot Behavioral Simulation', () => {
       expect(result.hullDamageDice).toBe('3d10');
       expect(result.scatterFaces).toBe(1); // 1 hex face = 60°
       expect(result.trappedInHex).toBe(false);
+    });
+  });
+
+  describe('Oberth Thrust Burn ADF Bounding', () => {
+    it('bounds maxSlingshotAdf to 0 when vessel has adf: 0 (disabled engine or station)', () => {
+      function calculateMaxSlingshotAdf(linkedShip) {
+        const val = linkedShip?.adf;
+        return val !== undefined && val !== null ? Math.max(0, Number(val)) : 5;
+      }
+
+      expect(calculateMaxSlingshotAdf({ adf: 0 })).toBe(0);
+      expect(calculateMaxSlingshotAdf({ adf: '0' })).toBe(0);
+      expect(calculateMaxSlingshotAdf({ adf: 3 })).toBe(3);
+      expect(calculateMaxSlingshotAdf(null)).toBe(5);
+      expect(calculateMaxSlingshotAdf({})).toBe(5);
+    });
+  });
+
+  describe('Snap Flip Pilot Check Roll Logging', () => {
+    it('includes pilot check roll vs target in success and failure roll labels', () => {
+      const shipName = 'Bold Venture';
+      const roll = 35;
+      const pilotTarget = 60;
+      const successLabel = `${shipName}: ⚠️ Emergency Snap Flip (180°) (Pilot Check: ${roll} vs ${pilotTarget}%)`;
+      const failureLabel = `${shipName}: ⚠️ Emergency Snap Flip FAILED (Pilot Check: 75 vs ${pilotTarget}%)`;
+
+      expect(successLabel).toContain(`(Pilot Check: ${roll} vs ${pilotTarget}%)`);
+      expect(failureLabel).toContain(`(Pilot Check: 75 vs ${pilotTarget}%)`);
+      expect(content).toMatch(/label:\s*`\$\{shipName\}:\s*⚠️\s*Emergency Snap Flip \(180°\) \(Pilot Check: \$\{roll\} vs \$\{pilotTarget\}%\)`/);
     });
   });
 

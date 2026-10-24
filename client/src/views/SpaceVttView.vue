@@ -2049,16 +2049,18 @@ function hexDistance(a, b) {
 }
 
 function getCelestialBodyType(token) {
-  if (!token) return 'PLANET';
+  if (!token) return null;
   const target = String(token.body_type || token.name || token.label || '').trim();
+  if (/asteroid|debris|station/i.test(target)) return null;
   if (/moon/i.test(target)) return 'MOON';
   if (/gas giant|giant|jupiter|saturn/i.test(target)) return 'GAS_GIANT';
-  return 'PLANET';
+  if (/planet|earth|mars|venus|terra|world/i.test(target) || isCelestialToken(token)) return 'PLANET';
+  return null;
 }
 
 const nearestCelestialBody = computed(() => {
   if (!selectedToken.value || isCelestialToken(selectedToken.value)) return null;
-  const celestials = tokens.value.filter((t) => isCelestialToken(t));
+  const celestials = tokens.value.filter((t) => isCelestialToken(t) && getCelestialBodyType(t) !== null);
   if (celestials.length === 0) return null;
 
   let nearest = null;
@@ -2096,7 +2098,8 @@ const isSelectedTokenSlingshotEligible = computed(() => {
 });
 
 const maxSlingshotAdf = computed(() => {
-  return Number(selectedTokenLinkedShip.value?.adf) || 5;
+  const val = selectedTokenLinkedShip.value?.adf;
+  return val !== undefined && val !== null ? Math.max(0, Number(val)) : 5;
 });
 
 const liveSlingshotParams = computed(() => {
@@ -2341,7 +2344,7 @@ async function executeSnapFlip(options = {}) {
     await rotateSelectedToken(180);
     sendRollToServer({
       type: 'percentile',
-      label: `${shipName}: ⚠️ Emergency Snap Flip (180°)`,
+      label: `${shipName}: ⚠️ Emergency Snap Flip (180°) (Pilot Check: ${roll} vs ${pilotTarget}%)`,
       total: newRotation,
       breakdown: formatSnapFlipAlert(shipName, newRotation),
     });
