@@ -1,78 +1,69 @@
-# Star Frontiers VTT - Release v0.9.0 Summary
+# Star Frontiers VTT - Release v0.10.0 Summary
 
-**Release Tag:** `v0.9.0`  
-**Date:** October 23, 2026  
+**Release Tag:** `v0.10.0`  
+**Date:** October 24, 2026  
 **Status:** Stable / Production Ready
 
 ---
 
 ## 1. Overview
 
-Release `v0.9.0` is a major stability, security hardening, performance, and bugfix release. It delivers full resolution of the **38-item comprehensive codebase audit**, restored high-contrast **3D Percentile Dice Textures**, **LAN Network & WebSocket Optimization** (private IP subnet CORS allowlist, direct WebSocket transport priority, Express gzip compression, 1-day static asset caching, code-split 3D engine), and **Direct Production Static SPA Serving** on port 3000.
+Release `v0.10.0` introduces rulebook-accurate **Knight Hawks Master Physics**, **Combat Flip & Burn Mechanics**, and **Celestial Orbital Slingshots with Oberth Effect Burns** on the 10,000 km hex grid. It also delivers the **Real-Time Tactical Ping System**, **Tactical Wireframe Toolbar Icons**, **Plain ASCII Character Sheet Downloads**, **Character & Ship Freeform Healing/Restoration**, and **Global Dark Sci-Fi Contextual Scrollbars**.
 
 ---
 
-## 2. Included Features & Capabilities in v0.9.0
+## 2. Key Features & Capabilities in v0.10.0
 
-### LAN Performance & Network Infrastructure
-- **Private Subnet CORS & Socket.io Handshake (`server/src/index.js`):**
-  - Implemented `isPrivateNetworkOrigin` allowing all RFC 1918 private IPv4 ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`), IPv6 loopback (`[::1]`), and `.local` mDNS hostnames across any port.
-  - Resolves CORS rejection and socket disconnection loops when accessing the VTT from local network IPs (e.g., `http://192.168.1.x:3001` or `http://10.0.0.x:3001`).
-- **Direct WebSocket Transport Priority (`client/src/services/socket.js`):**
-  - Configured `transports: ['websocket', 'polling']` to connect directly over WebSockets, eliminating multi-round-trip HTTP long-polling handshake overhead.
-- **Express HTTP Response Compression (`compression`):**
-  - Installed and enabled Gzip/Brotli compression middleware on Express. Payloads such as `rulebooks.json` (1.1 MB down to ~370 KB) and `inventory_items.json` are compressed on the fly (~70–85% bandwidth reduction).
-- **Static Asset Caching:**
-  - Added `Cache-Control: public, max-age=86400` (1 day), `ETag`, and `Last-Modified` headers to all `/uploads` files (maps, token art, vehicle images).
-- **Code-Split 3D Dice Engine:**
-  - Switched `@3d-dice/dice-box` to dynamic asynchronous import in both `RpgVttView.vue` and `SpaceVttView.vue`.
-  - Decreased the critical initial bundle size by ~200 KB (from 731 KB down to 533 KB / 158 KB gzipped) for faster initial view mounting.
-- **Direct Production SPA Serving:**
-  - `server/src/index.js` serves pre-built `client/dist` production assets directly with client-side SPA routing fallback on port 3000, allowing players to connect directly without Vite dev server waterfall overhead.
+### Master High-G Maneuvers & Knight Hawks Space Physics
+- **Rotational Independence & Maneuver Agility:**
+  - Angular pivot around center of mass is decoupled from linear speed vector.
+  - Spends 3 MR for a canonical 180° pivot (3 hex-faces at 60° each).
+  - **MR 3+**: Executes a 1-Turn in-hex Standard Flip & Burn (no check required).
+  - **MR 1–2**: Supports 2-Turn Lumbering Flip (drifts at current speed rotating native MR on Turn 1, completing 180° on Turn 2) or 1-Turn Emergency Snap Flip (Pilot check required; crew rolls centrifugal whip STA check: -10% Bow/Stern, 0% Midships).
+  - **Failed Snap Flip Resolution**: Pilot failure rotates native MR only (60° or 120°), blocks main engine braking, and subjects crew to thruster misfire whip STA check.
+- **Safe 3 ΔV Compensator Threshold & High-G Deceleration:**
+  - Standard ship inertial compensators safely absorb up to 3 points of total ΔV (braking, acceleration, or gravitational shear) in a single turn without requiring a crew check.
+  - Decelerating by 4+ ADF applies a High-G Stamina check penalty of -10% per point spent above 3.
+- **Native d10 / d100 G-LOC Physics Resolution:**
+  - Strictly native d10/d100 dice mechanics with `ceil(1d10 / 2)` (1–5) light rolls.
+  - Posture modifiers: Crash couch (+20%), Braced (0%), Unbraced (-20%).
+  - **G-Stun (Margin 01–19)**: Secured crew stunned 1 turn and -20% next turn; unbraced crew knocked prone, takes `ceil(1d10 / 2)` (1–5) damage, stunned 1 turn.
+  - **Full G-LOC Blackout (Margin 20+)**: Secured crew unconscious for `ceil(1d10 / 2)` turns (6–30s); unbraced crew hurled `ceil(1d10 / 2)` meters, takes 1d10 impact damage, unconscious `ceil(1d10 / 2)` turns.
+- **Interactive Crew G-Load Check Dialog:**
+  - Dedicated interactive modal with live formula breakdown, 3D dice rolls with audio/HUD, and automated tactical Roll Log reporting.
 
-### 3D Percentile Dice Visual Polish
-- **Number Contrast Restoration:**
-  - Fixed low-contrast number rendering on custom percentile dice (`custom-ones` and `custom-tens`).
-  - Restored clear, crisp numeric coloring and contrast across dark and light dice themes.
+### Moon & Planet Gravitational Slingshots & Oberth Burns
+- **Celestial Slingshot Zones (10,000 km Hex Grid):**
+  - Minimum entry speed of 4 Hexes/Turn (40,000 km/turn).
+  - **Moon: Crater Skim (Distance 0)**: +1 Hex-Face (60°) vector bend, +1 Hex/Turn exit speed, Pilot check (-5% per speed > 8), 2 ΔV (Safe).
+  - **Planet: Outer Well (Distance 1)**: +1 Hex-Face (60°), +1 Hex/Turn exit speed, Routine (Safe).
+  - **Planet: Low-Orbit Skim (Distance 0)**: +2 Hex-Faces (120°), +2 Hexes/Turn exit speed, Pilot check (-5% per speed > 6), 3 ΔV (Safe).
+  - **Gas Giant: Outer Well (Distance 1–2)**: +1 Hex-Face (60°), +1 Hex/Turn exit speed, Routine (Safe).
+  - **Gas Giant: Deep Skim (Distance 0)**: +3 Hex-Faces (180°), +3 Hexes/Turn exit speed, Pilot check at -20% (-5% per speed > 6), 4 ΔV (-10% Crew STA check).
+- **The Oberth ADF Burn (Distance 0):**
+  - Burning ADF forward at periapsis/perilune grants +2 Hexes/Turn exit speed per ADF spent.
+  - Compound G-load: $\text{Total }\Delta\text{V} = \text{Base Gravity }\Delta\text{V} + (\text{ADF spent} \times 2)$.
+  - Automatically transfers to the Crew G-Load dialog when Total ΔV > 3.
+- **Distance 0 Hazard Engine:**
+  - *Minor (01–19)*: Free turn completes, loses speed bonus, Moon takes 1d10 (screens absorb), Planet/Gas Giant takes 2d10 structural, unbraced crew prone + `ceil(1d10 / 2)` damage.
+  - *Major (20+)*: Speed halved, Moon takes 3d10 (60° deflection), Planet/Gas Giant takes 4d10 structural, trapped in hex with `ORBITAL_DECAY_REQUIRES_2_ADF_ESCAPE`.
+- **Proximity Detection**:
+  - Automatically detects distance to Moon, Planet, or Gas Giant using canonical odd-r hex geometry while excluding non-gravitational tokens (asteroids, debris, stations).
 
-### Comprehensive 38-Bug Fixes & Security Hardening
-- **Backend & Authorization:**
-  - Enforced strict GameMaster authorization across adversary mutations, vehicle deployment/deletions, file uploads, and map management.
-  - Replaced unparameterized database queries with bound SQLite statements.
-  - Purged active sessions from `sessions.db` on user deletion to prevent orphaned session reuse.
-  - Decoupled token foreign key references on template and sheet deletions to avoid SQLite constraint errors.
-- **Canvas Rendering & Token Interaction:**
-  - Fixed HiDPI canvas rendering resolution blur on retina displays.
-  - Constrained token dragging and rotation within map boundaries.
-  - Prevented token collision stacking during center placement of combatants and celestial objects.
-  - Refined bottom-up damage and wounded visual overlays on RPG tokens.
-- **Tactical HUDs & Game Rules:**
-  - Vehicle and adversary tactical HUD action bar synchronization.
-  - Hardened Star Frontiers Alpha Dawn rules calculations and Knight Hawks weapon firing limitations (`FF`, `T`, `MPO`, `RD`, `LTD`).
-  - Clamped negative values on ship defense and ammo counters.
+### Tactical VTT Real-Time Ping System
+- Interactive canvas ping tool on both RPG VTT and Space VTT.
+- Synchronized via Socket.io with animated pulsing radial rings, color-coded user avatars/names, sound effects, auto-dismiss timers, and GM Clear All Pings control.
+
+### UI & UX Polish
+- **Tactical Wireframe Toolbar Icons**: Replaced emoji buttons with dynamic lined wireframe SVG icons featuring neon glowing vector aesthetic.
+- **Dark Blue Rocket Tab**: Styled Space VTT navigation tab with a custom dark blue rocket icon.
+- **Plain ASCII Character Export**: One-click download button on Character Sheets header producing clean 80-column plain ASCII `.txt` export formatted for terminals and notepad.
+- **Digital Sheet Recovery Tools**: Freeform damage/heal steppers, Full Rest / Repair & Resupply actions, and dedicated SEU pool tracking.
+- **Dark Contextual Scrollbars**: Styled sci-fi slim scrollbars across Roll Log, GM Notes, and Rulebooks panels.
 
 ---
 
-## 3. Verification & Test Evidence
-
-All tests and production builds were verified inside the `sf-vtt-dev` development container:
-
-- **Server test suite:** 225 / 225 tests across 17 test files passed.
-- **Client test suite:** 437 / 437 tests across 41 test files passed.
-- **Combined total:** 662 / 662 automated tests passing cleanly (100% pass rate).
-- **Client production build:** Succeeded cleanly with Vite (`npm run build`).
-
----
-
-## 4. Release History
-
-- **v0.9.0 (October 23, 2026):** Major stability, security hardening, performance, and bugfix release: 38 codebase audit bug fixes, restored 3D percentile dice contrast, LAN private network CORS autodiscovery, direct WebSocket transport, Express HTTP gzip compression, 1-day asset caching, code-split 3D dice engine, and direct production static serving on port 3000.
-- **v0.8.0 (October 22, 2026):** Minor feature release: GameMaster-only GM Notes tab (`/dashboard/gm-notes`) with session groups and editable note panels, Space Combat Flip & Burn maneuver (`MR >= 3`) with STA check & blackout rollers, and Star Frontiers Knight Hawks space weapon firing limitations/arcs (`FF`, `T`, `MPO`, `RD`, `LTD`) across rulebooks, custom weapon designer, ship sheets, and Space VTT.
-- **v0.7.0 (October 22, 2026):** Minor feature and bugfix release: Adversary template deletion and live token artwork replacement (`PATCH /api/adversaries/:id/token`), missing/moved token image fallback resilience, RPG VTT bottom-up red damage and wounded token overlays, and project `README.md` screenshot gallery.
-- **v0.6.0 (October 18, 2026):** Minor feature and polish release: Knight Hawks Ship Weapons Selection Modal & canonical 10-weapon catalog, prominent weapon titles with category limitation badges and inline renaming, ship sheet typography/layout refinements, and synchronized VTT dice & roll banner clearing.
-- **v0.5.0 (October 17, 2026):** Major minor-feature release: RPG VTT Alpha Dawn vehicle support & tactical Vehicle HUD, Space VTT celestial tokens (asteroids, moons, planets), canonical Alpha Dawn equipment catalog expansion (117 items) with category filter tabs, player self-service password changes, and tabletop dice rolling sound effects.
-- **v0.4.0 (October 16, 2026):** Minor feature release: Dynamic Adversary Stocking engine, Adversary Token HUD, AI token art generator & circular ring masking pipeline, and Admin Uploads & Assets File Manager with directory CRUD, file move, atomic database cascades, and real-time canvas asset sync.
-- **v0.3.0 (October 16, 2026):** Minor feature release: shared dice rolls & roll log, per-user tab/view state persistence, Knight Hawks spaceship skills, sheet Notes, "Species" terminology, and Map Manager grid controls (dimensions, line thickness, visibility).
-- **v0.2.0 (October 4, 2026):** Major feature release: Image Browser & Uploads Explorer, Decoupled Die Roll Log HUDs, Center Token Placement with Collision Avoidance, Map Background Browsing, Dynamic Tab Titles, and Modal Form Simplification.
-- **v0.1.1 (September 27, 2026):** Sub-release snapshot: Damage dice totals HUD, single source of truth HP refactor, fog removal, token ring color persistence, character portrait layout, ship token linking, and UI theme alignment.
-- **v0.1.0 (September 22, 2026):** Initial stable release: RPG and Space VTTs, 3D physics dice box, character and starship sheets, searchable rulebooks, role-based user management, and sci-fi terminal design.
+## 3. Verification & Test Metrics
+- **Client Test Suite**: 50 test files passed, 678 total tests passed (100% passing).
+- **Server Test Suite**: 18 test files passed, 233 total tests passed (100% passing).
+- **Production Build**: Built cleanly with Vite in 3.40s.
