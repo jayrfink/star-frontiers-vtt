@@ -1,6 +1,6 @@
-# Star Frontiers VTT - Release v0.10.0 Summary
+# Star Frontiers VTT - Release v0.10.1 Summary
 
-**Release Tag:** `v0.10.0`  
+**Release Tag:** `v0.10.1`  
 **Date:** October 24, 2026  
 **Status:** Stable / Production Ready
 
@@ -8,11 +8,26 @@
 
 ## 1. Overview
 
-Release `v0.10.0` introduces rulebook-accurate **Knight Hawks Master Physics**, **Combat Flip & Burn Mechanics**, and **Celestial Orbital Slingshots with Oberth Effect Burns** on the 10,000 km hex grid. It also delivers the **Real-Time Tactical Ping System**, **Tactical Wireframe Toolbar Icons**, **Plain ASCII Character Sheet Downloads**, **Character & Ship Freeform Healing/Restoration**, and **Global Dark Sci-Fi Contextual Scrollbars**.
+Release `v0.10.1` is a security and robustness update following the `v0.10.0` release. It hardens origin boundary validations, fixes prototype property traversal on rulebook routes, enforces role-based GM socket filtering on linked character sheet updates, synchronizes space token hull damage with ship sheet modifications, and prevents token spawner grid-locking on undersized maps.
 
 ---
 
-## 2. Key Features & Capabilities in v0.10.0
+## 2. Security & Robustness Fixes in v0.10.1
+
+- **[SEC-01] Strict Private Network Origin Validation (`server/src/index.js`):**
+  - Replaced overly permissive `.endsWith('.local')` check with strict dot-boundary checks to prevent malicious cross-origin domain spoofing while preserving LAN mDNS development origins.
+- **[SEC-02] Object Prototype Traversal Guard (`server/src/rulebooks.js`):**
+  - Added strict property ownership checking (`Object.prototype.hasOwnProperty`) for book PDF lookups to prevent unhandled 500 exceptions from prototype methods like `toString` or `valueOf`.
+- **[SEC-03] GM Layer Guard & Token Formatting on SEU Sync (`server/src/sheets.js`):**
+  - Synchronizing character sheet SEU now safely routes through `formatToken` and emits to `role:GameMaster` exclusively if the token is placed on the GM layer, preventing information disclosure to players.
+- **[BUG-01] Space Token HP & Max HP Synchronization (`server/src/sheets.js`):**
+  - Saving ship sheet updates now synchronizes `current_hp` and `max_hp` to all linked space tokens on active space maps, routing updates through proper token formatting and GM layer checks.
+- **[BUG-02] Spawner Boundary Clamping on Undersized Maps (`server/src/adversarySpawner.js`):**
+  - Clamped token footprints to `Math.min(size, mapWidth, mapHeight)` to prevent infinite coordinate search lockups on tiny custom maps.
+
+---
+
+## 3. Prior Major Capabilities in v0.10.0
 
 ### Master High-G Maneuvers & Knight Hawks Space Physics
 - **Rotational Independence & Maneuver Agility:**
