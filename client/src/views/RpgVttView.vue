@@ -2766,8 +2766,8 @@ onBeforeUnmount(() => {
   stroke: none;
 }
 
-.vtt-toolbar > button.active .tool-icon,
-.vtt-toolbar > button:hover .tool-icon {
+.vtt-toolbar button.active .tool-icon,
+.vtt-toolbar button:hover .tool-icon {
   filter: drop-shadow(0 0 6px currentColor);
 }
 
