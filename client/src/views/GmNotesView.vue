@@ -606,4 +606,40 @@ onMounted(() => {
   font-size: 2.5rem;
   margin-bottom: 8px;
 }
+
+.session-list,
+.notes-workspace,
+.panel-content-textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #30363d #161b22;
+}
+
+.session-list::-webkit-scrollbar,
+.notes-workspace::-webkit-scrollbar,
+.panel-content-textarea::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.session-list::-webkit-scrollbar-track,
+.notes-workspace::-webkit-scrollbar-track,
+.panel-content-textarea::-webkit-scrollbar-track {
+  background: #161b22;
+  border-radius: 4px;
+}
+
+.session-list::-webkit-scrollbar-thumb,
+.notes-workspace::-webkit-scrollbar-thumb,
+.panel-content-textarea::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border: 1px solid #3b434b;
+  border-radius: 4px;
+}
+
+.session-list::-webkit-scrollbar-thumb:hover,
+.notes-workspace::-webkit-scrollbar-thumb:hover,
+.panel-content-textarea::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+  border-color: #586069;
+}
 </style>

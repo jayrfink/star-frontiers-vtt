@@ -1003,4 +1003,56 @@ onMounted(() => {
   border: none;
   display: block;
 }
+
+/* Catalog Scrollbars */
+.pdf-sidebar,
+.search-results-list,
+.toc-tree-list,
+.quickref-layout,
+.results-list,
+.browser-tree {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 133, 156, 0.5) #161b22;
+}
+
+.pdf-sidebar::-webkit-scrollbar,
+.search-results-list::-webkit-scrollbar,
+.toc-tree-list::-webkit-scrollbar,
+.quickref-layout::-webkit-scrollbar,
+.results-list::-webkit-scrollbar,
+.browser-tree::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pdf-sidebar::-webkit-scrollbar-track,
+.search-results-list::-webkit-scrollbar-track,
+.toc-tree-list::-webkit-scrollbar-track,
+.quickref-layout::-webkit-scrollbar-track,
+.results-list::-webkit-scrollbar-track,
+.browser-tree::-webkit-scrollbar-track {
+  background: #161b22;
+  border-radius: 4px;
+}
+
+.pdf-sidebar::-webkit-scrollbar-thumb,
+.search-results-list::-webkit-scrollbar-thumb,
+.toc-tree-list::-webkit-scrollbar-thumb,
+.quickref-layout::-webkit-scrollbar-thumb,
+.results-list::-webkit-scrollbar-thumb,
+.browser-tree::-webkit-scrollbar-thumb {
+  background: rgba(58, 133, 156, 0.5);
+  border: 1px solid rgba(58, 133, 156, 0.7);
+  border-radius: 4px;
+}
+
+.pdf-sidebar::-webkit-scrollbar-thumb:hover,
+.search-results-list::-webkit-scrollbar-thumb:hover,
+.toc-tree-list::-webkit-scrollbar-thumb:hover,
+.quickref-layout::-webkit-scrollbar-thumb:hover,
+.results-list::-webkit-scrollbar-thumb:hover,
+.browser-tree::-webkit-scrollbar-thumb:hover {
+  background: rgba(78, 162, 187, 0.8);
+  border-color: #4ea2bb;
+}
 </style>

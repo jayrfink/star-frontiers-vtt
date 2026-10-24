@@ -3870,6 +3870,28 @@ onBeforeUnmount(() => {
   padding: 6px 10px;
   max-height: 240px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 255, 0.45) rgba(5, 15, 20, 0.8);
+}
+
+.roll-log-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.roll-log-body::-webkit-scrollbar-track {
+  background: rgba(5, 15, 20, 0.8);
+  border-radius: 3px;
+}
+
+.roll-log-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.6);
+  border-radius: 3px;
+}
+
+.roll-log-body::-webkit-scrollbar-thumb:hover {
+  background: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
 }
 
 .roll-log-empty {
