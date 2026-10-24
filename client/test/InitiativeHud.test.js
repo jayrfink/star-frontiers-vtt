@@ -13,7 +13,7 @@ describe('Initiative Dice & HUD System', () => {
     it('has Initiative button in toolbar', () => {
       expect(spaceContent).toMatch(/class="btn-tool btn-initiative"/);
       expect(spaceContent).toMatch(/@click="rollInitiative"/);
-      expect(spaceContent).toMatch(/⚡ Initiative/);
+      expect(spaceContent).toMatch(/Initiative/);
     });
 
     it('has floating Initiative HUD banner with player and opposition cards and no winner determination', () => {
@@ -53,7 +53,7 @@ describe('Initiative Dice & HUD System', () => {
     it('has Initiative button in toolbar', () => {
       expect(rpgContent).toMatch(/class="btn-tool btn-initiative"/);
       expect(rpgContent).toMatch(/@click="rollInitiative"/);
-      expect(rpgContent).toMatch(/⚡ Initiative/);
+      expect(rpgContent).toMatch(/Initiative/);
     });
 
     it('has floating Initiative HUD banner with player and opposition cards and no winner determination', () => {

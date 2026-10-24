@@ -48,28 +48,28 @@
           title="Select / Move Token"
           @click="activeTool = 'select'"
         >
-          👆 Move
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l3 3"/></svg> Move
         </button>
         <button
           :class="{ active: activeTool === 'pan' }"
           title="Pan Map (or hold Space / Middle Click)"
           @click="activeTool = 'pan'"
         >
-          ✋ Pan
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg> Pan
         </button>
         <button
           :class="{ active: activeTool === 'measure' }"
           title="Distance Ruler"
           @click="activeTool = 'measure'"
         >
-          📏 Ruler
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h18M3 8v8M21 8v8M9 10v4M15 10v4"/></svg> Ruler
         </button>
         <button
           :class="{ active: activeTool === 'ping' }"
           title="Tactical Ping (Click or drag on map)"
           @click="activeTool = 'ping'"
         >
-          📍 Ping
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg> Ping
         </button>
         <button
           v-if="hasMyActivePing"
@@ -77,7 +77,7 @@
           title="Clear your tactical ping"
           @click="clearMyPing"
         >
-          ✕ Clear Ping
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg> Clear Ping
         </button>
         <button
           v-if="isGm && activePingsList.length > 0"
@@ -85,15 +85,15 @@
           title="Clear all tactical pings"
           @click="clearAllPings"
         >
-          🧹 Clear All Pings
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5l13 13"/></svg> Clear All Pings
         </button>
 
         <button class="btn-tool btn-initiative" @click="rollInitiative" title="Roll Combat Initiative (Players vs. Opposition 2d10)">
-          ⚡ Initiative
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Initiative
         </button>
 
         <button class="btn-tool" @click="rollPercentile">
-          🎲 Roll d%
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><text x="12" y="15" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-weight="bold">%</text></svg> Roll d%
         </button>
 
         <!-- Damage Dice Roller -->
@@ -105,7 +105,7 @@
               @click="toggleDmgMenu"
               title="Click to configure and roll damage dice"
             >
-              💥 DMG Die ({{ damageDiceCount }}d10)
+              <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 20 12 16.5 6.5 20 8 13.5 3 9l6.5-.5L12 2z"/></svg> DMG Die ({{ damageDiceCount }}d10)
             </button>
             <button
               class="btn-dmg-step"
@@ -123,7 +123,7 @@
 
           <div v-if="showDmgMenu" class="dmg-popover">
             <div class="dmg-popover-header">
-              <span>💥 Damage Dice</span>
+              <span><svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 20 12 16.5 6.5 20 8 13.5 3 9l6.5-.5L12 2z"/></svg> Damage Dice</span>
               <button class="dmg-popover-close" @click.stop="showDmgMenu = false">×</button>
             </div>
             <div class="dmg-stepper">
@@ -144,7 +144,7 @@
               </button>
             </div>
             <button type="button" class="btn-roll-dmg-action" @click.stop="rollDamage">
-              🎲 Roll {{ damageDiceCount }}d10 Damage
+              <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg> Roll {{ damageDiceCount }}d10 Damage
             </button>
             <div v-if="lastDamageRoll" class="dmg-last-roll-card">
               <div class="last-roll-header">Last Roll ({{ lastDamageRoll.count }}d10):</div>
@@ -157,7 +157,7 @@
         </div>
 
         <button class="btn-tool" @click="clearDice">
-          ✖ Clear Dice
+          <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9l6 6M15 9l-6 6"/></svg> Clear Dice
         </button>
       </nav>
 
@@ -2746,6 +2746,29 @@ onBeforeUnmount(() => {
   color: #5eead4;
   border-color: #2dd4bf;
   box-shadow: 0 0 12px rgba(45, 212, 191, 0.6);
+}
+
+.tool-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 5px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  filter: drop-shadow(0 0 3px currentColor);
+  transition: all 0.15s ease-in-out;
+}
+
+.tool-icon text {
+  fill: currentColor;
+  stroke: none;
+}
+
+.vtt-toolbar > button.active .tool-icon,
+.vtt-toolbar > button:hover .tool-icon {
+  filter: drop-shadow(0 0 6px currentColor);
 }
 
 .toolbar-divider {

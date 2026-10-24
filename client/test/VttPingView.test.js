@@ -19,19 +19,19 @@ describe('VttPingView Static Template & Socket Verification', () => {
     it('renders the Ping toolbar button with active class binding', () => {
       expect(rpgContent).toMatch(/:class="\{\s*active:\s*activeTool\s*===\s*'ping'\s*\}"/);
       expect(rpgContent).toMatch(/@click="activeTool\s*=\s*'ping'"/);
-      expect(rpgContent).toContain('📍 Ping');
+      expect(rpgContent).toContain('Ping');
     });
 
     it('renders Clear Ping button when current user has an active ping', () => {
       expect(rpgContent).toMatch(/v-if="hasMyActivePing"[^>]*@click="clearMyPing"/);
       expect(rpgContent).toContain('btn-clear-ping');
-      expect(rpgContent).toContain('✕ Clear Ping');
+      expect(rpgContent).toContain('Clear Ping');
     });
 
     it('renders Clear All Pings button for GM when active pings exist', () => {
       expect(rpgContent).toMatch(/v-if="isGm\s*&&\s*activePingsList\.length\s*>\s*0"[^>]*@click="clearAllPings"/);
       expect(rpgContent).toContain('btn-clear-all-pings');
-      expect(rpgContent).toContain('🧹 Clear All Pings');
+      expect(rpgContent).toContain('Clear All Pings');
     });
 
     it('binds pings and ping events to VttCanvas component', () => {
@@ -65,19 +65,19 @@ describe('VttPingView Static Template & Socket Verification', () => {
     it('renders the Ping toolbar button with active class binding', () => {
       expect(spaceContent).toMatch(/:class="\{\s*active:\s*activeTool\s*===\s*'ping'\s*\}"/);
       expect(spaceContent).toMatch(/@click="activeTool\s*=\s*'ping'"/);
-      expect(spaceContent).toContain('📍 Ping');
+      expect(spaceContent).toContain('Ping');
     });
 
     it('renders Clear Ping button when current user has an active ping', () => {
       expect(spaceContent).toMatch(/v-if="hasMyActivePing"[^>]*@click="clearMyPing"/);
       expect(spaceContent).toContain('btn-clear-ping');
-      expect(spaceContent).toContain('✕ Clear Ping');
+      expect(spaceContent).toContain('Clear Ping');
     });
 
     it('renders Clear All Pings button for GM when active pings exist', () => {
       expect(spaceContent).toMatch(/v-if="isGm\s*&&\s*activePingsList\.length\s*>\s*0"[^>]*@click="clearAllPings"/);
       expect(spaceContent).toContain('btn-clear-all-pings');
-      expect(spaceContent).toContain('🧹 Clear All Pings');
+      expect(spaceContent).toContain('Clear All Pings');
     });
 
     it('binds pings and ping events to SpaceVttCanvas component', () => {
