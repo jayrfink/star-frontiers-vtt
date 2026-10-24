@@ -14,6 +14,7 @@ import { createRollRouter } from './rolls.js';
 import { createAdversariesRouter } from './adversaries.js';
 import { createVehiclesRouter } from './vehicles.js';
 import { createGmNotesRouter } from './gmNotes.js';
+import { registerPingHandlers } from './pings.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -161,6 +162,8 @@ export function createApp(db, sessionDir, uploadDir) {
       socket.join('role:GameMaster');
     }
   });
+
+  registerPingHandlers(io, db);
 
   app.locals.db = db;
   app.locals.sessionDir = sessionDir;
