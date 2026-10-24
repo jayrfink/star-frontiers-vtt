@@ -2,7 +2,7 @@
   <div
     ref="containerRef"
     class="space-vtt-canvas-container"
-    :class="{ 'cursor-pan': isPanning || activeTool === 'pan' }"
+    :class="{ 'cursor-pan': isPanning || activeTool === 'pan', 'cursor-ping': activeTool === 'ping' }"
     @mousedown="onMouseDown"
     @mousemove="onMouseMove"
     @mouseup="onMouseUp"
@@ -17,6 +17,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { socket } from '../services/socket.js';
 import { isCelestialToken } from '../utils/spaceTokens.js';
+import { drawAllPings, isPingDismissHit } from '../utils/pingRenderer.js';
 
 const props = defineProps({
   map: {
@@ -27,9 +28,13 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  pings: {
+    type: [Array, Object],
+    default: () => [],
+  },
   activeTool: {
     type: String,
-    default: 'select', // 'select', 'pan'
+    default: 'select', // 'select', 'pan', 'ping'
   },
   zoomLevel: {
     type: Number,
@@ -57,6 +62,8 @@ const emit = defineEmits([
   'token-selected',
   'tokens-updated',
   'map-updated',
+  'ping-update',
+  'ping-dismiss',
 ]);
 
 const containerRef = ref(null);
@@ -90,7 +97,57 @@ watch(() => props.map, () => {
 watch(() => props.selectedTokenId, () => {
   requestRender();
 });
-watch(() => props.activeTool, () => {
+
+// Ping state & animation
+const isPingDragging = ref(false);
+let lastPingPos = { x: 0, y: 0 };
+let lastPingEmitTime = 0;
+let pingAnimFrameId = null;
+
+const hasActivePings = computed(() => {
+  if (!props.pings) return false;
+  if (Array.isArray(props.pings)) return props.pings.length > 0;
+  if (typeof props.pings === 'object') return Object.keys(props.pings).length > 0;
+  return false;
+});
+
+function updatePingAnimation() {
+  if (hasActivePings.value) {
+    if (!pingAnimFrameId) {
+      const loop = () => {
+        if (!hasActivePings.value) {
+          pingAnimFrameId = null;
+          requestRender();
+          return;
+        }
+        drawCanvas();
+        pingAnimFrameId = requestAnimationFrame(loop);
+      };
+      pingAnimFrameId = requestAnimationFrame(loop);
+    }
+  } else {
+    if (pingAnimFrameId) {
+      cancelAnimationFrame(pingAnimFrameId);
+      pingAnimFrameId = null;
+      requestRender();
+    }
+  }
+}
+
+watch(
+  () => props.pings,
+  () => {
+    updatePingAnimation();
+    requestRender();
+  },
+  { deep: true }
+);
+
+watch(() => props.activeTool, (newTool) => {
+  if (newTool !== 'ping' && isPingDragging.value) {
+    isPingDragging.value = false;
+    emit('ping-update', { x: lastPingPos.x, y: lastPingPos.y, isDragging: false });
+  }
   requestRender();
 });
 
@@ -304,6 +361,10 @@ function stopRenderLoop() {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
+  if (pingAnimFrameId) {
+    cancelAnimationFrame(pingAnimFrameId);
+    pingAnimFrameId = null;
+  }
   needsRender = false;
 }
 
@@ -347,6 +408,9 @@ function drawCanvas() {
   if (draggingToken.value) {
     drawGhostToken(ctx, draggingToken.value, dragCell.value);
   }
+
+  // 5. Draw Tactical Pings
+  drawAllPings(ctx, props.pings, performance.now());
 
   ctx.restore();
 }
@@ -629,6 +693,26 @@ function onMouseDown(e) {
   }
 
   if (e.button === 0) {
+    const pingList = Array.isArray(props.pings)
+      ? props.pings
+      : (props.pings && typeof props.pings === 'object')
+      ? Object.values(props.pings)
+      : [];
+    for (const ping of pingList) {
+      if (ping && isPingDismissHit(ping, worldPos.x, worldPos.y)) {
+        emit('ping-dismiss', { userId: ping.userId });
+        return;
+      }
+    }
+
+    if (props.activeTool === 'ping') {
+      isPingDragging.value = true;
+      lastPingPos = { x: worldPos.x, y: worldPos.y };
+      lastPingEmitTime = performance.now();
+      emit('ping-update', { x: worldPos.x, y: worldPos.y, isDragging: true });
+      return;
+    }
+
     if (props.activeTool === 'select') {
       const hitTestOrder = [...props.tokens].sort((a, b) => {
         const aCel = isCelestialToken(a) ? 0 : 1;
@@ -678,6 +762,16 @@ function onMouseMove(e) {
     return;
   }
 
+  if (isPingDragging.value) {
+    const now = performance.now();
+    lastPingPos = { x: worldPos.x, y: worldPos.y };
+    if (now - lastPingEmitTime >= 30) {
+      lastPingEmitTime = now;
+      emit('ping-update', { x: worldPos.x, y: worldPos.y, isDragging: true });
+    }
+    return;
+  }
+
   if (cell && draggingToken.value) {
     dragCell.value = cell;
     requestRender();
@@ -685,7 +779,20 @@ function onMouseMove(e) {
   }
 }
 
-function onMouseUp() {
+function onMouseUp(e) {
+  if (isPingDragging.value) {
+    isPingDragging.value = false;
+    let posX = lastPingPos.x;
+    let posY = lastPingPos.y;
+    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      const worldPos = getWorldFromScreen(e.clientX, e.clientY);
+      posX = worldPos.x;
+      posY = worldPos.y;
+    }
+    emit('ping-update', { x: posX, y: posY, isDragging: false });
+    return;
+  }
+
   if (isPanning.value) {
     isPanning.value = false;
     requestRender();
@@ -757,6 +864,9 @@ onMounted(() => {
   }
 
   startRenderLoop();
+  if (hasActivePings.value) {
+    updatePingAnimation();
+  }
 
   socket.on('token:asset-renamed', handleAssetRenamed);
   socket.on('token:asset-deleted', handleAssetDeleted);
@@ -766,6 +876,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopRenderLoop();
+  if (pingAnimFrameId) {
+    cancelAnimationFrame(pingAnimFrameId);
+    pingAnimFrameId = null;
+  }
   socket.off('token:asset-renamed', handleAssetRenamed);
   socket.off('token:asset-deleted', handleAssetDeleted);
   socket.off('map:asset-renamed', handleMapAssetRenamed);
@@ -802,5 +916,9 @@ canvas {
 
 .cursor-pan:active {
   cursor: grabbing;
+}
+
+.cursor-ping {
+  cursor: crosshair;
 }
 </style>
