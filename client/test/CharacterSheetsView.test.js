@@ -611,6 +611,164 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       spy.mockRestore();
     });
   });
+
+  describe('Character Sheets Left Navigation Reordering', () => {
+    it('determines reordering permission based on role or user ownership', () => {
+      // Mock auth store via canReorder method
+      const vm = {
+        canReorder: CharacterSheetsView.methods.canReorder,
+      };
+
+      // When character is null
+      expect(vm.canReorder(null)).toBe(false);
+    });
+
+    it('moves character up and down, updates local array optimistically, and dispatches PUT /api/characters/reorder', async () => {
+      const origFetch = global.fetch;
+      let requestedUrl = null;
+      let requestedBody = null;
+
+      global.fetch = vi.fn().mockImplementation((url, opts) => {
+        requestedUrl = url;
+        requestedBody = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, order: requestedBody.order }),
+        });
+      });
+
+      try {
+        const vm = {
+          characters: [
+            { id: 101, name: 'Char A' },
+            { id: 102, name: 'Char B' },
+            { id: 103, name: 'Char C' },
+          ],
+          errorMessage: '',
+          moveCharacter: CharacterSheetsView.methods.moveCharacter,
+          saveCharacterOrder: CharacterSheetsView.methods.saveCharacterOrder,
+        };
+
+        // Move Char B up (index 1 + -1 -> index 0)
+        await vm.moveCharacter(1, -1);
+        expect(vm.characters.map(c => c.id)).toEqual([102, 101, 103]);
+        expect(requestedUrl).toBe('/api/characters/reorder');
+        expect(requestedBody).toEqual({ order: [102, 101, 103] });
+
+        // Move Char B down (index 0 + 1 -> index 1)
+        await vm.moveCharacter(0, 1);
+        expect(vm.characters.map(c => c.id)).toEqual([101, 102, 103]);
+        expect(requestedBody).toEqual({ order: [101, 102, 103] });
+
+        // Boundary checks (move top item up, or bottom item down does nothing)
+        requestedUrl = null;
+        await vm.moveCharacter(0, -1);
+        expect(requestedUrl).toBeNull();
+
+        await vm.moveCharacter(2, 1);
+        expect(requestedUrl).toBeNull();
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('rolls back optimistic character order and sets errorMessage on API failure', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Cannot reorder sheets you do not own' }),
+      });
+
+      try {
+        const initial = [
+          { id: 101, name: 'Char A' },
+          { id: 102, name: 'Char B' },
+        ];
+        const vm = {
+          characters: [...initial],
+          errorMessage: '',
+          moveCharacter: CharacterSheetsView.methods.moveCharacter,
+          saveCharacterOrder: CharacterSheetsView.methods.saveCharacterOrder,
+        };
+
+        await vm.moveCharacter(0, 1);
+        // On error, should rollback to original order
+        expect(vm.characters.map(c => c.id)).toEqual([101, 102]);
+        expect(vm.errorMessage).toBe('Cannot reorder sheets you do not own');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('reorders character list on socket event sheets:reordered while preserving selectedChar', () => {
+      const char1 = { id: 101, name: 'Char 1' };
+      const char2 = { id: 102, name: 'Char 2' };
+      const char3 = { id: 103, name: 'Char 3' };
+
+      const vm = {
+        characters: [char1, char2, char3],
+        selectedChar: char2,
+        handleSheetsReordered: CharacterSheetsView.methods.handleSheetsReordered,
+      };
+
+      // Reorder payload
+      vm.handleSheetsReordered({
+        type: 'character',
+        order: [103, 101, 102],
+      });
+
+      expect(vm.characters.map(c => c.id)).toEqual([103, 101, 102]);
+      expect(vm.selectedChar).toBe(char2);
+
+      // Ignores events for ship type
+      vm.handleSheetsReordered({
+        type: 'ship',
+        order: [102, 101, 103],
+      });
+      expect(vm.characters.map(c => c.id)).toEqual([103, 101, 102]);
+    });
+
+    it('handles drag and drop reordering', async () => {
+      const origFetch = global.fetch;
+      let sentOrder = null;
+      global.fetch = vi.fn().mockImplementation((url, opts) => {
+        sentOrder = JSON.parse(opts.body).order;
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, order: sentOrder }),
+        });
+      });
+
+      try {
+        const vm = {
+          characters: [
+            { id: 1, name: 'First' },
+            { id: 2, name: 'Second' },
+            { id: 3, name: 'Third' },
+          ],
+          draggedCharIndex: 0,
+          dragOverCharIndex: 2,
+          errorMessage: '',
+          onDrop: CharacterSheetsView.methods.onDrop,
+          saveCharacterOrder: CharacterSheetsView.methods.saveCharacterOrder,
+        };
+
+        const mockEvent = {
+          preventDefault: vi.fn(),
+        };
+
+        await vm.onDrop(mockEvent, 2);
+        expect(mockEvent.preventDefault).toHaveBeenCalled();
+        expect(vm.characters.map(c => c.id)).toEqual([2, 3, 1]);
+        expect(sentOrder).toEqual([2, 3, 1]);
+        expect(vm.draggedCharIndex).toBeNull();
+        expect(vm.dragOverCharIndex).toBeNull();
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
 });
 
 

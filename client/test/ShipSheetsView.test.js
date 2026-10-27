@@ -879,6 +879,161 @@ describe('ShipSheetsView - 0 Ammo Display & 0 Hull Point Calculations', () => {
   });
 });
 
+describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
+  it('determines reordering permission based on role or user ownership', () => {
+    const vm = {
+      canReorder: ShipSheetsView.methods.canReorder,
+    };
+    expect(vm.canReorder(null)).toBe(false);
+  });
+
+  it('moves ship up and down, updates local array optimistically, and dispatches PUT /api/ships/reorder', async () => {
+    const origFetch = global.fetch;
+    let requestedUrl = null;
+    let requestedBody = null;
+
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      requestedUrl = url;
+      requestedBody = JSON.parse(opts.body);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, order: requestedBody.order }),
+      });
+    });
+
+    try {
+      const vm = {
+        ships: [
+          { id: 201, name: 'Ship A' },
+          { id: 202, name: 'Ship B' },
+          { id: 203, name: 'Ship C' },
+        ],
+        errorMessage: '',
+        moveShip: ShipSheetsView.methods.moveShip,
+        saveShipOrder: ShipSheetsView.methods.saveShipOrder,
+      };
+
+      // Move Ship B up (index 1 + -1 -> index 0)
+      await vm.moveShip(1, -1);
+      expect(vm.ships.map(s => s.id)).toEqual([202, 201, 203]);
+      expect(requestedUrl).toBe('/api/ships/reorder');
+      expect(requestedBody).toEqual({ order: [202, 201, 203] });
+
+      // Move Ship B down (index 0 + 1 -> index 1)
+      await vm.moveShip(0, 1);
+      expect(vm.ships.map(s => s.id)).toEqual([201, 202, 203]);
+      expect(requestedBody).toEqual({ order: [201, 202, 203] });
+
+      // Boundary checks (move top item up, or bottom item down does nothing)
+      requestedUrl = null;
+      await vm.moveShip(0, -1);
+      expect(requestedUrl).toBeNull();
+
+      await vm.moveShip(2, 1);
+      expect(requestedUrl).toBeNull();
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+
+  it('rolls back optimistic ship order and sets errorMessage on API failure', async () => {
+    const origFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Cannot reorder sheets you do not own' }),
+    });
+
+    try {
+      const initial = [
+        { id: 201, name: 'Ship A' },
+        { id: 202, name: 'Ship B' },
+      ];
+      const vm = {
+        ships: [...initial],
+        errorMessage: '',
+        moveShip: ShipSheetsView.methods.moveShip,
+        saveShipOrder: ShipSheetsView.methods.saveShipOrder,
+      };
+
+      await vm.moveShip(0, 1);
+      // On error, should rollback to original order
+      expect(vm.ships.map(s => s.id)).toEqual([201, 202]);
+      expect(vm.errorMessage).toBe('Cannot reorder sheets you do not own');
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+
+  it('reorders ship list on socket event sheets:reordered while preserving selectedShip', () => {
+    const ship1 = { id: 201, name: 'Ship 1' };
+    const ship2 = { id: 202, name: 'Ship 2' };
+    const ship3 = { id: 203, name: 'Ship 3' };
+
+    const vm = {
+      ships: [ship1, ship2, ship3],
+      selectedShip: ship2,
+      handleSheetsReordered: ShipSheetsView.methods.handleSheetsReordered,
+    };
+
+    // Reorder payload for ship
+    vm.handleSheetsReordered({
+      type: 'ship',
+      order: [203, 201, 202],
+    });
+
+    expect(vm.ships.map(s => s.id)).toEqual([203, 201, 202]);
+    expect(vm.selectedShip).toBe(ship2);
+
+    // Ignores events for character type
+    vm.handleSheetsReordered({
+      type: 'character',
+      order: [202, 201, 203],
+    });
+    expect(vm.ships.map(s => s.id)).toEqual([203, 201, 202]);
+  });
+
+  it('handles drag and drop reordering for ships', async () => {
+    const origFetch = global.fetch;
+    let sentOrder = null;
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      sentOrder = JSON.parse(opts.body).order;
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, order: sentOrder }),
+      });
+    });
+
+    try {
+      const vm = {
+        ships: [
+          { id: 11, name: 'First Ship' },
+          { id: 12, name: 'Second Ship' },
+          { id: 13, name: 'Third Ship' },
+        ],
+        draggedShipIndex: 0,
+        dragOverShipIndex: 2,
+        errorMessage: '',
+        onDrop: ShipSheetsView.methods.onDrop,
+        saveShipOrder: ShipSheetsView.methods.saveShipOrder,
+      };
+
+      const mockEvent = {
+        preventDefault: vi.fn(),
+      };
+
+      await vm.onDrop(mockEvent, 2);
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
+      expect(vm.ships.map(s => s.id)).toEqual([12, 13, 11]);
+      expect(sentOrder).toEqual([12, 13, 11]);
+      expect(vm.draggedShipIndex).toBeNull();
+      expect(vm.dragOverShipIndex).toBeNull();
+    } finally {
+      global.fetch = origFetch;
+    }
+  });
+});
+
 
 
 

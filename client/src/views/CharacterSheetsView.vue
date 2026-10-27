@@ -13,16 +13,50 @@
       </div>
       <ul v-else ref="sidebarList" class="character-list sheet-list" @scroll="onScrollSave">
         <li
-          v-for="char in characters"
+          v-for="(char, index) in characters"
           :key="char.id"
-          :class="{ active: selectedChar && selectedChar.id === char.id }"
+          :class="{
+            active: selectedChar && selectedChar.id === char.id,
+            dragging: draggedCharIndex === index,
+            'drag-over': dragOverCharIndex === index && draggedCharIndex !== index
+          }"
+          :draggable="canReorder(char)"
+          @dragstart="onDragStart($event, index)"
+          @dragover="onDragOver($event, index)"
+          @dragleave="onDragLeave($event, index)"
+          @drop="onDrop($event, index)"
+          @dragend="onDragEnd"
           @click="selectCharacter(char)"
         >
+          <span
+            v-if="canReorder(char)"
+            class="drag-handle"
+            title="Drag to reorder"
+            @click.stop
+          >⋮⋮</span>
           <div class="char-item-info">
             <span class="char-name">{{ char.name || 'Unnamed' }}</span>
             <span class="char-sub">{{ char.race || 'Unknown Species' }} • STA {{ char.current_stamina }}/{{ char.max_stamina }}</span>
           </div>
-          <button class="btn-delete-small" title="Delete Character" @click.stop="deleteCharacter(char.id)">✕</button>
+          <div class="char-item-actions">
+            <div v-if="canReorder(char)" class="reorder-actions">
+              <button
+                type="button"
+                class="btn-reorder btn-move-up"
+                title="Move Up"
+                :disabled="index === 0"
+                @click.stop="moveCharacter(index, -1)"
+              >▲</button>
+              <button
+                type="button"
+                class="btn-reorder btn-move-down"
+                title="Move Down"
+                :disabled="index === characters.length - 1"
+                @click.stop="moveCharacter(index, 1)"
+              >▼</button>
+            </div>
+            <button class="btn-delete-small" title="Delete Character" @click.stop="deleteCharacter(char.id)">✕</button>
+          </div>
         </li>
       </ul>
     </aside>
@@ -660,6 +694,7 @@
 
 <script>
 import { socket } from '../services/socket.js';
+import { useAuthStore } from '../stores/auth.js';
 import {
   RACES_DATA,
   OFFICIAL_SKILLS,
@@ -685,6 +720,8 @@ export default {
       loading: true,
       creating: false,
       errorMessage: '',
+      draggedCharIndex: null,
+      dragOverCharIndex: null,
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'char',
@@ -1371,15 +1408,122 @@ export default {
       }
       this.updateCharacter();
     },
+    canReorder(char) {
+      if (!char) return false;
+      try {
+        const authStore = useAuthStore();
+        if (authStore.user?.role === 'GameMaster') return true;
+        if (authStore.user?.id && char.user_id === authStore.user.id) return true;
+      } catch {
+        // Fallback if Pinia is unavailable
+      }
+      return false;
+    },
+    async moveCharacter(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= this.characters.length) return;
+      const original = [...this.characters];
+      const updated = [...this.characters];
+      const [moved] = updated.splice(index, 1);
+      updated.splice(targetIndex, 0, moved);
+      this.characters = updated;
+
+      await this.saveCharacterOrder(original);
+    },
+    onDragStart(event, index) {
+      const char = this.characters[index];
+      if (!this.canReorder(char)) {
+        event.preventDefault();
+        return;
+      }
+      this.draggedCharIndex = index;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+      }
+    },
+    onDragOver(event, index) {
+      if (this.draggedCharIndex === null) return;
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+      this.dragOverCharIndex = index;
+    },
+    onDragLeave(event, index) {
+      if (this.dragOverCharIndex === index) {
+        this.dragOverCharIndex = null;
+      }
+    },
+    async onDrop(event, targetIndex) {
+      event.preventDefault();
+      const fromIndex = this.draggedCharIndex;
+      this.draggedCharIndex = null;
+      this.dragOverCharIndex = null;
+      if (fromIndex === null || fromIndex === undefined || fromIndex === targetIndex) return;
+      if (fromIndex < 0 || fromIndex >= this.characters.length) return;
+      if (targetIndex < 0 || targetIndex >= this.characters.length) return;
+
+      const original = [...this.characters];
+      const updated = [...this.characters];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      this.characters = updated;
+
+      await this.saveCharacterOrder(original);
+    },
+    onDragEnd() {
+      this.draggedCharIndex = null;
+      this.dragOverCharIndex = null;
+    },
+    async saveCharacterOrder(previousCharacters) {
+      this.errorMessage = '';
+      try {
+        const order = this.characters.map((c) => c.id);
+        const res = await fetch('/api/characters/reorder', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ order }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          this.errorMessage = errData.error || `Failed to reorder characters (HTTP ${res.status})`;
+          this.characters = previousCharacters;
+        }
+      } catch (err) {
+        console.error('Error reordering characters:', err);
+        this.errorMessage = err.message || 'Error reordering characters';
+        this.characters = previousCharacters;
+      }
+    },
     setupSocketListeners() {
       socket.on('sheet:created', this.handleSheetCreated);
       socket.on('sheet:updated', this.handleSheetUpdated);
       socket.on('sheet:deleted', this.handleSheetDeleted);
+      socket.on('sheets:reordered', this.handleSheetsReordered);
     },
     removeSocketListeners() {
       socket.off('sheet:created', this.handleSheetCreated);
       socket.off('sheet:updated', this.handleSheetUpdated);
       socket.off('sheet:deleted', this.handleSheetDeleted);
+      socket.off('sheets:reordered', this.handleSheetsReordered);
+    },
+    handleSheetsReordered(payload) {
+      if (payload && payload.type === 'character' && Array.isArray(payload.order)) {
+        const map = new Map(this.characters.map((c) => [c.id, c]));
+        const reordered = [];
+        for (const id of payload.order) {
+          if (map.has(id)) {
+            reordered.push(map.get(id));
+            map.delete(id);
+          }
+        }
+        for (const remaining of map.values()) {
+          reordered.push(remaining);
+        }
+        this.characters = reordered;
+      }
     },
     handleSheetCreated(payload) {
       if (payload && payload.type === 'character' && payload.sheet) {
@@ -1466,18 +1610,29 @@ export default {
 }
 
 .character-list li {
-  padding: 12px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid #21262d;
   border-left: 4px solid transparent;
   cursor: pointer;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  transition: background 0.2s, border-color 0.2s;
+  gap: 8px;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+  user-select: none;
 }
 
 .character-list li:hover {
   background: #21262d;
+}
+
+.character-list li.dragging {
+  opacity: 0.4;
+  background: #1c2128;
+}
+
+.character-list li.drag-over {
+  border-top: 2px solid #00e5ff;
+  background: rgba(0, 229, 255, 0.08);
 }
 
 .character-list li.active {
@@ -1497,11 +1652,71 @@ export default {
   color: #80cbc4;
 }
 
+.drag-handle {
+  cursor: grab;
+  color: #6e7681;
+  font-size: 14px;
+  letter-spacing: -2px;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.drag-handle:hover {
+  color: #00e5ff;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
 .char-item-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
   overflow: hidden;
+  flex: 1;
+}
+
+.char-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.reorder-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-reorder {
+  background: transparent;
+  border: none;
+  color: #6e7681;
+  cursor: pointer;
+  padding: 1px 4px;
+  font-size: 9px;
+  line-height: 1;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-reorder:hover:not(:disabled) {
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.15);
+}
+
+.btn-reorder:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
 }
 
 .char-name {
