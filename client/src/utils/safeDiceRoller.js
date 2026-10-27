@@ -40,10 +40,10 @@ export function generateSyntheticRoll(notation) {
  * @param {Object} diceBox - DiceBox instance (or null)
  * @param {Array} notation - Array of dice descriptors
  * @param {Object} options
- * @param {number} [options.timeoutMs=4000] - Max time to wait for 3D physics settling
+ * @param {number} [options.timeoutMs=10000] - Max time to wait for 3D physics settling
  * @returns {Promise<Array>} Array of settled die results
  */
-export async function executeQueuedDiceRoll(diceBox, notation, { timeoutMs = 4000 } = {}) {
+export async function executeQueuedDiceRoll(diceBox, notation, { timeoutMs = 10000 } = {}) {
   return diceRollQueue.enqueue(async () => {
     if (!diceBox || typeof diceBox.roll !== 'function') {
       return generateSyntheticRoll(notation);
