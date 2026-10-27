@@ -42,6 +42,7 @@ function migrate(db) {
       inventory TEXT DEFAULT '[]',
       notes TEXT DEFAULT '',
       avatar_url TEXT DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -61,6 +62,7 @@ function migrate(db) {
       defenses TEXT DEFAULT '[]',
       notes TEXT DEFAULT '',
       avatar_url TEXT DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -221,6 +223,10 @@ if (!mapCols.includes('map_type')) {
   if (!charCols.includes('current_seu')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN current_seu INTEGER NOT NULL DEFAULT 50');
   }
+  if (!charCols.includes('sort_order')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+  }
+  db.exec('UPDATE character_sheets SET sort_order = id WHERE sort_order = 0');
 
   const charTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='character_sheets'").get();
   if (charTableInfo && charTableInfo.sql && charTableInfo.sql.includes("CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian'))")) {
@@ -252,6 +258,7 @@ if (!mapCols.includes('map_type')) {
           inventory TEXT DEFAULT '[]',
           notes TEXT DEFAULT '',
           avatar_url TEXT DEFAULT '',
+          sort_order INTEGER NOT NULL DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -259,14 +266,14 @@ if (!mapCols.includes('map_type')) {
         INSERT INTO character_sheets_dg_tmp (
           id, user_id, name, race, psa, gender, height, weight,
           str, sta, current_sta, max_seu, current_seu, dex, rs, int_stat, log_stat, per, ldr,
-          racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
+          racial_abilities, skills, inventory, notes, avatar_url, sort_order, created_at, updated_at
         )
         SELECT
           id, user_id, name, race, psa, gender, height, weight,
           str, sta, current_sta,
           COALESCE(max_seu, 50), COALESCE(current_seu, 50),
           dex, rs, int_stat, log_stat, per, ldr,
-          racial_abilities, skills, inventory, notes, avatar_url, created_at, updated_at
+          racial_abilities, skills, inventory, notes, avatar_url, COALESCE(sort_order, id), created_at, updated_at
         FROM character_sheets;
         DROP TABLE character_sheets;
         ALTER TABLE character_sheets_dg_tmp RENAME TO character_sheets;
@@ -358,6 +365,10 @@ if (!mapCols.includes('map_type')) {
   if (!shipCols.includes('avatar_url')) {
     db.exec('ALTER TABLE ship_sheets ADD COLUMN avatar_url TEXT DEFAULT ""');
   }
+  if (!shipCols.includes('sort_order')) {
+    db.exec('ALTER TABLE ship_sheets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+  }
+  db.exec('UPDATE ship_sheets SET sort_order = id WHERE sort_order = 0');
 
   const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);
   if (!tokenCols.includes('rotation')) {

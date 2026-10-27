@@ -48,11 +48,68 @@ export function createCharacterRouter(db, io) {
 
   router.get('/', (req, res) => {
     try {
-      const rows = db.prepare('SELECT * FROM character_sheets ORDER BY created_at DESC, id DESC').all();
+      const rows = db.prepare('SELECT * FROM character_sheets ORDER BY sort_order ASC, id ASC').all();
       res.json(rows.map(formatCharacterSheet));
     } catch (err) {
       console.error('Error listing characters:', err);
       res.status(500).json({ error: 'Failed to list character sheets' });
+    }
+  });
+
+  router.put('/reorder', (req, res) => {
+    try {
+      const { order } = req.body || {};
+      if (!Array.isArray(order) || order.length === 0) {
+        return res.status(400).json({ error: 'Order must be a non-empty array of sheet IDs' });
+      }
+
+      // Check numeric IDs and duplicates
+      const seen = new Set();
+      for (const id of order) {
+        if (typeof id !== 'number' || !Number.isInteger(id)) {
+          return res.status(400).json({ error: 'All IDs in order must be valid integers' });
+        }
+        if (seen.has(id)) {
+          return res.status(400).json({ error: 'Duplicate IDs found in order array' });
+        }
+        seen.add(id);
+      }
+
+      const isGM = isGameMaster(db, req.session.userId);
+      if (!isGM) {
+        // Player: can only reorder sheets they own. All sheets in order must be owned by the user.
+        const placeholders = order.map(() => '?').join(',');
+        const sheetsInOrder = db.prepare(`SELECT id, user_id FROM character_sheets WHERE id IN (${placeholders})`).all(...order);
+        const sheetMap = new Map(sheetsInOrder.map(s => [s.id, s]));
+
+        for (const id of order) {
+          const sheet = sheetMap.get(id);
+          if (!sheet) {
+            return res.status(404).json({ error: `Character sheet ${id} not found` });
+          }
+          if (sheet.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Cannot reorder sheets you do not own' });
+          }
+        }
+      }
+
+      const updateOrderTx = db.transaction((sheetIds) => {
+        const stmt = db.prepare('UPDATE character_sheets SET sort_order = ? WHERE id = ?');
+        sheetIds.forEach((id, index) => {
+          stmt.run(index, id);
+        });
+      });
+
+      updateOrderTx(order);
+
+      if (io) {
+        io.emit('sheets:reordered', { type: 'character', order });
+      }
+
+      res.json({ success: true, order });
+    } catch (err) {
+      console.error('Error reordering character sheets:', err);
+      res.status(500).json({ error: 'Failed to reorder character sheets' });
     }
   });
 
@@ -121,22 +178,24 @@ export function createCharacterRouter(db, io) {
       const skillsStr = typeof skills === 'string' ? skills : JSON.stringify(skills);
       const inventoryStr = typeof inventory === 'string' ? inventory : JSON.stringify(inventory);
 
+      const nextSortOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM character_sheets').get()?.next_order) || 1;
+
       const stmt = db.prepare(`
         INSERT INTO character_sheets (
           user_id, name, race, psa, gender, height, weight,
           str, sta, current_sta, max_seu, current_seu, dex, rs, int_stat, log_stat, per, ldr,
-          racial_abilities, skills, inventory, notes, avatar_url
+          racial_abilities, skills, inventory, notes, avatar_url, sort_order
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         req.session.userId, characterName, race, characterPsa, gender, height, weight,
         strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
-        racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || ''
+        racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
       const created = db.prepare('SELECT * FROM character_sheets WHERE id = ?').get(result.lastInsertRowid);
@@ -318,11 +377,68 @@ export function createShipRouter(db, io) {
 
   router.get('/', (req, res) => {
     try {
-      const rows = db.prepare('SELECT * FROM ship_sheets ORDER BY created_at DESC, id DESC').all();
+      const rows = db.prepare('SELECT * FROM ship_sheets ORDER BY sort_order ASC, id ASC').all();
       res.json(rows.map(formatShipSheet));
     } catch (err) {
       console.error('Error listing ships:', err);
       res.status(500).json({ error: 'Failed to list ship sheets' });
+    }
+  });
+
+  router.put('/reorder', (req, res) => {
+    try {
+      const { order } = req.body || {};
+      if (!Array.isArray(order) || order.length === 0) {
+        return res.status(400).json({ error: 'Order must be a non-empty array of sheet IDs' });
+      }
+
+      // Check numeric IDs and duplicates
+      const seen = new Set();
+      for (const id of order) {
+        if (typeof id !== 'number' || !Number.isInteger(id)) {
+          return res.status(400).json({ error: 'All IDs in order must be valid integers' });
+        }
+        if (seen.has(id)) {
+          return res.status(400).json({ error: 'Duplicate IDs found in order array' });
+        }
+        seen.add(id);
+      }
+
+      const isGM = isGameMaster(db, req.session.userId);
+      if (!isGM) {
+        // Player: can only reorder sheets they own. All sheets in order must be owned by the user.
+        const placeholders = order.map(() => '?').join(',');
+        const sheetsInOrder = db.prepare(`SELECT id, user_id FROM ship_sheets WHERE id IN (${placeholders})`).all(...order);
+        const sheetMap = new Map(sheetsInOrder.map(s => [s.id, s]));
+
+        for (const id of order) {
+          const sheet = sheetMap.get(id);
+          if (!sheet) {
+            return res.status(404).json({ error: `Ship sheet ${id} not found` });
+          }
+          if (sheet.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Cannot reorder sheets you do not own' });
+          }
+        }
+      }
+
+      const updateOrderTx = db.transaction((sheetIds) => {
+        const stmt = db.prepare('UPDATE ship_sheets SET sort_order = ? WHERE id = ?');
+        sheetIds.forEach((id, index) => {
+          stmt.run(index, id);
+        });
+      });
+
+      updateOrderTx(order);
+
+      if (io) {
+        io.emit('sheets:reordered', { type: 'ship', order });
+      }
+
+      res.json({ success: true, order });
+    } catch (err) {
+      console.error('Error reordering ship sheets:', err);
+      res.status(500).json({ error: 'Failed to reorder ship sheets' });
     }
   });
 
@@ -370,19 +486,21 @@ export function createShipRouter(db, io) {
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
 
+      const nextSortOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM ship_sheets').get()?.next_order) || 1;
+
       const stmt = db.prepare(`
         INSERT INTO ship_sheets (
           user_id, name, ship_type, hull_points, current_hp, adf, mr, dcr,
-          weapons, defenses, notes, avatar_url
+          weapons, defenses, notes, avatar_url, sort_order
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?
+          ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         req.session.userId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr,
-        weaponsStr, defensesStr, notes, req.body.avatar_url || ''
+        weaponsStr, defensesStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
       const created = db.prepare('SELECT * FROM ship_sheets WHERE id = ?').get(result.lastInsertRowid);

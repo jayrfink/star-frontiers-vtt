@@ -636,5 +636,178 @@ describe('Sheets API & Socket.io', () => {
       expect(updateRes.body.mr).toBe(0);
       expect(updateRes.body.dcr).toBe(0);
     });
+
+    it('reorders character sheets updates sort_order, returns new order, and emits sheets:reordered', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmUser', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmUser', password: 'password123' });
+
+      const c1 = (await gmAgent.post('/api/characters').send({ name: 'Alpha', race: 'Human' })).body;
+      const c2 = (await gmAgent.post('/api/characters').send({ name: 'Beta', race: 'Vrusk' })).body;
+      const c3 = (await gmAgent.post('/api/characters').send({ name: 'Gamma', race: 'Yazirian' })).body;
+
+      const emitSpy = vi.spyOn(io, 'emit');
+
+      // Reorder: Gamma, Alpha, Beta
+      const reorderRes = await gmAgent.put('/api/characters/reorder').send({
+        order: [c3.id, c1.id, c2.id],
+      });
+
+      expect(reorderRes.status).toBe(200);
+      expect(reorderRes.body).toEqual({ success: true, order: [c3.id, c1.id, c2.id] });
+      expect(emitSpy).toHaveBeenCalledWith('sheets:reordered', {
+        type: 'character',
+        order: [c3.id, c1.id, c2.id],
+      });
+
+      const listRes = await gmAgent.get('/api/characters');
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.map(c => c.id)).toEqual([c3.id, c1.id, c2.id]);
+    });
+
+    it('rejects unauthenticated requests to reorder character sheets with 401', async () => {
+      const res = await request(app).put('/api/characters/reorder').send({ order: [1, 2] });
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects invalid payloads on character reorder with 400', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmValidate', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmValidate', password: 'password123' });
+
+      // Non-array
+      let res = await gmAgent.put('/api/characters/reorder').send({ order: 'not-an-array' });
+      expect(res.status).toBe(400);
+
+      // Empty array
+      res = await gmAgent.put('/api/characters/reorder').send({ order: [] });
+      expect(res.status).toBe(400);
+
+      // Non-numeric IDs
+      res = await gmAgent.put('/api/characters/reorder').send({ order: [1, 'abc'] });
+      expect(res.status).toBe(400);
+
+      // Duplicate IDs
+      res = await gmAgent.put('/api/characters/reorder').send({ order: [1, 1] });
+      expect(res.status).toBe(400);
+    });
+
+    it('enforces character reorder permissions (GM allowed, player allowed for own, forbidden for non-owned)', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmAuth', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmAuth', password: 'password123' });
+
+      const gmChar = (await gmAgent.post('/api/characters').send({ name: 'GM Char', race: 'Human' })).body;
+
+      // GM creates playerAuth
+      await gmAgent.post('/api/auth/register').send({ username: 'playerAuth', password: 'password123', role: 'Player' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'playerAuth', password: 'password123' });
+
+      const pChar1 = (await playerAgent.post('/api/characters').send({ name: 'Player Char 1', race: 'Vrusk' })).body;
+      const pChar2 = (await playerAgent.post('/api/characters').send({ name: 'Player Char 2', race: 'Dralasite' })).body;
+
+      // Player reordering player-owned sheets
+      const playerSuccessRes = await playerAgent.put('/api/characters/reorder').send({
+        order: [pChar2.id, pChar1.id],
+      });
+      expect(playerSuccessRes.status).toBe(200);
+
+      // Player attempting to reorder another user's sheet (GM char)
+      const playerForbiddenRes = await playerAgent.put('/api/characters/reorder').send({
+        order: [pChar2.id, gmChar.id, pChar1.id],
+      });
+      expect(playerForbiddenRes.status).toBe(403);
+
+      // GM can reorder all sheets
+      const gmSuccessRes = await gmAgent.put('/api/characters/reorder').send({
+        order: [pChar1.id, gmChar.id, pChar2.id],
+      });
+      expect(gmSuccessRes.status).toBe(200);
+      expect(gmSuccessRes.body.order).toEqual([pChar1.id, gmChar.id, pChar2.id]);
+    });
+
+    it('reorders ship sheets updates sort_order, returns new order, and emits sheets:reordered', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmShipReorder', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmShipReorder', password: 'password123' });
+
+      const s1 = (await gmAgent.post('/api/ships').send({ name: 'Ship 1', ship_type: 'Fighter' })).body;
+      const s2 = (await gmAgent.post('/api/ships').send({ name: 'Ship 2', ship_type: 'Frigate' })).body;
+      const s3 = (await gmAgent.post('/api/ships').send({ name: 'Ship 3', ship_type: 'Cruiser' })).body;
+
+      const emitSpy = vi.spyOn(io, 'emit');
+
+      // Reorder: Ship 3, Ship 1, Ship 2
+      const reorderRes = await gmAgent.put('/api/ships/reorder').send({
+        order: [s3.id, s1.id, s2.id],
+      });
+
+      expect(reorderRes.status).toBe(200);
+      expect(reorderRes.body).toEqual({ success: true, order: [s3.id, s1.id, s2.id] });
+      expect(emitSpy).toHaveBeenCalledWith('sheets:reordered', {
+        type: 'ship',
+        order: [s3.id, s1.id, s2.id],
+      });
+
+      const listRes = await gmAgent.get('/api/ships');
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.map(s => s.id)).toEqual([s3.id, s1.id, s2.id]);
+    });
+
+    it('rejects unauthenticated and invalid requests on ship reorder', async () => {
+      const unauthRes = await request(app).put('/api/ships/reorder').send({ order: [1, 2] });
+      expect(unauthRes.status).toBe(401);
+
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmShipVal', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmShipVal', password: 'password123' });
+
+      let res = await gmAgent.put('/api/ships/reorder').send({ order: null });
+      expect(res.status).toBe(400);
+
+      res = await gmAgent.put('/api/ships/reorder').send({ order: [] });
+      expect(res.status).toBe(400);
+
+      res = await gmAgent.put('/api/ships/reorder').send({ order: ['one'] });
+      expect(res.status).toBe(400);
+    });
+
+    it('enforces ship reorder permissions (GM allowed, player allowed for own, forbidden for non-owned)', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmShipPerm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmShipPerm', password: 'password123' });
+
+      const gmShip = (await gmAgent.post('/api/ships').send({ name: 'GM Cruiser', ship_type: 'Cruiser' })).body;
+
+      // GM creates playerShipPerm
+      await gmAgent.post('/api/auth/register').send({ username: 'playerShipPerm', password: 'password123', role: 'Player' });
+
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'playerShipPerm', password: 'password123' });
+
+      const pShip1 = (await playerAgent.post('/api/ships').send({ name: 'Player Scout 1', ship_type: 'Scout' })).body;
+      const pShip2 = (await playerAgent.post('/api/ships').send({ name: 'Player Scout 2', ship_type: 'Scout' })).body;
+
+      // Player reordering player-owned ships
+      const playerSuccessRes = await playerAgent.put('/api/ships/reorder').send({
+        order: [pShip2.id, pShip1.id],
+      });
+      expect(playerSuccessRes.status).toBe(200);
+
+      // Player moving GM ship
+      const playerForbiddenRes = await playerAgent.put('/api/ships/reorder').send({
+        order: [pShip2.id, gmShip.id, pShip1.id],
+      });
+      expect(playerForbiddenRes.status).toBe(403);
+
+      // GM reordering all ships
+      const gmSuccessRes = await gmAgent.put('/api/ships/reorder').send({
+        order: [pShip1.id, gmShip.id, pShip2.id],
+      });
+      expect(gmSuccessRes.status).toBe(200);
+      expect(gmSuccessRes.body.order).toEqual([pShip1.id, gmShip.id, pShip2.id]);
+    });
   });
 });
