@@ -572,133 +572,146 @@
               </div>
 
               <!-- Flip & Burn Maneuver (MR >= 3, MR 1-2, Braking Burns & Crew Checks) -->
-              <div class="flip-burn-box">
-                <div class="flip-burn-header">
-                  <label>🔄 Flip &amp; Burn</label>
+              <div class="flip-burn-box" :class="{ collapsed: isFlipBurnCollapsed }">
+                <div
+                  class="flip-burn-header clickable"
+                  @click="isFlipBurnCollapsed = !isFlipBurnCollapsed"
+                  :title="isFlipBurnCollapsed ? 'Expand Flip & Burn Controls' : 'Collapse Flip & Burn Controls'"
+                  role="button"
+                  tabindex="0"
+                  @keydown.enter.prevent="isFlipBurnCollapsed = !isFlipBurnCollapsed"
+                  @keydown.space.prevent="isFlipBurnCollapsed = !isFlipBurnCollapsed"
+                >
+                  <div class="flip-burn-header-title">
+                    <span class="collapse-caret" :class="{ collapsed: isFlipBurnCollapsed }">▼</span>
+                    <label>🔄 Flip &amp; Burn</label>
+                  </div>
                   <span v-if="selectedTokenLinkedShip" class="mr-pill" :class="{ eligible: selectedTokenCanStandardFlip || selectedTokenCanLumberingFlip }">
                     MR {{ selectedTokenLinkedShip.mr }}
                   </span>
                 </div>
 
-                <!-- MR >= 3 Single-Turn Standard Maneuver -->
-                <template v-if="selectedTokenCanStandardFlip">
-                  <button
-                    type="button"
-                    class="btn-flip-burn full-width"
-                    title="Reverse heading 180° in 1 turn (no STA check required)"
-                    @click="executeStandardFlip"
-                  >
-                    🔄 Standard Flip (180° - 1 Turn)
-                  </button>
-                  <small class="flip-burn-hint">
-                    Fast vessel (MR &ge; 3): 1-turn in-hex pivot. Compensators absorb rotation; no crew check required.
-                  </small>
-                </template>
+                <div v-show="!isFlipBurnCollapsed" class="flip-burn-body">
+                  <!-- MR >= 3 Single-Turn Standard Maneuver -->
+                  <template v-if="selectedTokenCanStandardFlip">
+                    <button
+                      type="button"
+                      class="btn-flip-burn full-width"
+                      title="Reverse heading 180° in 1 turn (no STA check required)"
+                      @click="executeStandardFlip"
+                    >
+                      🔄 Standard Flip (180° - 1 Turn)
+                    </button>
+                    <small class="flip-burn-hint">
+                      Fast vessel (MR &ge; 3): 1-turn in-hex pivot. Compensators absorb rotation; no crew check required.
+                    </small>
+                  </template>
 
-                <!-- MR 1-2 Vessels: Lumbering Flip or Emergency Snap Flip -->
-                <template v-else-if="selectedTokenCanLumberingFlip || selectedTokenCanSnapFlip">
-                  <div v-if="selectedTokenInMultiTurnFlip" class="multi-turn-progress-banner">
-                    ⏳ Multi-Turn Flip in Progress (Turn 1/2 complete: +90°)
-                  </div>
-                  <button
-                    type="button"
-                    class="btn-flip-burn full-width"
-                    :class="{ 'in-progress': selectedTokenInMultiTurnFlip }"
-                    :title="selectedTokenInMultiTurnFlip ? 'Complete Turn 2/2 (+90°, total 180°)' : 'Start Turn 1/2 (+90°)'"
-                    @click="executeLumberingFlip"
-                  >
-                    {{ selectedTokenInMultiTurnFlip ? '🔄 Complete Lumbering Flip (Turn 2/2: +90°)' : '🔄 Start Lumbering Flip (Turn 1/2: +90°)' }}
-                  </button>
-                  <button
-                    v-if="selectedTokenInMultiTurnFlip"
-                    type="button"
-                    class="btn-cancel-flip"
-                    @click="cancelMultiTurnFlip"
-                    title="Cancel multi-turn flip state"
-                  >
-                    ✕ Cancel Flip
-                  </button>
-                  <small class="flip-burn-hint">
-                    {{ selectedTokenInMultiTurnFlip ? 'Turn 2 of 2: Reverses final 90° (total 180°). No STA check required.' : 'Lower agility vessel (MR 1–2): Takes 2 turns to flip at drift speed. No STA check required.' }}
-                  </small>
-
-                  <button
-                    type="button"
-                    class="btn-snap-flip full-width"
-                    title="Overload RCS thrusters for 1-turn flip (requires pilot check and crew STA check)"
-                    @click="executeSnapFlip()"
-                  >
-                    ⚠️ Emergency Snap Flip (180° - 1 Turn)
-                  </button>
-                  <small class="flip-burn-hint warning">
-                    Overloads RCS thrusters: Reverses in 1 turn, but crew suffers centrifugal whip (-10% at extremities).
-                  </small>
-                </template>
-
-                <small v-else-if="selectedTokenLinkedShip" class="flip-burn-ineligible">
-                  Vessel lacks maneuvering thrusters (MR 0)
-                </small>
-
-                <!-- Braking Burn Deceleration Section -->
-                <div class="braking-burn-controls">
-                  <div class="braking-header">
-                    <label>Braking Burn (Deceleration)</label>
-                    <div class="braking-input-group">
-                      <span class="dv-label">ΔV</span>
-                      <input
-                        type="number"
-                        v-model.number="brakingDeltaV"
-                        min="1"
-                        max="20"
-                        step="1"
-                        class="braking-dv-input"
-                      />
+                  <!-- MR 1-2 Vessels: Lumbering Flip or Emergency Snap Flip -->
+                  <template v-else-if="selectedTokenCanLumberingFlip || selectedTokenCanSnapFlip">
+                    <div v-if="selectedTokenInMultiTurnFlip" class="multi-turn-progress-banner">
+                      ⏳ Multi-Turn Flip in Progress (Turn 1/2 complete: +90°)
                     </div>
+                    <button
+                      type="button"
+                      class="btn-flip-burn full-width"
+                      :class="{ 'in-progress': selectedTokenInMultiTurnFlip }"
+                      :title="selectedTokenInMultiTurnFlip ? 'Complete Turn 2/2 (+90°, total 180°)' : 'Start Turn 1/2 (+90°)'"
+                      @click="executeLumberingFlip"
+                    >
+                      {{ selectedTokenInMultiTurnFlip ? '🔄 Complete Lumbering Flip (Turn 2/2: +90°)' : '🔄 Start Lumbering Flip (Turn 1/2: +90°)' }}
+                    </button>
+                    <button
+                      v-if="selectedTokenInMultiTurnFlip"
+                      type="button"
+                      class="btn-cancel-flip"
+                      @click="cancelMultiTurnFlip"
+                      title="Cancel multi-turn flip state"
+                    >
+                      ✕ Cancel Flip
+                    </button>
+                    <small class="flip-burn-hint">
+                      {{ selectedTokenInMultiTurnFlip ? 'Turn 2 of 2: Reverses final 90° (total 180°). No STA check required.' : 'Lower agility vessel (MR 1–2): Takes 2 turns to flip at drift speed. No STA check required.' }}
+                    </small>
+
+                    <button
+                      type="button"
+                      class="btn-snap-flip full-width"
+                      title="Overload RCS thrusters for 1-turn flip (requires pilot check and crew STA check)"
+                      @click="executeSnapFlip()"
+                    >
+                      ⚠️ Emergency Snap Flip (180° - 1 Turn)
+                    </button>
+                    <small class="flip-burn-hint warning">
+                      Overloads RCS thrusters: Reverses in 1 turn, but crew suffers centrifugal whip (-10% at extremities).
+                    </small>
+                  </template>
+
+                  <small v-else-if="selectedTokenLinkedShip" class="flip-burn-ineligible">
+                    Vessel lacks maneuvering thrusters (MR 0)
+                  </small>
+
+                  <!-- Braking Burn Deceleration Section -->
+                  <div class="braking-burn-controls">
+                    <div class="braking-header">
+                      <label>Braking Burn (Deceleration)</label>
+                      <div class="braking-input-group">
+                        <span class="dv-label">ΔV</span>
+                        <input
+                          type="number"
+                          v-model.number="brakingDeltaV"
+                          min="1"
+                          max="20"
+                          step="1"
+                          class="braking-dv-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div v-if="brakingDeltaV <= 3" class="braking-indicator safe">
+                      ✅ Safe Deceleration: Compensators active, 0% penalty
+                    </div>
+                    <div v-else class="braking-indicator high-g">
+                      ⚠️ HIGH-G BRAKING BURN: -{{ (brakingDeltaV - 3) * 10 }}% STA check penalty
+                    </div>
+
+                    <button
+                      type="button"
+                      class="btn-braking-burn full-width"
+                      :class="{ 'high-g': brakingDeltaV >= 4 }"
+                      @click="executeBrakingBurn"
+                    >
+                      🚀 Execute Braking Burn (ΔV {{ brakingDeltaV }})
+                    </button>
                   </div>
 
-                  <div v-if="brakingDeltaV <= 3" class="braking-indicator safe">
-                    ✅ Safe Deceleration: Compensators active, 0% penalty
-                  </div>
-                  <div v-else class="braking-indicator high-g">
-                    ⚠️ HIGH-G BRAKING BURN: -{{ (brakingDeltaV - 3) * 10 }}% STA check penalty
-                  </div>
-
+                  <!-- Direct button to open Crew G-Load Check Dialog -->
                   <button
                     type="button"
-                    class="btn-braking-burn full-width"
-                    :class="{ 'high-g': brakingDeltaV >= 4 }"
-                    @click="executeBrakingBurn"
+                    class="btn-crew-gcheck-trigger full-width"
+                    @click="openCrewGCheckModal('Manual Check')"
                   >
-                    🚀 Execute Braking Burn (ΔV {{ brakingDeltaV }})
+                    🩺 Crew G-Load Check
                   </button>
-                </div>
 
-                <!-- Direct button to open Crew G-Load Check Dialog -->
-                <button
-                  type="button"
-                  class="btn-crew-gcheck-trigger full-width"
-                  @click="openCrewGCheckModal('Manual Check')"
-                >
-                  🩺 Crew G-Load Check
-                </button>
-
-                <!-- Direct button to open Orbital Slingshot Modal -->
-                <button
-                  type="button"
-                  class="btn-slingshot-trigger full-width"
-                  @click="openSlingshotModal()"
-                  title="Open Orbital Slingshot & Gravity Well Calculator"
-                >
-                  🪐 Orbital Slingshot
-                </button>
-
-                <div class="flip-burn-roll-btns">
-                  <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll quick d% STA Check">
-                    🎲 Quick STA (d%)
+                  <!-- Direct button to open Orbital Slingshot Modal -->
+                  <button
+                    type="button"
+                    class="btn-slingshot-trigger full-width"
+                    @click="openSlingshotModal()"
+                    title="Open Orbital Slingshot & Gravity Well Calculator"
+                  >
+                    🪐 Orbital Slingshot
                   </button>
-                  <button type="button" class="btn-fb-roll blackout" @click="rollFlipAndBurnBlackout" title="Roll 1d10 × 10 seconds blackout duration">
-                    💫 Blackout (1d10×10s)
-                  </button>
+
+                  <div class="flip-burn-roll-btns">
+                    <button type="button" class="btn-fb-roll" @click="rollFlipAndBurnStaCheck" title="Roll quick d% STA Check">
+                      🎲 Quick STA (d%)
+                    </button>
+                    <button type="button" class="btn-fb-roll blackout" @click="rollFlipAndBurnBlackout" title="Roll 1d10 × 10 seconds blackout duration">
+                      💫 Blackout (1d10×10s)
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -723,9 +736,30 @@
               </div>
 
               <!-- Ship Weapons Section -->
-              <div v-if="selectedTokenLinkedShip && selectedTokenLinkedShip.weapons && selectedTokenLinkedShip.weapons.length > 0" class="token-weapons-section">
-                <label>Weapons ({{ selectedTokenLinkedShip.weapons.length }}):</label>
-                <div class="token-weapons-list">
+              <div
+                v-if="selectedTokenLinkedShip && selectedTokenLinkedShip.weapons && selectedTokenLinkedShip.weapons.length > 0"
+                class="token-weapons-section"
+                :class="{ collapsed: isWeaponsCollapsed }"
+              >
+                <div
+                  class="token-weapons-header clickable"
+                  @click="isWeaponsCollapsed = !isWeaponsCollapsed"
+                  :title="isWeaponsCollapsed ? 'Expand Weapons List' : 'Collapse Weapons List'"
+                  role="button"
+                  tabindex="0"
+                  @keydown.enter.prevent="isWeaponsCollapsed = !isWeaponsCollapsed"
+                  @keydown.space.prevent="isWeaponsCollapsed = !isWeaponsCollapsed"
+                >
+                  <div class="token-weapons-header-title">
+                    <span class="collapse-caret" :class="{ collapsed: isWeaponsCollapsed }">▼</span>
+                    <label>⚔️ Weapons ({{ selectedTokenLinkedShip.weapons.length }})</label>
+                  </div>
+                  <span class="weapons-count-pill">
+                    {{ selectedTokenLinkedShip.weapons.length }} {{ selectedTokenLinkedShip.weapons.length === 1 ? 'gun' : 'guns' }}
+                  </span>
+                </div>
+
+                <div v-show="!isWeaponsCollapsed" class="token-weapons-list">
                   <div
                     v-for="(wpn, wIdx) in selectedTokenLinkedShip.weapons"
                     :key="wpn.id || wIdx"
@@ -1388,6 +1422,8 @@ import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import { calculateDamageRoll, calculatePercentileRoll, calculateInitiativeRoll } from '../utils/diceUtils.js';
+import { executeQueuedDiceRoll } from '../utils/safeDiceRoller.js';
+import { diceRollQueue } from '../utils/diceRollQueue.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
 import { isCelestialToken, CELESTIAL_PRESET_NAMES } from '../utils/spaceTokens.js';
@@ -1571,149 +1607,114 @@ function toggleDmgMenu() {
 async function rollInitiative() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showInitiativeHud.value = false;
-    showPercentileHud.value = false;
-    showDamageHud.value = false;
-    if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
+  showInitiativeHud.value = false;
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-init-player', themeColor: '#0b222e', qty: 1 },
-        { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
-      ]);
-      const initSummary = calculateInitiativeRoll(results);
-      if (initSummary.valid) {
-        const rollData = {
-          ...initSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        lastInitiativeRoll.value = rollData;
-        showInitiativeHud.value = true;
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-init-player', themeColor: '#0b222e', qty: 1 },
+      { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
+    ]);
+    const initSummary = calculateInitiativeRoll(results);
+    if (initSummary.valid) {
+      const rollData = {
+        ...initSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      lastInitiativeRoll.value = rollData;
+      showInitiativeHud.value = true;
 
-        sendRollToServer({
-          type: 'initiative',
-          label: '⚡ Combat Initiative',
-          total: initSummary.playerRoll,
-          breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll}`,
-          rollSummary: rollData
-        });
+      sendRollToServer({
+        type: 'initiative',
+        label: '⚡ Combat Initiative',
+        total: initSummary.playerRoll,
+        breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll}`,
+        rollSummary: rollData
+      });
 
-        initiativeHudTimeout = setTimeout(() => {
-          showInitiativeHud.value = false;
-        }, 9000);
-      }
-    } catch (err) {
-      console.error('Initiative roll failed:', err);
+      initiativeHudTimeout = setTimeout(() => {
+        showInitiativeHud.value = false;
+      }, 9000);
     }
-  } else {
-    const playerRoll = Math.floor(Math.random() * 10) + 1;
-    const oppRoll = Math.floor(Math.random() * 10) + 1;
-    let winner = 'tie';
-    if (playerRoll > oppRoll) winner = 'players';
-    else if (oppRoll > playerRoll) winner = 'opposition';
-
-    const rollData = {
-      playerRoll,
-      oppRoll,
-      winner,
-      valid: true,
-      username: authStore.user?.username,
-      role: authStore.user?.role
-    };
-    lastInitiativeRoll.value = rollData;
-    showInitiativeHud.value = true;
-
-    sendRollToServer({
-      type: 'initiative',
-      label: '⚡ Combat Initiative',
-      total: playerRoll,
-      breakdown: `Players: ${playerRoll} vs Opposition: ${oppRoll}`,
-      rollSummary: rollData
-    });
-
-    initiativeHudTimeout = setTimeout(() => {
-      showInitiativeHud.value = false;
-    }, 9000);
+  } catch (err) {
+    console.error('Initiative roll failed:', err);
   }
 }
 
 async function rollPercentile() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showPercentileHud.value = false;
-    showDamageHud.value = false;
-    showInitiativeHud.value = false;
-    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  showInitiativeHud.value = false;
+  if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
-        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
-      ]);
-      const rollSummary = calculatePercentileRoll(results);
-      if (rollSummary.valid) {
-        lastPercentileRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showPercentileHud.value = true;
-        sendRollToServer({
-          type: 'percentile',
-          label: 'd%',
-          total: rollSummary.total,
-          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`,
-          rollSummary
-        });
-        percentileHudTimeout = setTimeout(() => {
-          showPercentileHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Percentile dice roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
+      { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
+    ]);
+    const rollSummary = calculatePercentileRoll(results);
+    if (rollSummary.valid) {
+      lastPercentileRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showPercentileHud.value = true;
+      sendRollToServer({
+        type: 'percentile',
+        label: 'd%',
+        total: rollSummary.total,
+        breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`,
+        rollSummary
+      });
+      percentileHudTimeout = setTimeout(() => {
+        showPercentileHud.value = false;
+      }, 8000);
     }
+  } catch (err) {
+    console.error('Percentile dice roll failed:', err);
   }
 }
 
 async function rollDamage() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showDamageHud.value = false;
-    showPercentileHud.value = false;
-    showInitiativeHud.value = false;
-    if (damageHudTimeout) clearTimeout(damageHudTimeout);
-    showDmgMenu.value = false;
+  showDamageHud.value = false;
+  showPercentileHud.value = false;
+  showInitiativeHud.value = false;
+  if (damageHudTimeout) clearTimeout(damageHudTimeout);
+  showDmgMenu.value = false;
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
-      ]);
-      const rollSummary = calculateDamageRoll(results);
-      if (rollSummary.count > 0) {
-        lastDamageRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showDamageHud.value = true;
-        sendRollToServer({
-          type: 'damage',
-          label: `${rollSummary.count}d10`,
-          total: rollSummary.total,
-          breakdown: `[${rollSummary.dice.join(', ')}]`,
-          rollSummary
-        });
-        damageHudTimeout = setTimeout(() => {
-          showDamageHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Damage dice roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
+    ]);
+    const rollSummary = calculateDamageRoll(results);
+    if (rollSummary.count > 0) {
+      lastDamageRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showDamageHud.value = true;
+      sendRollToServer({
+        type: 'damage',
+        label: `${rollSummary.count}d10`,
+        total: rollSummary.total,
+        breakdown: `[${rollSummary.dice.join(', ')}]`,
+        rollSummary
+      });
+      damageHudTimeout = setTimeout(() => {
+        showDamageHud.value = false;
+      }, 8000);
     }
+  } catch (err) {
+    console.error('Damage dice roll failed:', err);
   }
 }
 
@@ -1885,6 +1886,8 @@ const uploadingAvatar = ref(false);
 
 // Braking Burn Deceleration (ΔV)
 const brakingDeltaV = ref(2);
+const isFlipBurnCollapsed = ref(true);
+const isWeaponsCollapsed = ref(true);
 
 // Interactive Crew G-Load Check Dialog State
 const showCrewGCheckModal = ref(false);
@@ -2319,17 +2322,15 @@ async function executeSnapFlip(options = {}) {
   if (roll === null) {
     playDiceSound({ isRemote: false });
     const diceBox = await getReadyDiceBox();
-    if (diceBox) {
-      try {
-        const results = await diceBox.roll([
-          { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-          { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
-        ]);
-        const rollSummary = calculatePercentileRoll(results);
-        if (rollSummary.valid) roll = rollSummary.total;
-      } catch (err) {
-        console.error('Snap Flip 3D roll failed:', err);
-      }
+    try {
+      const results = await executeQueuedDiceRoll(diceBox, [
+        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+      ]);
+      const rollSummary = calculatePercentileRoll(results);
+      if (rollSummary.valid) roll = rollSummary.total;
+    } catch (err) {
+      console.error('Snap Flip 3D roll failed:', err);
     }
   }
 
@@ -2482,7 +2483,7 @@ async function executeSlingshot(options = {}) {
       if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
       try {
-        const results = await diceBox.roll([
+        const results = await executeQueuedDiceRoll(diceBox, [
           { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
           { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
         ]);
@@ -2613,7 +2614,7 @@ async function rollCrewGCheck() {
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBox.roll([
+      const results = await executeQueuedDiceRoll(diceBox, [
         { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
         { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
       ]);
@@ -2674,7 +2675,7 @@ async function rollFlipAndBurnStaCheck() {
     if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
     try {
-      const results = await diceBox.roll([
+      const results = await executeQueuedDiceRoll(diceBox, [
         { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
         { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
       ]);
@@ -2722,7 +2723,7 @@ async function rollFlipAndBurnBlackout() {
     if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
     try {
-      const results = await diceBox.roll([
+      const results = await executeQueuedDiceRoll(diceBox, [
         { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: 1 },
       ]);
       const rollSummary = calculateDamageRoll(results);
@@ -5335,12 +5336,57 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.flip-burn-box.collapsed {
+  padding: 8px 10px;
+  gap: 0;
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(56, 189, 248, 0.15);
 }
 
 .flip-burn-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.flip-burn-header.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.flip-burn-header.clickable:hover label {
+  color: #7dd3fc;
+}
+
+.flip-burn-header.clickable:hover .collapse-caret {
+  color: #7dd3fc;
+}
+
+.flip-burn-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.collapse-caret {
+  font-size: 9px;
+  color: #38bdf8;
+  display: inline-block;
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+
+.collapse-caret.collapsed {
+  transform: rotate(-90deg);
+}
+
+.flip-burn-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .flip-burn-header label {
@@ -5945,22 +5991,66 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   padding: 10px;
   margin-top: 10px;
+  transition: all 0.2s ease;
+}
+
+.token-weapons-section.collapsed {
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(56, 189, 248, 0.15);
+}
+
+.token-weapons-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.token-weapons-header.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.token-weapons-header.clickable:hover label {
+  color: #7dd3fc;
+}
+
+.token-weapons-header.clickable:hover .collapse-caret {
+  color: #7dd3fc;
+}
+
+.token-weapons-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weapons-count-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .token-weapons-section label {
-  display: block;
+  display: inline-block;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #38bdf8;
-  margin-bottom: 6px;
+  margin: 0;
+  cursor: pointer;
 }
 
 .token-weapons-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin-top: 8px;
 }
 
 .token-weapon-item {

@@ -815,6 +815,8 @@ import DeployVehicleModal from '../components/DeployVehicleModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { socket } from '../services/socket.js';
 import { calculateDamageRoll, calculatePercentileRoll, calculateInitiativeRoll } from '../utils/diceUtils.js';
+import { executeQueuedDiceRoll } from '../utils/safeDiceRoller.js';
+import { diceRollQueue } from '../utils/diceRollQueue.js';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { playDiceSound, toggleMute as toggleDiceMute, isMuted as isDiceMuted } from '../services/diceAudio.js';
 
@@ -972,149 +974,114 @@ function toggleDmgMenu() {
 async function rollInitiative() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showInitiativeHud.value = false;
-    showPercentileHud.value = false;
-    showDamageHud.value = false;
-    if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
+  showInitiativeHud.value = false;
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  if (initiativeHudTimeout) clearTimeout(initiativeHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-init-player', themeColor: '#0b222e', qty: 1 },
-        { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
-      ]);
-      const initSummary = calculateInitiativeRoll(results);
-      if (initSummary.valid) {
-        const rollData = {
-          ...initSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        lastInitiativeRoll.value = rollData;
-        showInitiativeHud.value = true;
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-init-player', themeColor: '#0b222e', qty: 1 },
+      { sides: 10, theme: 'custom-init-opp', themeColor: '#400a22', qty: 1 }
+    ]);
+    const initSummary = calculateInitiativeRoll(results);
+    if (initSummary.valid) {
+      const rollData = {
+        ...initSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      lastInitiativeRoll.value = rollData;
+      showInitiativeHud.value = true;
 
-        sendRollToServer({
-          type: 'initiative',
-          label: '⚡ Combat Initiative',
-          total: initSummary.playerRoll,
-          breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll}`,
-          rollSummary: rollData
-        });
+      sendRollToServer({
+        type: 'initiative',
+        label: '⚡ Combat Initiative',
+        total: initSummary.playerRoll,
+        breakdown: `Players: ${initSummary.playerRoll} vs Opposition: ${initSummary.oppRoll}`,
+        rollSummary: rollData
+      });
 
-        initiativeHudTimeout = setTimeout(() => {
-          showInitiativeHud.value = false;
-        }, 9000);
-      }
-    } catch (err) {
-      console.error('Initiative roll failed:', err);
+      initiativeHudTimeout = setTimeout(() => {
+        showInitiativeHud.value = false;
+      }, 9000);
     }
-  } else {
-    const playerRoll = Math.floor(Math.random() * 10) + 1;
-    const oppRoll = Math.floor(Math.random() * 10) + 1;
-    let winner = 'tie';
-    if (playerRoll > oppRoll) winner = 'players';
-    else if (oppRoll > playerRoll) winner = 'opposition';
-
-    const rollData = {
-      playerRoll,
-      oppRoll,
-      winner,
-      valid: true,
-      username: authStore.user?.username,
-      role: authStore.user?.role
-    };
-    lastInitiativeRoll.value = rollData;
-    showInitiativeHud.value = true;
-
-    sendRollToServer({
-      type: 'initiative',
-      label: '⚡ Combat Initiative',
-      total: playerRoll,
-      breakdown: `Players: ${playerRoll} vs Opposition: ${oppRoll}`,
-      rollSummary: rollData
-    });
-
-    initiativeHudTimeout = setTimeout(() => {
-      showInitiativeHud.value = false;
-    }, 9000);
+  } catch (err) {
+    console.error('Initiative roll failed:', err);
   }
 }
 
 async function rollPercentile() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showPercentileHud.value = false;
-    showDamageHud.value = false;
-    showInitiativeHud.value = false;
-    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  showInitiativeHud.value = false;
+  if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
-        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
-      ]);
-      const rollSummary = calculatePercentileRoll(results);
-      if (rollSummary.valid) {
-        lastPercentileRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showPercentileHud.value = true;
-        sendRollToServer({
-          type: 'percentile',
-          label: 'd%',
-          total: rollSummary.total,
-          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`,
-          rollSummary
-        });
-        percentileHudTimeout = setTimeout(() => {
-          showPercentileHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Percentile dice roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
+      { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
+    ]);
+    const rollSummary = calculatePercentileRoll(results);
+    if (rollSummary.valid) {
+      lastPercentileRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showPercentileHud.value = true;
+      sendRollToServer({
+        type: 'percentile',
+        label: 'd%',
+        total: rollSummary.total,
+        breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}]`,
+        rollSummary
+      });
+      percentileHudTimeout = setTimeout(() => {
+        showPercentileHud.value = false;
+      }, 8000);
     }
+  } catch (err) {
+    console.error('Percentile dice roll failed:', err);
   }
 }
 
 async function rollDamage() {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showDamageHud.value = false;
-    showPercentileHud.value = false;
-    showInitiativeHud.value = false;
-    if (damageHudTimeout) clearTimeout(damageHudTimeout);
-    showDmgMenu.value = false;
+  showDamageHud.value = false;
+  showPercentileHud.value = false;
+  showInitiativeHud.value = false;
+  if (damageHudTimeout) clearTimeout(damageHudTimeout);
+  showDmgMenu.value = false;
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
-      ]);
-      const rollSummary = calculateDamageRoll(results);
-      if (rollSummary.count > 0) {
-        lastDamageRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showDamageHud.value = true;
-        sendRollToServer({
-          type: 'damage',
-          label: `${rollSummary.count}d10`,
-          total: rollSummary.total,
-          breakdown: `[${rollSummary.dice.join(', ')}]`,
-          rollSummary
-        });
-        damageHudTimeout = setTimeout(() => {
-          showDamageHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Damage dice roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: damageDiceCount.value }
+    ]);
+    const rollSummary = calculateDamageRoll(results);
+    if (rollSummary.count > 0) {
+      lastDamageRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showDamageHud.value = true;
+      sendRollToServer({
+        type: 'damage',
+        label: `${rollSummary.count}d10`,
+        total: rollSummary.total,
+        breakdown: `[${rollSummary.dice.join(', ')}]`,
+        rollSummary
+      });
+      damageHudTimeout = setTimeout(() => {
+        showDamageHud.value = false;
+      }, 8000);
     }
+  } catch (err) {
+    console.error('Damage dice roll failed:', err);
   }
 }
 
@@ -1889,50 +1856,38 @@ async function onAdversaryTokenUpdate(updatedToken) {
 async function onAdversaryRollAttack({ action, token }) {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showPercentileHud.value = false;
-    showDamageHud.value = false;
-    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }
-      ]);
-      const rollSummary = calculatePercentileRoll(results);
-      if (rollSummary.valid) {
-        const isHit = rollSummary.total <= (action.target_pct || 50);
-        const hitLabel = isHit ? 'HIT!' : 'MISS';
-        lastPercentileRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showPercentileHud.value = true;
-        sendRollToServer({
-          type: 'percentile',
-          label: `${token?.name || 'Adversary'}: ${action.name} (${action.target_pct}%) - ${hitLabel}`,
-          total: rollSummary.total,
-          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] target <= ${action.target_pct}%`,
-          rollSummary
-        });
-        percentileHudTimeout = setTimeout(() => {
-          showPercentileHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Adversary attack roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
+      { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }
+    ]);
+    const rollSummary = calculatePercentileRoll(results);
+    if (rollSummary.valid) {
+      const isHit = rollSummary.total <= (action.target_pct || 50);
+      const hitLabel = isHit ? 'HIT!' : 'MISS';
+      lastPercentileRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showPercentileHud.value = true;
+      sendRollToServer({
+        type: 'percentile',
+        label: `${token?.name || 'Adversary'}: ${action.name} (${action.target_pct}%) - ${hitLabel}`,
+        total: rollSummary.total,
+        breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] target <= ${action.target_pct}%`,
+        rollSummary
+      });
+      percentileHudTimeout = setTimeout(() => {
+        showPercentileHud.value = false;
+      }, 8000);
     }
-  } else {
-    const roll = Math.floor(Math.random() * 100) + 1;
-    const isHit = roll <= (action.target_pct || 50);
-    const hitLabel = isHit ? 'HIT!' : 'MISS';
-    sendRollToServer({
-      type: 'percentile',
-      label: `${token?.name || 'Adversary'}: ${action.name} (${action.target_pct}%) - ${hitLabel}`,
-      total: roll,
-      breakdown: `Roll: ${roll} vs target <= ${action.target_pct}%`,
-    });
+  } catch (err) {
+    console.error('Adversary attack roll failed:', err);
   }
 }
 
@@ -1989,69 +1944,47 @@ async function onAdversaryRollDamage({ action, token }) {
   }
 
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showDamageHud.value = false;
-    showPercentileHud.value = false;
-    showInitiativeHud.value = false;
-    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+  showDamageHud.value = false;
+  showPercentileHud.value = false;
+  showInitiativeHud.value = false;
+  if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: diceCount }
-      ]);
-      const rollSummary = calculateDamageRoll(results);
-      if (rollSummary.count > 0) {
-        const rawSum = rollSummary.total;
-        const scaled = divisor > 1 ? Math.ceil(rawSum / divisor) : rawSum;
-        const finalTotal = scaled + modifier;
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-dmg', themeColor: '#140409', qty: diceCount }
+    ]);
+    const rollSummary = calculateDamageRoll(results);
+    if (rollSummary.count > 0) {
+      const rawSum = rollSummary.total;
+      const scaled = divisor > 1 ? Math.ceil(rawSum / divisor) : rawSum;
+      const finalTotal = scaled + modifier;
 
-        let breakdownStr = `[${rollSummary.dice.join(', ')}]`;
-        if (divisor > 1) breakdownStr += ` / ${divisor}`;
-        if (modifier > 0) breakdownStr += ` + ${modifier}`;
-        else if (modifier < 0) breakdownStr += ` - ${Math.abs(modifier)}`;
+      let breakdownStr = `[${rollSummary.dice.join(', ')}]`;
+      if (divisor > 1) breakdownStr += ` / ${divisor}`;
+      if (modifier > 0) breakdownStr += ` + ${modifier}`;
+      else if (modifier < 0) breakdownStr += ` - ${Math.abs(modifier)}`;
 
-        lastDamageRoll.value = {
-          ...rollSummary,
-          total: finalTotal,
-          breakdown: breakdownStr,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showDamageHud.value = true;
-        sendRollToServer({
-          type: 'damage',
-          label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
-          total: finalTotal,
-          breakdown: breakdownStr,
-          rollSummary: { ...rollSummary, total: finalTotal }
-        });
-        damageHudTimeout = setTimeout(() => {
-          showDamageHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Adversary damage roll failed:', err);
+      lastDamageRoll.value = {
+        ...rollSummary,
+        total: finalTotal,
+        breakdown: breakdownStr,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showDamageHud.value = true;
+      sendRollToServer({
+        type: 'damage',
+        label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
+        total: finalTotal,
+        breakdown: breakdownStr,
+        rollSummary: { ...rollSummary, total: finalTotal }
+      });
+      damageHudTimeout = setTimeout(() => {
+        showDamageHud.value = false;
+      }, 8000);
     }
-  } else {
-    let rolls = [];
-    for (let i = 0; i < diceCount; i++) {
-      rolls.push(Math.floor(Math.random() * 10) + 1);
-    }
-    const rawSum = rolls.reduce((a, b) => a + b, 0);
-    const scaled = divisor > 1 ? Math.ceil(rawSum / divisor) : rawSum;
-    const total = scaled + modifier;
-
-    let breakdownStr = `[${rolls.join(', ')}]`;
-    if (divisor > 1) breakdownStr += ` / ${divisor}`;
-    if (modifier > 0) breakdownStr += ` + ${modifier}`;
-    else if (modifier < 0) breakdownStr += ` - ${Math.abs(modifier)}`;
-
-    sendRollToServer({
-      type: 'damage',
-      label: `${token?.name || 'Adversary'}: ${action.name} Damage (${action.damage})`,
-      total,
-      breakdown: breakdownStr,
-    });
+  } catch (err) {
+    console.error('Adversary damage roll failed:', err);
   }
 }
 
@@ -2113,94 +2046,72 @@ async function onVehicleTokenUpdate(updatedToken) {
 async function onVehicleRollControl({ token } = {}) {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showPercentileHud.value = false;
-    showDamageHud.value = false;
-    if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
+  showPercentileHud.value = false;
+  showDamageHud.value = false;
+  if (percentileHudTimeout) clearTimeout(percentileHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-tens', themeColor: '#38bdf8', qty: 1 },
-        { sides: 10, theme: 'custom-ones', themeColor: '#0369a1', qty: 1 }
-      ]);
-      const rollSummary = calculatePercentileRoll(results);
-      if (rollSummary.valid) {
-        lastPercentileRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showPercentileHud.value = true;
-        sendRollToServer({
-          type: 'percentile',
-          label: `${token?.name || 'Vehicle'}: Control Check (d100)`,
-          total: rollSummary.total,
-          breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] Control Table check`,
-          rollSummary
-        });
-        percentileHudTimeout = setTimeout(() => {
-          showPercentileHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Vehicle control roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-tens', themeColor: '#38bdf8', qty: 1 },
+      { sides: 10, theme: 'custom-ones', themeColor: '#0369a1', qty: 1 }
+    ]);
+    const rollSummary = calculatePercentileRoll(results);
+    if (rollSummary.valid) {
+      lastPercentileRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showPercentileHud.value = true;
+      sendRollToServer({
+        type: 'percentile',
+        label: `${token?.name || 'Vehicle'}: Control Check (d100)`,
+        total: rollSummary.total,
+        breakdown: `[Tens: ${rollSummary.tens * 10}, Ones: ${rollSummary.ones}] Control Table check`,
+        rollSummary
+      });
+      percentileHudTimeout = setTimeout(() => {
+        showPercentileHud.value = false;
+      }, 8000);
     }
-  } else {
-    const roll = Math.floor(Math.random() * 100) + 1;
-    sendRollToServer({
-      type: 'percentile',
-      label: `${token?.name || 'Vehicle'}: Control Check (d100)`,
-      total: roll,
-      breakdown: `Roll: ${roll} (Control Table check)`,
-    });
+  } catch (err) {
+    console.error('Vehicle control roll failed:', err);
   }
 }
 
 async function onVehicleRollDamage({ token } = {}) {
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
-  if (diceBox) {
-    showDamageHud.value = false;
-    showPercentileHud.value = false;
-    showInitiativeHud.value = false;
-    if (damageHudTimeout) clearTimeout(damageHudTimeout);
+  showDamageHud.value = false;
+  showPercentileHud.value = false;
+  showInitiativeHud.value = false;
+  if (damageHudTimeout) clearTimeout(damageHudTimeout);
 
-    try {
-      const results = await diceBox.roll([
-        { sides: 10, theme: 'custom-dmg', themeColor: '#f97316', qty: 2 }
-      ]);
-      const rollSummary = calculateDamageRoll(results);
-      if (rollSummary.count > 0) {
-        lastDamageRoll.value = {
-          ...rollSummary,
-          username: authStore.user?.username,
-          role: authStore.user?.role
-        };
-        showDamageHud.value = true;
-        sendRollToServer({
-          type: 'damage',
-          label: `${token?.name || 'Vehicle'}: Vehicle Damage Table (2d10)`,
-          total: rollSummary.total,
-          breakdown: `[${rollSummary.dice.join(', ')}]`,
-          rollSummary
-        });
-        damageHudTimeout = setTimeout(() => {
-          showDamageHud.value = false;
-        }, 8000);
-      }
-    } catch (err) {
-      console.error('Vehicle damage roll failed:', err);
+  try {
+    const results = await executeQueuedDiceRoll(diceBox, [
+      { sides: 10, theme: 'custom-dmg', themeColor: '#f97316', qty: 2 }
+    ]);
+    const rollSummary = calculateDamageRoll(results);
+    if (rollSummary.count > 0) {
+      lastDamageRoll.value = {
+        ...rollSummary,
+        username: authStore.user?.username,
+        role: authStore.user?.role
+      };
+      showDamageHud.value = true;
+      sendRollToServer({
+        type: 'damage',
+        label: `${token?.name || 'Vehicle'}: Vehicle Damage Table (2d10)`,
+        total: rollSummary.total,
+        breakdown: `[${rollSummary.dice.join(', ')}]`,
+        rollSummary
+      });
+      damageHudTimeout = setTimeout(() => {
+        showDamageHud.value = false;
+      }, 8000);
     }
-  } else {
-    const d1 = Math.floor(Math.random() * 10) + 1;
-    const d2 = Math.floor(Math.random() * 10) + 1;
-    const total = d1 + d2;
-    sendRollToServer({
-      type: 'damage',
-      label: `${token?.name || 'Vehicle'}: Vehicle Damage Table (2d10)`,
-      total,
-      breakdown: `[${d1}, ${d2}]`,
-    });
+  } catch (err) {
+    console.error('Vehicle damage roll failed:', err);
   }
 }
 

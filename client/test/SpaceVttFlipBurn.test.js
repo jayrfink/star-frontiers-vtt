@@ -39,6 +39,7 @@ describe('SpaceVttView Flip & Burn and Crew G-Load Check Integration', () => {
 
     it('declares reactive state for Braking Burn controls and Crew G-Load Check modal', () => {
       expect(content).toMatch(/brakingDeltaV\s*=\s*ref\(/);
+      expect(content).toMatch(/isFlipBurnCollapsed\s*=\s*ref\(/);
       expect(content).toMatch(/showCrewGCheckModal\s*=\s*ref\(/);
       expect(content).toMatch(/crewCheckCharName\s*=\s*ref\(/);
       expect(content).toMatch(/crewCheckBaseSta\s*=\s*ref\(/);
@@ -83,6 +84,20 @@ describe('SpaceVttView Flip & Burn and Crew G-Load Check Integration', () => {
     it('contains a direct button to trigger the Crew G-Load Check modal', () => {
       expect(content).toContain('Crew G-Load Check');
       expect(content).toMatch(/openCrewGCheckModal/);
+    });
+
+    it('supports collapsible flip and burn controls with caret indicator defaulting to collapsed', () => {
+      expect(content).toMatch(/isFlipBurnCollapsed\s*=\s*ref\(true\)/);
+      expect(content).toContain('flip-burn-header clickable');
+      expect(content).toContain('collapse-caret');
+      expect(content).toContain('flip-burn-body');
+    });
+
+    it('supports collapsible weapons section with caret indicator defaulting to collapsed', () => {
+      expect(content).toMatch(/isWeaponsCollapsed\s*=\s*ref\(true\)/);
+      expect(content).toContain('token-weapons-header clickable');
+      expect(content).toContain('token-weapons-section');
+      expect(content).toContain('token-weapons-list');
     });
   });
 
