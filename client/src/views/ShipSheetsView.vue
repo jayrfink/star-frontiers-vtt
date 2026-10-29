@@ -768,6 +768,14 @@ export default {
     };
   },
   computed: {
+    isGm() {
+      try {
+        const authStore = useAuthStore();
+        return authStore.user?.role === 'GameMaster';
+      } catch {
+        return false;
+      }
+    },
     currentBrowserImage() {
       if (this.imageBrowserTarget === 'sheet') {
         return this.selectedShip ? (this.selectedShip.avatar_url || '') : '';
@@ -1429,14 +1437,7 @@ export default {
     },
     canReorder(ship) {
       if (!ship) return false;
-      try {
-        const authStore = useAuthStore();
-        if (authStore.user?.role === 'GameMaster') return true;
-        if (authStore.user?.id && ship.user_id === authStore.user.id) return true;
-      } catch {
-        // Fallback if Pinia is unavailable
-      }
-      return false;
+      return this.isGm;
     },
     async moveShip(index, direction) {
       const targetIndex = index + direction;

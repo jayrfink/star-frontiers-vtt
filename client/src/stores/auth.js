@@ -51,8 +51,13 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error(data.error || 'Login failed');
     }
     user.value = await res.json();
-    if (socket && !socket.connected) {
-      socket.connect();
+    if (socket) {
+      if (socket.connected) {
+        socket.disconnect();
+        socket.connect();
+      } else {
+        socket.connect();
+      }
     }
   }
 

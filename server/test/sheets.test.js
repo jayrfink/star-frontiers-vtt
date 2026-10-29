@@ -692,7 +692,7 @@ describe('Sheets API & Socket.io', () => {
       expect(res.status).toBe(400);
     });
 
-    it('enforces character reorder permissions (GM allowed, player allowed for own, forbidden for non-owned)', async () => {
+    it('enforces character reorder permissions (GM allowed, non-GM forbidden)', async () => {
       const gmAgent = request.agent(app);
       await gmAgent.post('/api/auth/register').send({ username: 'gmAuth', password: 'password123' });
       await gmAgent.post('/api/auth/login').send({ username: 'gmAuth', password: 'password123' });
@@ -708,15 +708,9 @@ describe('Sheets API & Socket.io', () => {
       const pChar1 = (await playerAgent.post('/api/characters').send({ name: 'Player Char 1', race: 'Vrusk' })).body;
       const pChar2 = (await playerAgent.post('/api/characters').send({ name: 'Player Char 2', race: 'Dralasite' })).body;
 
-      // Player reordering player-owned sheets
-      const playerSuccessRes = await playerAgent.put('/api/characters/reorder').send({
-        order: [pChar2.id, pChar1.id],
-      });
-      expect(playerSuccessRes.status).toBe(200);
-
-      // Player attempting to reorder another user's sheet (GM char)
+      // Player attempting to reorder receives 403 Forbidden
       const playerForbiddenRes = await playerAgent.put('/api/characters/reorder').send({
-        order: [pChar2.id, gmChar.id, pChar1.id],
+        order: [pChar2.id, pChar1.id],
       });
       expect(playerForbiddenRes.status).toBe(403);
 
@@ -774,7 +768,7 @@ describe('Sheets API & Socket.io', () => {
       expect(res.status).toBe(400);
     });
 
-    it('enforces ship reorder permissions (GM allowed, player allowed for own, forbidden for non-owned)', async () => {
+    it('enforces ship reorder permissions (GM allowed, non-GM forbidden)', async () => {
       const gmAgent = request.agent(app);
       await gmAgent.post('/api/auth/register').send({ username: 'gmShipPerm', password: 'password123' });
       await gmAgent.post('/api/auth/login').send({ username: 'gmShipPerm', password: 'password123' });
@@ -790,15 +784,9 @@ describe('Sheets API & Socket.io', () => {
       const pShip1 = (await playerAgent.post('/api/ships').send({ name: 'Player Scout 1', ship_type: 'Scout' })).body;
       const pShip2 = (await playerAgent.post('/api/ships').send({ name: 'Player Scout 2', ship_type: 'Scout' })).body;
 
-      // Player reordering player-owned ships
-      const playerSuccessRes = await playerAgent.put('/api/ships/reorder').send({
-        order: [pShip2.id, pShip1.id],
-      });
-      expect(playerSuccessRes.status).toBe(200);
-
-      // Player moving GM ship
+      // Player attempting to reorder receives 403 Forbidden
       const playerForbiddenRes = await playerAgent.put('/api/ships/reorder').send({
-        order: [pShip2.id, gmShip.id, pShip1.id],
+        order: [pShip2.id, pShip1.id],
       });
       expect(playerForbiddenRes.status).toBe(403);
 

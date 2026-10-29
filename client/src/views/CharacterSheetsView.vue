@@ -752,6 +752,14 @@ export default {
     };
   },
   computed: {
+    isGm() {
+      try {
+        const authStore = useAuthStore();
+        return authStore.user?.role === 'GameMaster';
+      } catch {
+        return false;
+      }
+    },
     currentBrowserImage() {
       if (this.imageBrowserTarget === 'char') {
         return this.selectedChar ? (this.selectedChar.avatar_url || '') : '';
@@ -1410,14 +1418,7 @@ export default {
     },
     canReorder(char) {
       if (!char) return false;
-      try {
-        const authStore = useAuthStore();
-        if (authStore.user?.role === 'GameMaster') return true;
-        if (authStore.user?.id && char.user_id === authStore.user.id) return true;
-      } catch {
-        // Fallback if Pinia is unavailable
-      }
-      return false;
+      return this.isGm;
     },
     async moveCharacter(index, direction) {
       const targetIndex = index + direction;

@@ -613,14 +613,22 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
   });
 
   describe('Character Sheets Left Navigation Reordering', () => {
-    it('determines reordering permission based on role or user ownership', () => {
-      // Mock auth store via canReorder method
-      const vm = {
+    it('determines reordering permission based on GameMaster role', () => {
+      const vmGM = {
+        isGm: true,
+        canReorder: CharacterSheetsView.methods.canReorder,
+      };
+      const vmPlayer = {
+        isGm: false,
         canReorder: CharacterSheetsView.methods.canReorder,
       };
 
       // When character is null
-      expect(vm.canReorder(null)).toBe(false);
+      expect(vmGM.canReorder(null)).toBe(false);
+      // When user is GameMaster
+      expect(vmGM.canReorder({ id: 1, user_id: 2 })).toBe(true);
+      // When user is not GameMaster (Player)
+      expect(vmPlayer.canReorder({ id: 1, user_id: 1 })).toBe(false);
     });
 
     it('moves character up and down, updates local array optimistically, and dispatches PUT /api/characters/reorder', async () => {

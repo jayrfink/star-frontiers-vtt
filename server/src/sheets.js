@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, isGameMaster } from './middleware.js';
+import { requireAuth, requireGM, isGameMaster } from './middleware.js';
 import { formatToken } from './maps.js';
 
 function safeJsonParse(str, fallback) {
@@ -56,7 +56,7 @@ export function createCharacterRouter(db, io) {
     }
   });
 
-  router.put('/reorder', (req, res) => {
+  router.put('/reorder', requireGM(db), (req, res) => {
     try {
       const { order } = req.body || {};
       if (!Array.isArray(order) || order.length === 0) {
@@ -73,24 +73,6 @@ export function createCharacterRouter(db, io) {
           return res.status(400).json({ error: 'Duplicate IDs found in order array' });
         }
         seen.add(id);
-      }
-
-      const isGM = isGameMaster(db, req.session.userId);
-      if (!isGM) {
-        // Player: can only reorder sheets they own. All sheets in order must be owned by the user.
-        const placeholders = order.map(() => '?').join(',');
-        const sheetsInOrder = db.prepare(`SELECT id, user_id FROM character_sheets WHERE id IN (${placeholders})`).all(...order);
-        const sheetMap = new Map(sheetsInOrder.map(s => [s.id, s]));
-
-        for (const id of order) {
-          const sheet = sheetMap.get(id);
-          if (!sheet) {
-            return res.status(404).json({ error: `Character sheet ${id} not found` });
-          }
-          if (sheet.user_id !== req.session.userId) {
-            return res.status(403).json({ error: 'Cannot reorder sheets you do not own' });
-          }
-        }
       }
 
       const updateOrderTx = db.transaction((sheetIds) => {
@@ -385,7 +367,7 @@ export function createShipRouter(db, io) {
     }
   });
 
-  router.put('/reorder', (req, res) => {
+  router.put('/reorder', requireGM(db), (req, res) => {
     try {
       const { order } = req.body || {};
       if (!Array.isArray(order) || order.length === 0) {
@@ -402,24 +384,6 @@ export function createShipRouter(db, io) {
           return res.status(400).json({ error: 'Duplicate IDs found in order array' });
         }
         seen.add(id);
-      }
-
-      const isGM = isGameMaster(db, req.session.userId);
-      if (!isGM) {
-        // Player: can only reorder sheets they own. All sheets in order must be owned by the user.
-        const placeholders = order.map(() => '?').join(',');
-        const sheetsInOrder = db.prepare(`SELECT id, user_id FROM ship_sheets WHERE id IN (${placeholders})`).all(...order);
-        const sheetMap = new Map(sheetsInOrder.map(s => [s.id, s]));
-
-        for (const id of order) {
-          const sheet = sheetMap.get(id);
-          if (!sheet) {
-            return res.status(404).json({ error: `Ship sheet ${id} not found` });
-          }
-          if (sheet.user_id !== req.session.userId) {
-            return res.status(403).json({ error: 'Cannot reorder sheets you do not own' });
-          }
-        }
       }
 
       const updateOrderTx = db.transaction((sheetIds) => {

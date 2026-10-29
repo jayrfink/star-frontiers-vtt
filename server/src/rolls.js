@@ -80,7 +80,24 @@ export function createRollRouter(db, io) {
     if (type === 'initiative' && (total < 1 || total > 10)) {
       return res.status(400).json({ error: 'Initiative roll total must be between 1 and 10' });
     }
-    if (rollSummary && typeof rollSummary === 'object') {
+    if (typeof label !== 'string' || label.trim().length === 0 || label.trim().length > 100) {
+      return res.status(400).json({ error: 'label is required and must be between 1 and 100 characters' });
+    }
+    if (typeof breakdown !== 'string' || breakdown.length > 500) {
+      return res.status(400).json({ error: 'breakdown must be a string up to 500 characters' });
+    }
+    if (rollSummary !== undefined && rollSummary !== null) {
+      if (typeof rollSummary !== 'object' || Array.isArray(rollSummary)) {
+        return res.status(400).json({ error: 'rollSummary must be a plain object' });
+      }
+      if (rollSummary.dice !== undefined) {
+        if (!Array.isArray(rollSummary.dice)) {
+          return res.status(400).json({ error: 'dice must be an array' });
+        }
+        if (rollSummary.dice.length > 100) {
+          return res.status(400).json({ error: 'dice array exceeds maximum limit of 100' });
+        }
+      }
       if (type === 'initiative') {
         if (rollSummary.playerRoll !== undefined && (!Number.isFinite(rollSummary.playerRoll) || rollSummary.playerRoll < 1 || rollSummary.playerRoll > 10)) {
           return res.status(400).json({ error: 'Invalid initiative playerRoll parameter' });
@@ -105,9 +122,6 @@ export function createRollRouter(db, io) {
           }
         }
       }
-    }
-    if (!label || typeof breakdown !== 'string') {
-      return res.status(400).json({ error: 'label, numeric total, and breakdown are required' });
     }
 
     try {

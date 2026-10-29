@@ -349,4 +349,102 @@ describe('Rolls API & Sockets', () => {
     });
     expect(resInvalidInitDie.status).toBe(400);
   });
+
+  it('SEC-AUDIT-03 & SEC-AUDIT-05: validates label, breakdown lengths and rollSummary dice array', async () => {
+    // 1. label validation
+    const resEmptyLabel = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: '   ',
+      total: 50,
+      breakdown: 'test'
+    });
+    expect(resEmptyLabel.status).toBe(400);
+
+    const resLongLabel = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'a'.repeat(101),
+      total: 50,
+      breakdown: 'test'
+    });
+    expect(resLongLabel.status).toBe(400);
+
+    // 2. breakdown validation
+    const resLongBreakdown = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'valid label',
+      total: 50,
+      breakdown: 'b'.repeat(501)
+    });
+    expect(resLongBreakdown.status).toBe(400);
+
+    // 3. rollSummary must be a plain object
+    const resArraySummary = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'valid label',
+      total: 50,
+      breakdown: 'test',
+      rollSummary: [1, 2, 3]
+    });
+    expect(resArraySummary.status).toBe(400);
+
+    const resStringSummary = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'percentile',
+      label: 'valid label',
+      total: 50,
+      breakdown: 'test',
+      rollSummary: 'string-summary'
+    });
+    expect(resStringSummary.status).toBe(400);
+
+    // 4. rollSummary.dice must be an array
+    const resDiceNumber = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '1d10',
+      total: 5,
+      breakdown: 'test',
+      rollSummary: { dice: 123 }
+    });
+    expect(resDiceNumber.status).toBe(400);
+    expect(resDiceNumber.body.error).toBe('dice must be an array');
+
+    const resDiceString = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '1d10',
+      total: 5,
+      breakdown: 'test',
+      rollSummary: { dice: 'string' }
+    });
+    expect(resDiceString.status).toBe(400);
+    expect(resDiceString.body.error).toBe('dice must be an array');
+
+    // 5. rollSummary.dice must not exceed 100 items
+    const resTooManyDice = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '101d10',
+      total: 500,
+      breakdown: 'test',
+      rollSummary: { dice: new Array(101).fill(5) }
+    });
+    expect(resTooManyDice.status).toBe(400);
+    expect(resTooManyDice.body.error).toBe('dice array exceeds maximum limit of 100');
+
+    // 6. Valid label, breakdown, and dice array are accepted
+    const resValid = await playerAgent.post('/api/rolls').send({
+      mode: 'rpg',
+      type: 'damage',
+      label: '100d10',
+      total: 500,
+      breakdown: 'dice roll',
+      rollSummary: { dice: new Array(100).fill(5) }
+    });
+    expect(resValid.status).toBe(201);
+  });
 });

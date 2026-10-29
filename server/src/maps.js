@@ -223,7 +223,10 @@ export function createMapRouter(db, io) {
       if (io) {
         io.emit('map:created', { map });
         if (is_active) {
-          io.emit('map:activated', { map, tokens: [] });
+          const gmTokens = [];
+          const playerTokens = [];
+          io.to('role:GameMaster').emit('map:activated', { map, tokens: gmTokens });
+          io.except('role:GameMaster').emit('map:activated', { map, tokens: playerTokens });
         }
       }
 
@@ -234,8 +237,8 @@ export function createMapRouter(db, io) {
     }
   });
 
-  // POST /api/maps/:id/activate - Activate map (GM only)
-  router.post('/:id/activate', requireGM(db), (req, res) => {
+  // POST or PUT /api/maps/:id/activate - Activate map (GM only)
+  const activateMapHandler = (req, res) => {
     try {
       const mapRow = db.prepare('SELECT * FROM maps WHERE id = ?').get(req.params.id);
       if (!mapRow) {
@@ -255,7 +258,10 @@ export function createMapRouter(db, io) {
       const tokens = tokenRows.map((row) => formatToken(row, db));
 
       if (io) {
-        io.emit('map:activated', { map, tokens });
+        const gmTokens = tokens;
+        const playerTokens = tokens.filter(t => t.layer !== 'gm');
+        io.to('role:GameMaster').emit('map:activated', { map, tokens: gmTokens });
+        io.except('role:GameMaster').emit('map:activated', { map, tokens: playerTokens });
       }
 
       res.json({ map, tokens });
@@ -263,7 +269,10 @@ export function createMapRouter(db, io) {
       console.error('Error activating map:', err);
       res.status(500).json({ error: 'Failed to activate map' });
     }
-  });
+  };
+
+  router.post('/:id/activate', requireGM(db), activateMapHandler);
+  router.put('/:id/activate', requireGM(db), activateMapHandler);
 
   // PUT /api/maps/:id - Update map (GM only)
   router.put('/:id', requireGM(db), (req, res) => {
@@ -334,7 +343,10 @@ export function createMapRouter(db, io) {
         if (Boolean(is_active) && (req.body.is_active !== undefined || !existing.is_active)) {
           const tokenRows = db.prepare('SELECT * FROM tokens WHERE map_id = ? ORDER BY id ASC').all(map.id);
           const tokens = tokenRows.map(r => formatToken(r, db));
-          io.emit('map:activated', { map, tokens });
+          const gmTokens = tokens;
+          const playerTokens = tokens.filter(t => t.layer !== 'gm');
+          io.to('role:GameMaster').emit('map:activated', { map, tokens: gmTokens });
+          io.except('role:GameMaster').emit('map:activated', { map, tokens: playerTokens });
         }
       }
 
@@ -372,6 +384,8 @@ export function createMapRouter(db, io) {
 function canManageToken(db, userId, token) {
   if (!userId) return false;
   if (isGameMaster(db, userId)) return true;
+  // Non-GMs must NEVER manage (move, edit, or delete) GM-layer tokens, even if linked to their sheet
+  if (token && token.layer === 'gm') return false;
   if (!token || !token.character_id) return false;
   let mapType = 'rpg';
   if (token.map_id) {

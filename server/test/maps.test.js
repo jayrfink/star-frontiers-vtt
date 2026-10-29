@@ -117,14 +117,26 @@ describe('Maps & Tokens API & Socket.io', () => {
       const map1Res = await gmAgent.post('/api/maps').send({ name: 'Map 1' });
       const map2Res = await gmAgent.post('/api/maps').send({ name: 'Map 2' });
 
-      const emitSpy = vi.spyOn(io, 'emit');
+      const gmEmitSpy = vi.fn();
+      const playerEmitSpy = vi.fn();
+      vi.spyOn(io, 'to').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return { emit: gmEmitSpy };
+        return io;
+      });
+      vi.spyOn(io, 'except').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return { emit: playerEmitSpy };
+        return io;
+      });
 
       const activateRes = await gmAgent.post(`/api/maps/${map2Res.body.id}/activate`);
       expect(activateRes.status).toBe(200);
       expect(activateRes.body.map.id).toBe(map2Res.body.id);
       expect(activateRes.body.map.is_active).toBe(1);
 
-      expect(emitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+      expect(gmEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+        map: expect.objectContaining({ id: map2Res.body.id, is_active: 1 }),
+      }));
+      expect(playerEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
         map: expect.objectContaining({ id: map2Res.body.id, is_active: 1 }),
       }));
 
@@ -701,12 +713,27 @@ describe('Maps & Tokens API & Socket.io', () => {
         name: 'Stationary Sentry',
       });
 
-      const emitSpy = vi.spyOn(io, 'emit');
+      const gmEmitSpy = vi.fn();
+      const playerEmitSpy = vi.fn();
+      vi.spyOn(io, 'to').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return { emit: gmEmitSpy };
+        return io;
+      });
+      vi.spyOn(io, 'except').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return { emit: playerEmitSpy };
+        return io;
+      });
 
       const putRes = await agent.put(`/api/maps/${mapRes.body.id}`).send({ is_active: 1 });
       expect(putRes.status).toBe(200);
 
-      expect(emitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+      expect(gmEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+        map: expect.objectContaining({ id: mapRes.body.id, is_active: 1 }),
+        tokens: expect.arrayContaining([
+          expect.objectContaining({ id: tokenRes.body.id, name: 'Stationary Sentry' }),
+        ]),
+      }));
+      expect(playerEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
         map: expect.objectContaining({ id: mapRes.body.id, is_active: 1 }),
         tokens: expect.arrayContaining([
           expect.objectContaining({ id: tokenRes.body.id, name: 'Stationary Sentry' }),
@@ -982,6 +1009,182 @@ describe('Maps & Tokens API & Socket.io', () => {
       });
       expect(tryChangeMax.status).toBe(200);
       expect(tryChangeMax.body.max_hp).toBe(45);
+    });
+
+    it('SEC-AUDIT-01: map:activated emits GM tokens only to role:GameMaster and excludes GM-layer tokens for regular players', async () => {
+      // GM creates map
+      const mapRes = await agent.post('/api/maps').send({ name: 'Audit Map', map_type: 'rpg', is_active: 0 });
+      const mapId = mapRes.body.id;
+
+      // GM creates a visible character token
+      const charTok = (await agent.post('/api/tokens').send({
+        map_id: mapId,
+        name: 'Visible Explorer',
+        layer: 'character',
+        x: 10,
+        y: 10,
+      })).body;
+
+      // GM creates a hidden GM-layer token
+      const gmTok = (await agent.post('/api/tokens').send({
+        map_id: mapId,
+        name: 'Secret Ambush Beast',
+        layer: 'gm',
+        x: 20,
+        y: 20,
+      })).body;
+
+      const gmEmitSpy = vi.fn();
+      const playerEmitSpy = vi.fn();
+      vi.spyOn(io, 'to').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return { emit: gmEmitSpy };
+        return io;
+      });
+      vi.spyOn(io, 'except').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return { emit: playerEmitSpy };
+        return io;
+      });
+
+      // 1. Activate via POST /api/maps/:id/activate
+      const activateRes = await agent.post(`/api/maps/${mapId}/activate`);
+      expect(activateRes.status).toBe(200);
+
+      expect(gmEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+        map: expect.objectContaining({ id: mapId, is_active: 1 }),
+        tokens: expect.arrayContaining([
+          expect.objectContaining({ id: charTok.id, name: 'Visible Explorer', layer: 'character' }),
+          expect.objectContaining({ id: gmTok.id, name: 'Secret Ambush Beast', layer: 'gm' }),
+        ]),
+      }));
+
+      // Player room broadcast must NOT contain GM-layer tokens
+      expect(playerEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+        map: expect.objectContaining({ id: mapId, is_active: 1 }),
+      }));
+      const playerPayload = playerEmitSpy.mock.calls.find(call => call[0] === 'map:activated')?.[1];
+      expect(playerPayload).toBeDefined();
+      expect(playerPayload.tokens.some(t => t.id === gmTok.id || t.layer === 'gm')).toBe(false);
+      expect(playerPayload.tokens.some(t => t.id === charTok.id)).toBe(true);
+
+      // 2. Also verify activation via PUT /api/maps/:id
+      gmEmitSpy.mockClear();
+      playerEmitSpy.mockClear();
+
+      // Deactivate first
+      await agent.put(`/api/maps/${mapId}`).send({ is_active: 0 });
+      gmEmitSpy.mockClear();
+      playerEmitSpy.mockClear();
+
+      // Now activate via PUT
+      const putActivateRes = await agent.put(`/api/maps/${mapId}`).send({ is_active: 1 });
+      expect(putActivateRes.status).toBe(200);
+
+      expect(gmEmitSpy).toHaveBeenCalledWith('map:activated', expect.objectContaining({
+        map: expect.objectContaining({ id: mapId, is_active: 1 }),
+        tokens: expect.arrayContaining([
+          expect.objectContaining({ id: charTok.id, name: 'Visible Explorer', layer: 'character' }),
+          expect.objectContaining({ id: gmTok.id, name: 'Secret Ambush Beast', layer: 'gm' }),
+        ]),
+      }));
+
+      const putPlayerPayload = playerEmitSpy.mock.calls.find(call => call[0] === 'map:activated')?.[1];
+      expect(putPlayerPayload).toBeDefined();
+      expect(putPlayerPayload.tokens.some(t => t.id === gmTok.id || t.layer === 'gm')).toBe(false);
+      expect(putPlayerPayload.tokens.some(t => t.id === charTok.id)).toBe(true);
+    });
+
+    it('SEC-AUDIT-02: Non-GM player gets 403 when attempting to PUT or DELETE a GM-layer token even if linked to their sheet', async () => {
+      // 1. GM creates RPG map
+      const mapRes = await agent.post('/api/maps').send({ name: 'Audit Map 2', map_type: 'rpg' });
+      const mapId = mapRes.body.id;
+
+      // 2. Register Player and log in
+      await agent.post('/api/auth/register').send({ username: 'auditPlayer', password: 'password123', role: 'Player' });
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'auditPlayer', password: 'password123' });
+
+      // 3. Player creates a character sheet
+      const charRes = await playerAgent.post('/api/characters').send({
+        name: 'Audit Hero',
+        race: 'Human',
+        sta: 50,
+      });
+      const charId = charRes.body.id;
+
+      // 4. GM creates a token linked to Player's character sheet, but on the 'gm' layer
+      const gmTokenRes = await agent.post('/api/tokens').send({
+        map_id: mapId,
+        character_id: charId,
+        name: 'Audit Hero (GM Hidden)',
+        layer: 'gm',
+        x: 10,
+        y: 10,
+      });
+      expect(gmTokenRes.status).toBe(201);
+      expect(gmTokenRes.body.layer).toBe('gm');
+      const gmTokenId = gmTokenRes.body.id;
+
+      // 5. Player attempts PUT /api/tokens/:id -> MUST get 403 Access denied
+      const putRes = await playerAgent.put(`/api/tokens/${gmTokenId}`).send({
+        x: 50,
+        y: 50,
+      });
+      expect(putRes.status).toBe(403);
+      expect(putRes.body.error).toBe('Access denied');
+
+      // Verify token coordinates did not change in DB
+      const checkRow = db.prepare('SELECT x, y, layer FROM tokens WHERE id = ?').get(gmTokenId);
+      expect(checkRow.x).toBe(10);
+      expect(checkRow.y).toBe(10);
+      expect(checkRow.layer).toBe('gm');
+
+      // 6. Player attempts DELETE /api/tokens/:id -> MUST get 403 Access denied
+      const delRes = await playerAgent.delete(`/api/tokens/${gmTokenId}`);
+      expect(delRes.status).toBe(403);
+      expect(delRes.body.error).toBe('Access denied');
+
+      // Verify token was not deleted
+      const stillExists = db.prepare('SELECT id FROM tokens WHERE id = ?').get(gmTokenId);
+      expect(stillExists).toBeDefined();
+
+      // 7. Same test on Space Map with Ship Sheet
+      const spaceMapRes = await agent.post('/api/maps').send({ name: 'Audit Space Map', map_type: 'space' });
+      const spaceMapId = spaceMapRes.body.id;
+
+      const shipRes = await playerAgent.post('/api/ships').send({
+        name: 'Audit Scout',
+        ship_type: 'Fighter',
+        hull_points: 30,
+      });
+      const shipId = shipRes.body.id;
+
+      const gmShipTokenRes = await agent.post('/api/tokens').send({
+        map_id: spaceMapId,
+        character_id: shipId,
+        name: 'Audit Scout (GM Hidden)',
+        layer: 'gm',
+        x: 5,
+        y: 5,
+      });
+      expect(gmShipTokenRes.status).toBe(201);
+      const gmShipTokenId = gmShipTokenRes.body.id;
+
+      const shipPutRes = await playerAgent.put(`/api/tokens/${gmShipTokenId}`).send({ x: 20 });
+      expect(shipPutRes.status).toBe(403);
+      expect(shipPutRes.body.error).toBe('Access denied');
+
+      const shipDelRes = await playerAgent.delete(`/api/tokens/${gmShipTokenId}`);
+      expect(shipDelRes.status).toBe(403);
+      expect(shipDelRes.body.error).toBe('Access denied');
+
+      // 8. GM CAN still move and delete the GM layer token
+      const gmMoveRes = await agent.put(`/api/tokens/${gmTokenId}`).send({ x: 15, y: 15 });
+      expect(gmMoveRes.status).toBe(200);
+      expect(gmMoveRes.body.x).toBe(15);
+
+      const gmDelRes = await agent.delete(`/api/tokens/${gmTokenId}`);
+      expect(gmDelRes.status).toBe(200);
+      expect(gmDelRes.body.ok).toBe(true);
     });
   });
 });

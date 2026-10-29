@@ -135,7 +135,7 @@
               <div class="last-roll-header">Last Roll ({{ lastDamageRoll.count }}d10):</div>
               <div class="last-roll-result">
                 <span class="last-roll-total">{{ lastDamageRoll.total }}</span>
-                <span class="last-roll-breakdown">[{{ lastDamageRoll.dice.join(', ') }}]</span>
+                <span class="last-roll-breakdown">[{{ Array.isArray(lastDamageRoll?.dice) ? lastDamageRoll.dice.join(', ') : '' }}]</span>
               </div>
             </div>
           </div>
@@ -3260,10 +3260,11 @@ let onSocketPingsSync = null;
 let onSocketConnect = null;
 
 function setupSocketListeners() {
-  socket.on('map:activated', onSocketMapActivated = ({ map, tokens: newTokens }) => {
+  socket.on('map:activated', onSocketMapActivated = (payload) => {
+    const map = payload?.map;
     if (map && map.map_type === 'space') {
       activeMap.value = map;
-      tokens.value = newTokens || [];
+      tokens.value = (payload?.tokens || []).filter(t => isGm.value || t.layer !== 'gm');
       selectedTokenId.value = null;
       activePings.value = {};
       socket.emit('ping:request_sync', { mapId: map.id });
@@ -3372,6 +3373,7 @@ function setupSocketListeners() {
   });
 
   socket.on('connect', onSocketConnect = () => {
+    fetchActiveMap();
     if (activeMap.value?.id) {
       socket.emit('ping:request_sync', { mapId: activeMap.value.id });
     }
@@ -3404,12 +3406,12 @@ function setupSocketListeners() {
         }, 8000);
       } else if (roll.type === 'damage') {
         lastDamageRoll.value = {
-          ...roll.rollSummary,
+          ...roll,
+          dice: Array.isArray(roll.rollSummary?.dice) ? roll.rollSummary.dice : [],
           username: roll.username,
           role: roll.role,
           total: roll.total,
           count: roll.rollSummary?.count || (roll.label ? parseInt(roll.label) : 1),
-          dice: roll.rollSummary?.dice || [],
           breakdown: roll.breakdown
         };
         showDamageHud.value = true;

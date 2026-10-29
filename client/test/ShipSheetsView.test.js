@@ -880,11 +880,18 @@ describe('ShipSheetsView - 0 Ammo Display & 0 Hull Point Calculations', () => {
 });
 
 describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
-  it('determines reordering permission based on role or user ownership', () => {
-    const vm = {
+  it('determines reordering permission based on GameMaster role', () => {
+    const vmGM = {
+      isGm: true,
       canReorder: ShipSheetsView.methods.canReorder,
     };
-    expect(vm.canReorder(null)).toBe(false);
+    const vmPlayer = {
+      isGm: false,
+      canReorder: ShipSheetsView.methods.canReorder,
+    };
+    expect(vmGM.canReorder(null)).toBe(false);
+    expect(vmGM.canReorder({ id: 1, user_id: 2 })).toBe(true);
+    expect(vmPlayer.canReorder({ id: 1, user_id: 1 })).toBe(false);
   });
 
   it('moves ship up and down, updates local array optimistically, and dispatches PUT /api/ships/reorder', async () => {
