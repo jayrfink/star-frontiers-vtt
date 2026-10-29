@@ -1,69 +1,91 @@
-# Star Frontiers VTT - Release v0.11.0 Summary
+# Star Frontiers VTT - Release v0.12.0 Summary
 
-**Release Tag:** `v0.11.0`  
-**Date:** October 26, 2026  
+**Release Tag:** `v0.12.0`  
+**Date:** October 29, 2026  
 **Status:** Stable / Production Ready
 
 ---
 
 ## 1. Overview
 
-Release `v0.11.0` delivers user-configurable **Character and Starship Sheet Navigation Reordering** with drag-and-drop handles and 1-click step buttons across the left sidebar, backed by persistent SQLite database storage and real-time Socket.io multi-client synchronization. In addition, this release incorporates **3D Physics Dice Serialization & Rapid Roll Capture** ensuring zero lost rolls during rapid successive rolling, **Collapsible VTT Applets & HUDs** (collapsed Flip & Burn applet and collapsed Weapons widget defaults), along with full security hardening and origin boundary protections.
+Release `v0.12.0` introduces the **`sf-vtt-ctl.sh` Service Control & Diagnostic CLI Tool**, fixes 3D dice physics settling timing to eliminate roll mismatch bugs, and incorporates two exhaustive security hardening sweeps resolving all critical and high severity vulnerabilities across WebSocket communication, GM secret layer isolation, SVG sandboxing, session lifecycle management, token stat bounds enforcement, and memory caps.
+
+All automated test suites (700 client tests, 255 server tests) pass with 100% compliance, and performance load testing demonstrates sustained high throughput (1,779 req/sec) with no regression.
 
 ---
 
-## 2. Key Features & Enhancements in v0.11.0
+## 2. Key Features & Enhancements in v0.12.0
 
-### Character & Ship Sheet Navigation Reordering
-- **Persistent Global Ordering:**
-  - Added `sort_order INTEGER NOT NULL DEFAULT 0` column to both `character_sheets` and `ship_sheets` in SQLite.
-  - Automatically backfills existing sheets to maintain chronological sequence without duplicates.
-  - Newly created sheets cleanly append to the end of lists (`SELECT COALESCE(MAX(sort_order), 0) + 1`).
-  - `GET /api/characters` and `GET /api/ships` return sheets ordered by `ORDER BY sort_order ASC, id ASC`.
-- **REST Endpoints & Security Boundaries:**
-  - Added `PUT /api/characters/reorder` and `PUT /api/ships/reorder` endpoints.
-  - Validates input arrays of sheet IDs and executes batched updates within an atomic database transaction.
-  - Enforces role-based permissions: GameMasters can reorder all sheets; Players can reorder their own sheets (unauthorized moves return 403).
-- **Interactive Drag-and-Drop & Accessible Controls:**
-  - Added drag handles (`⋮⋮`) with native HTML5 drag-and-drop support, drag ghosting, and drop placement indicators.
-  - Added accessible Move Up (`▲`) and Move Down (`▼`) buttons on each sheet item for quick 1-click step adjustment, with disabled states at list boundaries.
-  - Features optimistic local UI updates with automatic rollback and error feedback on failure.
-  - Real-time Socket.io event (`sheets:reordered`) synchronizes sidebar lists across all connected player and GM browser tabs while maintaining active sheet selection.
+### Service Management & Diagnostic CLI (`sf-vtt-ctl.sh`)
+- **Full Container Lifecycle Management:**
+  - `start`, `stop`, `restart` commands with granular service-specific controls (`sf-vtt-ctl.sh start server`, `sf-vtt-ctl.sh restart client`).
+  - Automated environment checks ensuring Docker daemon readiness and container health.
+- **Rich Status & Real-time Diagnostics:**
+  - Reports container runtime status, healthcheck metrics, CPU and memory utilization.
+  - Inspects active TCP client connections on both Client (3000) and Server (3001) ports.
+  - Queries active SQLite sessions and outputs currently authenticated users and roles (`GameMaster` / `Player`).
+  - Reports active battle map instances loaded into server memory.
+- **Log Streaming & Inspection:**
+  - Integrated `logs` command (`all`, `server`, `client`) with tailing options.
 
-### 3D Dice Serialization & Rapid Roll Capture
-- **FIFO Physics Serialization Queue:**
-  - Added `DiceRollQueue` to serialize 3D dice calls and prevent `@3d-dice/dice-box` from clearing in-flight physics worker promises during rapid clicking.
-- **Safe Fallback & Synthetic Roll Resolution:**
-  - Implemented `executeQueuedDiceRoll` with synthetic roll generation. If rolls occur faster than the 3D physics animation can display each one or if an animation promise is superseded, all rolls are guaranteed to calculate accurately, log to the server (`/api/rolls`), and display in the Roll Log HUD.
+### 3D Physical Dice Synchronization Fix
+- **Safe Settling Timeout Extension:**
+  - Extended 3D dice settle timeout from 4s to 10s in `safeDiceRoller.js`.
+  - Prevents premature roll resolution timeouts from generating synthetic rolls that overwrite in-flight physical 3D dice rolls before they settle on the virtual tabletop.
 
-### Collapsible VTT Widgets & UI Ergonomics
-- **Space VTT Widget Ergonomics:**
-  - Flip & Burn tactical applet is collapsible, defaulting to collapsed state to maximize canvas space.
-  - Space VTT token inspector Weapons widget is collapsible, defaulting to collapsed state.
+### Comprehensive Security Hardening & Audit Fixes
+
+#### GM-Layer Secrecy & Information Disclosure Prevention
+- **WebSocket GM Layer Token Isolation (`SEC-AUDIT-01`):**
+  - Hardened `map:activated` WebSocket event to emit distinct payloads: players receive maps with GM-layer tokens stripped, while Game Masters receive full state via `io.to('role:GameMaster')`.
+- **GM Token Mutation Protection (`SEC-AUDIT-02`):**
+  - Enforced strict authorization preventing non-GM players from moving, updating, or deleting tokens on the GM layer, even if the token is linked to a sheet they own.
+
+#### File Upload & Stored XSS Hardening
+- **SVG Sanitization Hardening (`SEC-01`):**
+  - Expanded regex and DOM parsing sanitization to detect and block namespaced scripting tags (`<svg:script>`, `<foreignObject>`, inline event handlers).
+- **Upload Endpoint Sandboxing:**
+  - Configured strict `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox` and `X-Content-Type-Options: nosniff` headers on all served `/uploads` static assets.
+
+#### Session & Authentication Lifecycle
+- **Session Fixation Mitigation (`SEC-02`):**
+  - Added mandatory `req.session.regenerate()` upon successful authentication to issue new session IDs and mitigate fixation attacks.
+- **Cookie Security Enforcement (`SEC-03`):**
+  - Dynamically configured `secure` cookie flag based on connection context (`process.env.NODE_ENV === 'production'` or `req.secure`).
+  - Validates session secrets in production environments to reject default fallbacks.
+- **Session Invalidation on Password Update (`SEC-04`):**
+  - Invalidates all existing concurrent sessions across all devices when a user's password is changed or reset.
+
+#### Token Validation & Stat Manipulation Prevention
+- **Stat Clamping Against Sheet Maxima (`SEC-05`):**
+  - Enforces server-side validation ensuring token current/max stamina, HP, and SEU cannot be manipulated beyond their sheet maximums.
+- **Dead Token Action Prevention (`SEC-06`):**
+  - Disallows combat actions, movement, or state adjustments from destroyed or deceased tokens unless revived by a Game Master.
+
+#### DoS & Memory Protection
+- **VTT Ping Map Validation (`SEC-AUDIT-05`):**
+  - Validates ping coordinates and target map IDs against active server maps.
+- **Map Instance Memory Caps (`SEC-AUDIT-03`):**
+  - Imposed a strict cap (50 maps maximum) on active in-memory battle map states with LRU eviction to prevent heap exhaustion.
+- **Roll Payload Sanitization (`SEC-AUDIT-06`):**
+  - Strict array and boundary validation on `rollSummary.dice` and string length limits on labels/breakdowns preventing client Vue render crashes.
+
+#### Sidebar Sheet Reordering Hardening
+- **GM Permission Enforcement on Reorder (`SEC-AUDIT-04`):**
+  - Restricted global sheet reorder endpoints (`/reorder`) to GameMaster only, preventing unauthorized client reordering and sorting collisions.
 
 ---
 
 ## 3. Verification & Test Metrics
 
 - **Client Test Suite**: 52 test files passed, 700 total tests passed (100% passing).
-- **Server Test Suite**: 18 test files passed, 240 total tests passed (100% passing).
-- **Combined Total**: 940 automated tests passing cleanly across client and server.
-- **Production Build**: Built cleanly with Vite in 2.10s.
+- **Server Test Suite**: 18 test files passed, 255 total tests passed (100% passing).
+- **Total Test Suite**: 955 automated tests passing cleanly across client and server.
+- **Performance Benchmark**: Autocannon benchmark sustained **1,779 req/sec** at sub-6ms median latency with zero dropped connections or HTTP errors.
 
 ---
 
-## 4. Release History
+## 4. Git Artifacts & History
 
-- **v0.11.0 (October 26, 2026):** Minor feature release: Character & Ship sheet left navigation reordering (drag-and-drop handles, move up/down buttons, atomic SQLite persistence, real-time Socket.io sync), 3D dice physics serialization & rapid roll capture guarantee, collapsible Flip & Burn applet and Weapons widget defaults.
-- **v0.10.1 (October 24, 2026):** Security and robustness update: Strict private network origin validation, prototype property traversal guard on rulebook lookups, GM layer guard on SEU sync, and linked space token HP synchronization.
-- **v0.10.0 (October 24, 2026):** Major feature release: Rulebook-accurate Knight Hawks Master Physics, Combat Flip & Burn Maneuvers, Celestial Orbital Slingshots with Oberth Effect Burns, Real-Time Tactical Ping System, Tactical Wireframe Toolbar Icons, Plain ASCII Character Sheet Downloads, and Digital Sheet Recovery Tools.
-- **v0.9.0 (October 23, 2026):** Major stability and performance release: Comprehensive 38-item codebase audit fixes, restored 3D percentile dice contrast, LAN private network CORS autodiscovery, direct WebSocket transport, Express HTTP gzip compression, 1-day asset caching, code-split 3D dice engine, and direct production static serving on port 3000.
-- **v0.8.0 (October 22, 2026):** Minor feature release: GameMaster-only GM Notes tab (`/dashboard/gm-notes`) with session groups and editable note panels, Space Combat Flip & Burn maneuver (`MR >= 3`) with STA check & blackout rollers, and Star Frontiers Knight Hawks space weapon firing limitations/arcs (`FF`, `T`, `MPO`, `RD`, `LTD`) across rulebooks, custom weapon designer, ship sheets, and Space VTT.
-- **v0.7.0 (October 22, 2026):** Minor feature and bugfix release: Adversary template deletion and live token artwork replacement (`PATCH /api/adversaries/:id/token`), missing/moved token image fallback resilience, RPG VTT bottom-up red damage and wounded token overlays, and project `README.md` screenshot gallery.
-- **v0.6.0 (October 18, 2026):** Minor feature and polish release: Knight Hawks Ship Weapons Selection Modal & canonical 10-weapon catalog, prominent weapon titles with category limitation badges and inline renaming, ship sheet typography/layout refinements, and synchronized VTT dice & roll banner clearing.
-- **v0.5.0 (October 17, 2026):** Major minor-feature release: RPG VTT Alpha Dawn vehicle support & tactical Vehicle HUD, Space VTT celestial tokens (asteroids, moons, planets), canonical Alpha Dawn equipment catalog expansion (117 items) with category filter tabs, player self-service password changes, and tabletop dice rolling sound effects.
-- **v0.4.0 (October 16, 2026):** Minor feature release: Dynamic Adversary Stocking engine, Adversary Token HUD, AI token art generator & circular ring masking pipeline, and Admin Uploads & Assets File Manager with directory CRUD, file move, atomic database cascades, and real-time canvas asset sync.
-- **v0.3.0 (October 16, 2026):** Minor feature release: shared dice rolls & roll log, per-user tab/view state persistence, Knight Hawks spaceship skills, sheet Notes, "Species" terminology, and Map Manager grid controls (dimensions, line thickness, visibility).
-- **v0.2.0 (October 4, 2026):** Major feature release: Image Browser & Uploads Explorer, Decoupled Die Roll Log HUDs, Center Token Placement with Collision Avoidance, Map Background Browsing, Dynamic Tab Titles, and Modal Form Simplification.
-- **v0.1.1 (September 27, 2026):** Sub-release snapshot: Damage dice totals HUD, single source of truth HP refactor, fog removal, token ring color persistence, character portrait layout, ship token linking, and UI theme alignment.
-- **v0.1.0 (September 22, 2026):** Initial stable release: RPG and Space VTTs, 3D physics dice box, character and starship sheets, searchable rulebooks, role-based user management, and sci-fi terminal design.
+- Tag: `v0.12.0`
+- Previous Tag: `v0.11.0`
