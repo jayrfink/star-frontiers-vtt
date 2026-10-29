@@ -490,6 +490,40 @@ export function createTokenRouter(db, io) {
         }
       }
 
+      let cleanCurrentHp = current_hp !== null && current_hp !== undefined && Number.isFinite(Number(current_hp))
+        ? Math.round(Number(current_hp))
+        : null;
+      let cleanMaxHp = max_hp !== null && max_hp !== undefined && Number.isFinite(Number(max_hp))
+        ? Math.round(Number(max_hp))
+        : null;
+      let cleanSeu = Number.isFinite(Number(seu_current)) ? Math.round(Number(seu_current)) : null;
+
+      // SEC-05: Non-GM token stat manipulation & integrity check
+      if (!isGM) {
+        if (mapExists.map_type === 'space') {
+          const ship = db.prepare('SELECT hull_points, current_hp FROM ship_sheets WHERE id = ?').get(character_id);
+          if (ship) {
+            cleanMaxHp = Number.isFinite(Number(ship.hull_points)) ? Number(ship.hull_points) : 50;
+            const sourceHp = Number.isFinite(Number(ship.current_hp)) ? Number(ship.current_hp) : cleanMaxHp;
+            const targetHp = cleanCurrentHp !== null ? cleanCurrentHp : sourceHp;
+            cleanCurrentHp = Math.min(cleanMaxHp, Math.max(0, targetHp));
+          }
+        } else {
+          const char = db.prepare('SELECT sta, current_sta, max_seu, current_seu FROM character_sheets WHERE id = ?').get(character_id);
+          if (char) {
+            cleanMaxHp = Number.isFinite(Number(char.sta)) ? Number(char.sta) : 50;
+            const sourceHp = Number.isFinite(Number(char.current_sta)) ? Number(char.current_sta) : cleanMaxHp;
+            const targetHp = cleanCurrentHp !== null ? cleanCurrentHp : sourceHp;
+            cleanCurrentHp = Math.min(cleanMaxHp, Math.max(0, targetHp));
+
+            const maxSeu = Number.isFinite(Number(char.max_seu)) ? Number(char.max_seu) : 50;
+            const sourceSeu = Number.isFinite(Number(char.current_seu)) ? Number(char.current_seu) : maxSeu;
+            const targetSeu = cleanSeu !== null ? cleanSeu : sourceSeu;
+            cleanSeu = Math.min(maxSeu, Math.max(0, targetSeu));
+          }
+        }
+      }
+
       // Enforce layer: non-GMs can only create tokens on the 'character' layer
       const cleanLayer = isGM ? layer : 'character';
       const cleanColor = color ? color.trim() : '#666666';
@@ -498,7 +532,6 @@ export function createTokenRouter(db, io) {
       const cleanSize = clampSize(size, 1);
       const cleanRotation = clampRotation(rotation, 0);
       const cleanSpeed = Number.isFinite(Number(current_speed)) ? Number(current_speed) : 0;
-      const cleanSeu = Number.isFinite(Number(seu_current)) ? Number(seu_current) : null;
 
       const statusEffectsStr = typeof status_effects === 'string' ? status_effects : JSON.stringify(status_effects);
       const conditionsStr = typeof conditions === 'string' ? conditions : JSON.stringify(conditions);
@@ -518,7 +551,7 @@ export function createTokenRouter(db, io) {
 
       const result = stmt.run(
         map_id, character_id, template_id, name, cleanColor, avatar_url,
-        cleanX, cleanY, cleanSize, current_hp, max_hp, cleanSeu, conditionsStr, statusEffectsStr, cleanLayer,
+        cleanX, cleanY, cleanSize, cleanCurrentHp, cleanMaxHp, cleanSeu, conditionsStr, statusEffectsStr, cleanLayer,
         cleanRotation, cleanSpeed, vehicleDataStr
       );
 
@@ -579,9 +612,45 @@ export function createTokenRouter(db, io) {
       const y = req.body.y ?? existing.y;
       const rawSize = !isGM ? existing.size : (req.body.size ?? existing.size);
       const size = clampSize(rawSize, existing.size ?? 1);
-      const current_hp = req.body.current_hp ?? existing.current_hp;
       const max_hp = !isGM ? existing.max_hp : (req.body.max_hp ?? existing.max_hp);
-      const seu_current = req.body.seu_current !== undefined ? req.body.seu_current : existing.seu_current;
+      let current_hp = req.body.current_hp ?? existing.current_hp;
+      let seu_current = req.body.seu_current !== undefined ? req.body.seu_current : existing.seu_current;
+
+      // SEC-05: Non-GM token stat manipulation & integrity check on update
+      if (!isGM) {
+        if (current_hp !== null && current_hp !== undefined && Number.isFinite(Number(current_hp))) {
+          const numericHp = Math.round(Number(current_hp));
+          if (max_hp !== null && max_hp !== undefined && Number.isFinite(Number(max_hp))) {
+            current_hp = Math.min(Number(max_hp), Math.max(0, numericHp));
+          } else {
+            current_hp = Math.max(0, numericHp);
+          }
+        }
+
+        if (seu_current !== null && seu_current !== undefined && Number.isFinite(Number(seu_current))) {
+          let maxSeu = null;
+          // Look up max_seu from linked character if rpg map
+          if (existing.character_id) {
+            let mapType = 'rpg';
+            if (existing.map_id) {
+              const mapRow = db.prepare('SELECT map_type FROM maps WHERE id = ?').get(existing.map_id);
+              if (mapRow?.map_type) mapType = mapRow.map_type;
+            }
+            if (mapType !== 'space') {
+              const char = db.prepare('SELECT max_seu FROM character_sheets WHERE id = ?').get(existing.character_id);
+              if (char && Number.isFinite(Number(char.max_seu))) {
+                maxSeu = Number(char.max_seu);
+              }
+            }
+          }
+          const numericSeu = Math.round(Number(seu_current));
+          if (maxSeu !== null) {
+            seu_current = Math.min(maxSeu, Math.max(0, numericSeu));
+          } else {
+            seu_current = Math.max(0, numericSeu);
+          }
+        }
+      }
       const layer = !isGM ? existing.layer : (req.body.layer ?? existing.layer);
       const rawRotation = req.body.rotation ?? existing.rotation ?? 0;
       const rotation = clampRotation(rawRotation, existing.rotation ?? 0);

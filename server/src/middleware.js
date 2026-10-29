@@ -192,6 +192,18 @@ export class BetterSqlite3Store extends session.Store {
 }
 
 export function createSessionMiddleware(dataDir) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const secret = process.env.SESSION_SECRET;
+
+  if (isProduction) {
+    if (!secret || secret === 'sf-vtt-dev-secret') {
+      throw new Error('SESSION_SECRET environment variable must be set to a secure secret in production mode');
+    }
+  }
+
+  const sessionSecret = secret || 'sf-vtt-dev-secret';
+  const isCookieSecure = process.env.COOKIE_SECURE === 'true' || (isProduction && process.env.COOKIE_SECURE !== 'false');
+
   let store;
   if (dataDir === ':memory:') {
     store = new session.MemoryStore();
@@ -207,13 +219,13 @@ export function createSessionMiddleware(dataDir) {
   }
   return session({
     store,
-    secret: process.env.SESSION_SECRET || 'sf-vtt-dev-secret',
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
+      secure: isCookieSecure,
       maxAge: 24 * 60 * 60 * 1000,
     },
   });

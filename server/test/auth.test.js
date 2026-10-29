@@ -176,6 +176,33 @@ describe('Auth API', () => {
         .send({ username: 'nobody', password: 'password123' });
       expect(res.status).toBe(401);
     });
+
+    it('regenerates session upon successful login to prevent session fixation', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'fixationUser', password: 'password123' });
+
+      // First establish an unauthenticated session cookie
+      const preSessionRes = await request(app).get('/api/auth/setup');
+      const rawCookie = preSessionRes.headers['set-cookie']?.[0];
+
+      // Login with that pre-existing session cookie
+      const loginReq = request(app).post('/api/auth/login');
+      if (rawCookie) {
+        loginReq.set('Cookie', rawCookie);
+      }
+      const loginRes = await loginReq.send({ username: 'fixationUser', password: 'password123' });
+      expect(loginRes.status).toBe(200);
+
+      // Verify a new session cookie was set upon login
+      const postCookie = loginRes.headers['set-cookie']?.[0];
+      expect(postCookie).toBeDefined();
+      if (rawCookie) {
+        const preSid = rawCookie.split(';')[0];
+        const postSid = postCookie.split(';')[0];
+        expect(postSid).not.toBe(preSid);
+      }
+    });
   });
 
   describe('GET /api/auth/me', () => {
@@ -447,11 +474,21 @@ describe('Auth API', () => {
       await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
       const regRes = await gmAgent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
 
+      // Establish an active session for player1 before password reset
+      const playerAgent = request.agent(app);
+      await playerAgent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+      const meBefore = await playerAgent.get('/api/auth/me');
+      expect(meBefore.status).toBe(200);
+
       const updateRes = await gmAgent
         .put(`/api/auth/users/${regRes.body.id}/password`)
         .send({ password: 'brandnewpassword' });
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.ok).toBe(true);
+
+      // Verify active session was invalidated (SEC-04)
+      const meAfter = await playerAgent.get('/api/auth/me');
+      expect(meAfter.status).toBe(401);
 
       // Verify old password fails
       const failedLogin = await request(app)
@@ -592,6 +629,42 @@ describe('Auth API', () => {
         .send({ username: 'gm', password: 'gmNewPassword123' });
       expect(successfulLogin.status).toBe(200);
       expect(successfulLogin.body.username).toBe('gm');
+    });
+
+    it('keeps current session alive after password change while invalidating other concurrent sessions (SEC-04)', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+      await gmAgent.post('/api/auth/register').send({ username: 'concurrentUser', password: 'password123' });
+
+      // Session A (primary session that changes password)
+      const sessionA = request.agent(app);
+      await sessionA.post('/api/auth/login').send({ username: 'concurrentUser', password: 'password123' });
+      const meA_before = await sessionA.get('/api/auth/me');
+      expect(meA_before.status).toBe(200);
+
+      // Session B (concurrent / compromised session)
+      const sessionB = request.agent(app);
+      await sessionB.post('/api/auth/login').send({ username: 'concurrentUser', password: 'password123' });
+      const meB_before = await sessionB.get('/api/auth/me');
+      expect(meB_before.status).toBe(200);
+
+      // Session A changes password
+      const updateRes = await sessionA.put('/api/auth/password').send({
+        currentPassword: 'password123',
+        newPassword: 'concurrentNewPass123',
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.ok).toBe(true);
+
+      // Session A should STILL be authenticated
+      const meA_after = await sessionA.get('/api/auth/me');
+      expect(meA_after.status).toBe(200);
+      expect(meA_after.body.username).toBe('concurrentUser');
+
+      // Session B should have been invalidated and receive 401
+      const meB_after = await sessionB.get('/api/auth/me');
+      expect(meB_after.status).toBe(401);
     });
 
     it('requireAuth rejects session if userId no longer exists in users table', async () => {

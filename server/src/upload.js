@@ -222,7 +222,13 @@ export function createUploadRouter(customUploadDir, db, io) {
             .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
           
           const dangerousPatterns = [
-            /<\s*(script|animate|set)\b/i,
+            /<\s*[a-zA-Z0-9_:-]*script\b/i,
+            /<\s*[a-zA-Z0-9_:-]*animate\b/i,
+            /<\s*[a-zA-Z0-9_:-]*set\b/i,
+            /<\s*[a-zA-Z0-9_:-]*foreignObject\b/i,
+            /<\s*[a-zA-Z0-9_:-]*handler\b/i,
+            /<\s*[a-zA-Z0-9_:-]*use\b[^>]*href\s*=\s*['"]?javascript:/i,
+            /xmlns:[a-zA-Z0-9_.-]+\s*=\s*['"][^'"]*(script|ecmascript|javascript)/i,
             /<!ENTITY\b/i,
             /\bon\w+\s*=/i,
             /javascript\s*:/i,

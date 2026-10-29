@@ -891,6 +891,39 @@ describe('Upload API', () => {
         .post('/api/upload')
         .attach('file', Buffer.from(entitySvg), 'entity.svg');
       expect(resEntity.status).toBe(400);
+
+      // SEC-01: Namespaced script tags & malicious elements
+      const namespacedSvg = '<svg xmlns:svg="http://www.w3.org/2000/svg"><svg:script>alert(1)</svg:script></svg>';
+      const resNamespaced = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(namespacedSvg), 'namespaced.svg');
+      expect(resNamespaced.status).toBe(400);
+
+      const foreignObjectSvg = '<svg><foreignObject><div>test</div></foreignObject></svg>';
+      const resForeign = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(foreignObjectSvg), 'foreign.svg');
+      expect(resForeign.status).toBe(400);
+
+      const useHrefSvg = '<svg><use href="javascript:alert(1)" /></svg>';
+      const resUse = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(useHrefSvg), 'use.svg');
+      expect(resUse.status).toBe(400);
+
+      const xmlScriptNsSvg = '<svg xmlns:s="http://www.w3.org/2000/ecmascript"><s:foo /></svg>';
+      const resXmlNs = await gmAgent
+        .post('/api/upload')
+        .attach('file', Buffer.from(xmlScriptNsSvg), 'xmlns.svg');
+      expect(resXmlNs.status).toBe(400);
+    });
+
+    it('sets CSP and nosniff security headers when serving static uploads (SEC-01)', async () => {
+      fs.writeFileSync(path.join(tempUploadDir, 'test-sec.svg'), '<svg width="10" height="10"></svg>');
+      const res = await request(app).get('/uploads/test-sec.svg');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-security-policy']).toBe("default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
   });
 });

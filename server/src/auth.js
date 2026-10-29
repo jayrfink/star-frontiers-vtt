@@ -9,6 +9,116 @@ import { requireAuth, requireGM, isGameMaster } from './middleware.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SALT_ROUNDS = 12;
 
+/**
+ * Invalidate sessions for a specific user ID across all session stores
+ * (custom SQLite store, session store db, disk sessions.db, app.db, and MemoryStore).
+ * Optionally excludes a specific session ID (e.g. current session during password change).
+ *
+ * @param {object} req - Express request object containing sessionStore and app
+ * @param {number|string} userId - ID of user whose sessions to purge
+ * @param {object} [db] - Fallback database connection
+ * @param {string} [excludeSessionId] - Optional session ID to preserve
+ */
+export function purgeUserSessions(req, userId, db, excludeSessionId) {
+  const targetId = Number(userId);
+
+  // Helper to purge sessions from a database connection with anchored JSON matching
+  const purgeFromDb = (targetDb) => {
+    try {
+      const hasTable = targetDb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'").get();
+      if (hasTable) {
+        if (excludeSessionId) {
+          targetDb.prepare(`
+            DELETE FROM sessions 
+            WHERE sid != ? AND (
+              (json_valid(sess) AND (json_extract(sess, '$.userId') = ? OR json_extract(sess, '$.userId') = ?))
+              OR sess LIKE ? OR sess LIKE ? OR sess LIKE ? OR sess LIKE ?
+            )
+          `).run(
+            excludeSessionId,
+            targetId,
+            String(targetId),
+            `%"userId":${targetId},%`,
+            `%"userId":${targetId}}%`,
+            `%"userId":"${targetId}",%`,
+            `%"userId":"${targetId}"}%`
+          );
+        } else {
+          targetDb.prepare(`
+            DELETE FROM sessions 
+            WHERE (json_valid(sess) AND (json_extract(sess, '$.userId') = ? OR json_extract(sess, '$.userId') = ?))
+               OR sess LIKE ? OR sess LIKE ? OR sess LIKE ? OR sess LIKE ?
+          `).run(
+            targetId,
+            String(targetId),
+            `%"userId":${targetId},%`,
+            `%"userId":${targetId}}%`,
+            `%"userId":"${targetId}",%`,
+            `%"userId":"${targetId}"}%`
+          );
+        }
+      }
+    } catch {}
+  };
+
+  // 1. Invalidate via sessionStore purgeUser or db property if available
+  if (req.sessionStore && typeof req.sessionStore.purgeUser === 'function') {
+    // If excludeSessionId is provided, purgeUser may not support exclusion, so check if store has db
+    if (excludeSessionId && req.sessionStore.db) {
+      purgeFromDb(req.sessionStore.db);
+    } else if (!excludeSessionId) {
+      req.sessionStore.purgeUser(targetId);
+    } else if (req.sessionStore.db) {
+      purgeFromDb(req.sessionStore.db);
+    }
+  } else if (req.sessionStore && req.sessionStore.db) {
+    purgeFromDb(req.sessionStore.db);
+  }
+
+  // 2. Invalidate active sessions in sessions.db file on disk (if it exists)
+  try {
+    const sessionDir = req.app?.locals?.sessionDir;
+    const sessionDbPath = sessionDir && sessionDir !== ':memory:'
+      ? path.join(sessionDir, 'sessions.db')
+      : (process.env.DATA_DIR ? path.join(process.env.DATA_DIR, 'sessions.db') : path.resolve(__dirname, '../../data/sessions.db'));
+    
+    if (fs.existsSync(sessionDbPath)) {
+      const storeDbName = req.sessionStore?.db?.name;
+      if (!storeDbName || path.resolve(storeDbName) !== path.resolve(sessionDbPath)) {
+        const sessDb = new Database(sessionDbPath);
+        try {
+          purgeFromDb(sessDb);
+        } finally {
+          sessDb.close();
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error purging sessions.db:', err);
+  }
+
+  // 3. Keep fallback purge in app.db (for in-memory test setups where sessions table is created in app.db)
+  if (db) {
+    purgeFromDb(db);
+  }
+
+  // 4. MemoryStore or standard sessionStore iteration
+  if (req.sessionStore && typeof req.sessionStore.all === 'function') {
+    req.sessionStore.all((err, sessions) => {
+      if (!err && sessions) {
+        for (const [sid, sess] of Object.entries(sessions)) {
+          if (excludeSessionId && sid === excludeSessionId) {
+            continue;
+          }
+          if (sess && (sess.userId === targetId || sess.userId === String(targetId) || Number(sess.userId) === targetId)) {
+            req.sessionStore.destroy(sid, () => {});
+          }
+        }
+      }
+    });
+  }
+}
+
 export function createAuthRouter(db) {
   const router = Router();
 
@@ -107,8 +217,22 @@ export function createAuthRouter(db) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      req.session.userId = user.id;
-      res.json({ id: user.id, username: user.username, role: user.role });
+      // Mitigate session fixation by regenerating session on successful login
+      if (req.session && typeof req.session.regenerate === 'function') {
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error('Session regeneration error:', err);
+            return res.status(500).json({ error: 'Login failed' });
+          }
+          req.session.userId = user.id;
+          res.json({ id: user.id, username: user.username, role: user.role });
+        });
+      } else {
+        if (req.session) {
+          req.session.userId = user.id;
+        }
+        res.json({ id: user.id, username: user.username, role: user.role });
+      }
     } catch (err) {
       console.error('Login error:', err);
       res.status(500).json({ error: 'Login failed' });
@@ -162,73 +286,7 @@ export function createAuthRouter(db) {
 
       db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
 
-      const targetId = Number(targetUser.id);
-
-      // Helper to purge sessions from a database connection with anchored JSON matching
-      const purgeFromDb = (targetDb) => {
-        try {
-          const hasTable = targetDb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'").get();
-          if (hasTable) {
-            targetDb.prepare(`
-              DELETE FROM sessions 
-              WHERE (json_valid(sess) AND (json_extract(sess, '$.userId') = ? OR json_extract(sess, '$.userId') = ?))
-                 OR sess LIKE ? OR sess LIKE ? OR sess LIKE ? OR sess LIKE ?
-            `).run(
-              targetId,
-              String(targetId),
-              `%"userId":${targetId},%`,
-              `%"userId":${targetId}}%`,
-              `%"userId":"${targetId}",%`,
-              `%"userId":"${targetId}"}%`
-            );
-          }
-        } catch {}
-      };
-
-      // 1. Invalidate via sessionStore purgeUser or db property if available
-      if (req.sessionStore && typeof req.sessionStore.purgeUser === 'function') {
-        req.sessionStore.purgeUser(targetId);
-      } else if (req.sessionStore && req.sessionStore.db) {
-        purgeFromDb(req.sessionStore.db);
-      }
-
-      // 2. Invalidate active sessions in sessions.db file on disk (if it exists)
-      try {
-        const sessionDir = req.app?.locals?.sessionDir;
-        const sessionDbPath = sessionDir && sessionDir !== ':memory:'
-          ? path.join(sessionDir, 'sessions.db')
-          : (process.env.DATA_DIR ? path.join(process.env.DATA_DIR, 'sessions.db') : path.resolve(__dirname, '../../data/sessions.db'));
-        
-        if (fs.existsSync(sessionDbPath)) {
-          const storeDbName = req.sessionStore?.db?.name;
-          if (!storeDbName || path.resolve(storeDbName) !== path.resolve(sessionDbPath)) {
-            const sessDb = new Database(sessionDbPath);
-            try {
-              purgeFromDb(sessDb);
-            } finally {
-              sessDb.close();
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error purging sessions.db:', err);
-      }
-
-      // 3. Keep fallback purge in app.db (for in-memory test setups where sessions table is created in app.db)
-      purgeFromDb(db);
-
-      // 4. MemoryStore or standard sessionStore iteration
-      if (req.sessionStore && typeof req.sessionStore.all === 'function') {
-        req.sessionStore.all((err, sessions) => {
-          if (!err && sessions) {
-            for (const [sid, sess] of Object.entries(sessions)) {
-              if (sess && (sess.userId === targetId || sess.userId === String(targetId) || Number(sess.userId) === targetId)) {
-                req.sessionStore.destroy(sid, () => {});
-              }
-            }
-          }
-        });
-      }
+      purgeUserSessions(req, targetUser.id, db);
 
       res.json({ ok: true });
     } catch (err) {
@@ -254,6 +312,10 @@ export function createAuthRouter(db) {
 
       const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, req.params.id);
+
+      // Invalidate all existing sessions for target user so compromised sessions cannot persist
+      purgeUserSessions(req, targetUser.id, db);
+
       res.json({ ok: true });
     } catch (err) {
       console.error('Update password error:', err);
@@ -287,7 +349,26 @@ export function createAuthRouter(db) {
 
       const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, req.session.userId);
-      res.json({ ok: true, message: 'Password updated successfully' });
+
+      const userId = user.id;
+
+      // Purge all other sessions for this user while keeping the current session active
+      if (req.session && typeof req.session.regenerate === 'function') {
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error('Session regeneration error during password change:', err);
+            return res.status(500).json({ error: 'Failed to update password' });
+          }
+          req.session.userId = userId;
+          // Purge any other sessions for this user, excluding the newly regenerated session
+          purgeUserSessions(req, userId, db, req.sessionID);
+          res.json({ ok: true, message: 'Password updated successfully' });
+        });
+      } else {
+        // Fallback if regenerate is not available
+        purgeUserSessions(req, userId, db, req.sessionID);
+        res.json({ ok: true, message: 'Password updated successfully' });
+      }
     } catch (err) {
       console.error('Change password error:', err);
       res.status(500).json({ error: 'Failed to update password' });

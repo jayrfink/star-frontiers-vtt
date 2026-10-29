@@ -94,7 +94,8 @@ start_backend() {
   fi
 
   log_info "Starting backend server on port 3000..."
-  docker exec -d "$CONTAINER_NAME" sh -c "cd '$DIR/server' && npm run dev > /tmp/server.log 2>&1"
+  local safe_dir="${DIR//\'/\'\\\'\'}"
+  docker exec -d "$CONTAINER_NAME" sh -c "cd '$safe_dir/server' && npm run dev > /tmp/server.log 2>&1"
 
   # Wait up to 5 seconds for backend to start listening
   local count=0
@@ -122,7 +123,8 @@ start_frontend() {
   fi
 
   log_info "Starting frontend Vite dev server on port 3001..."
-  docker exec -d "$CONTAINER_NAME" sh -c "cd '$DIR/client' && npm run dev -- --host 0.0.0.0 --port 3001 > /tmp/client.log 2>&1"
+  local safe_dir="${DIR//\'/\'\\\'\'}"
+  docker exec -d "$CONTAINER_NAME" sh -c "cd '$safe_dir/client' && npm run dev -- --host 0.0.0.0 --port 3001 > /tmp/client.log 2>&1"
 
   # Wait up to 5 seconds for frontend to start listening
   local count=0

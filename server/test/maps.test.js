@@ -898,5 +898,90 @@ describe('Maps & Tokens API & Socket.io', () => {
       });
       expect(badTokColorPut.status).toBe(400);
     });
+
+    it('SEC-05: Token stat manipulation & integrity clamp checks for non-GMs', async () => {
+      // 1. GM creates RPG map and Space map
+      const rpgMap = (await agent.post('/api/maps').send({ name: 'Sec RPG', map_type: 'rpg' })).body;
+      const spaceMap = (await agent.post('/api/maps').send({ name: 'Sec Space', map_type: 'space' })).body;
+
+      // 2. Register Player
+      await agent.post('/api/auth/register').send({ username: 'secPlayer', password: 'password123', role: 'Player' });
+      const pAgent = request.agent(app);
+      await pAgent.post('/api/auth/login').send({ username: 'secPlayer', password: 'password123' });
+
+      // Create character: sta = 45, max_seu = 60, current_sta = 40, current_seu = 50
+      const charRes = await pAgent.post('/api/characters').send({
+        name: 'Sec Hero',
+        race: 'Yazirian',
+        sta: 45,
+        current_sta: 40,
+        max_seu: 60,
+        current_seu: 50,
+      });
+      const char = charRes.body;
+
+      // Create ship: hull_points = 80, current_hp = 70
+      const shipRes = await pAgent.post('/api/ships').send({
+        name: 'Sec Ship',
+        ship_type: 'Frigate',
+        hull_points: 80,
+        current_hp: 70,
+      });
+      const ship = shipRes.body;
+
+      // Non-GM creates token on RPG map attempting to inflate stats (max_hp: 9999, current_hp: 9999, seu_current: 9999)
+      const inflatedCharTokenRes = await pAgent.post('/api/tokens').send({
+        map_id: rpgMap.id,
+        character_id: char.id,
+        name: 'Sec Hero Token',
+        max_hp: 9999,
+        current_hp: 9999,
+        seu_current: 9999,
+      });
+      expect(inflatedCharTokenRes.status).toBe(201);
+      const cToken = inflatedCharTokenRes.body;
+      // Clamped to character sheet STA and max_seu!
+      expect(cToken.max_hp).toBe(45);
+      expect(cToken.current_hp).toBe(45);
+      expect(cToken.seu_current).toBe(60);
+
+      // Non-GM creates token on Space map attempting to inflate stats
+      const inflatedShipTokenRes = await pAgent.post('/api/tokens').send({
+        map_id: spaceMap.id,
+        character_id: ship.id,
+        name: 'Sec Ship Token',
+        max_hp: 9999,
+        current_hp: 9999,
+      });
+      expect(inflatedShipTokenRes.status).toBe(201);
+      const sToken = inflatedShipTokenRes.body;
+      // Clamped to ship hull_points
+      expect(sToken.max_hp).toBe(80);
+      expect(sToken.current_hp).toBe(80);
+
+      // Non-GM attempts to update token current_hp beyond existing.max_hp (or negative)
+      const badHpUpdate = await pAgent.put(`/api/tokens/${cToken.id}`).send({
+        current_hp: 500,
+        seu_current: 500,
+      });
+      expect(badHpUpdate.status).toBe(200);
+      expect(badHpUpdate.body.current_hp).toBe(45); // clamped to max_hp (45)
+      expect(badHpUpdate.body.seu_current).toBe(60); // clamped to char max_seu (60)
+
+      const negHpUpdate = await pAgent.put(`/api/tokens/${cToken.id}`).send({
+        current_hp: -20,
+        seu_current: -10,
+      });
+      expect(negHpUpdate.status).toBe(200);
+      expect(negHpUpdate.body.current_hp).toBe(0);
+      expect(negHpUpdate.body.seu_current).toBe(0);
+
+      // Verify that non-GM cannot change max_hp on PUT
+      const tryChangeMax = await pAgent.put(`/api/tokens/${cToken.id}`).send({
+        max_hp: 999,
+      });
+      expect(tryChangeMax.status).toBe(200);
+      expect(tryChangeMax.body.max_hp).toBe(45);
+    });
   });
 });

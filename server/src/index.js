@@ -174,6 +174,14 @@ export function createApp(db, sessionDir, uploadDir) {
   app.locals.db = db;
   app.locals.sessionDir = sessionDir;
 
+  // Standard HTTP Security Headers (SEC-15)
+  app.use((req, res, next) => {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
   app.use(cors(corsOptions));
   app.use(compression());
   app.use(express.json());
@@ -184,6 +192,11 @@ export function createApp(db, sessionDir, uploadDir) {
   });
   app.use(
     '/uploads',
+    (req, res, next) => {
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      next();
+    },
     express.static(uploadsPath, {
       maxAge: '1d',
       etag: true,
@@ -237,6 +250,24 @@ app.get('/api/equipment', (req, res) => {
     });
   }
 
+  // Global Express Error Handler (SEC-16)
+  // Catches any unhandled errors in route handlers to prevent crashes and stack trace leaks
+  app.use((err, req, res, _next) => {
+    console.error('Unhandled server error:', err);
+    if (res.headersSent) {
+      return;
+    }
+    const statusCode = typeof err?.status === 'number' && err.status >= 400 && err.status < 600
+      ? err.status
+      : 500;
+    const responseBody = {
+      error: statusCode === 500 ? 'Internal server error' : (err.message || 'An error occurred'),
+    };
+    if (process.env.NODE_ENV !== 'production' && statusCode === 500 && err?.message) {
+      responseBody.details = err.message;
+    }
+    res.status(statusCode).json(responseBody);
+  });
 
   return { app, server, io };
 }
