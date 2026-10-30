@@ -1,6 +1,6 @@
-# Star Frontiers VTT - Release v0.12.1 Summary
+# Star Frontiers VTT - Release v0.12.2 Summary
 
-**Release Tag:** `v0.12.1`  
+**Release Tag:** `v0.12.2`  
 **Date:** October 29, 2026  
 **Status:** Stable / Production Ready
 
@@ -8,53 +8,42 @@
 
 ## 1. Overview
 
-Release `v0.12.1` is a patch release addressing real-time multiplayer synchronization and connectivity across the internet, enabling open token movement permissions for players, rendering visual condition markers on tokens, and integrating the OpenSpec specification framework into the repository.
+Release `v0.12.2` enhances character sheet energy management with revamped Standard Energy Unit (SEU) stepper controls and a dedicated one-click SEU Reload action. The reload action is positioned and styled in full visual parity with the Stamina Full Rest control.
 
-All automated test suites (256 server tests across 19 suites) pass with 100% compliance, and client production build compiles cleanly.
+All automated test suites (256 server tests across 19 suites) pass with 100% compliance, and the client production build compiles cleanly.
 
 ---
 
-## 2. Key Fixes & Enhancements in v0.12.1
+## 2. Key Enhancements in v0.12.2
 
-### Remote Internet Connectivity & WebSocket CORS Fixes
-- **Direct IP Address Origin Acceptance:**
-  - Expanded `isOriginAllowed` in `server/src/index.js` to allow WebSocket and HTTP CORS connections from any valid IPv4 or IPv6 address (including public server IP addresses).
-  - Eliminates `400 Bad Request (Origin not allowed by CORS)` errors that previously severed real-time WebSocket connections for players connecting over the public internet.
+### SEU Quick-Step Controls
+- **Reordered & Expanded Stepper Buttons:**
+  - Updated fixed SEU decrement/increment stepper buttons from `-1, -2, -5, +5` to `-5, -1, +1, +5` in `CharacterSheetsView.vue`.
+  - Tuned to common Star Frontiers combat costs (Heavy Laser / Screen at `-5`, Laser Pistol / Stunner at `-1`) and fast incremental recharges (`+1`, `+5`).
+  - Added descriptive tooltip titles for each button.
 
-### Token Movement & Player Authorization
-- **Universal Movement of Visible Tokens:**
-  - Modified `canManageToken` in `server/src/maps.js` to allow any logged-in player to move and update tokens on visible layers (`character`, `object`, `background`).
-  - Non-GM players can freely move NPCs, adversary tokens, vehicles, or characters during tactical combat.
-  - Deletion of other players' tokens or GM tokens remains restricted to GameMasters and token owners (`canDeleteToken`).
-  - Full GM layer isolation remains enforced: tokens on `layer === 'gm'` remain completely invisible and immutable to non-GMs.
+### One-Click SEU Reload
+- **Instant Power Pack Reload:**
+  - Added `⚡ Reload` (`reloadSeu()`) action restoring `current_seu` directly to `max_seu` without modifying stamina or other character statistics.
+  - Automatically bounds and clamps energy within `[0, max_seu]` and immediately persists to backend storage and websocket state.
+- **Visual & Layout Parity with Full Rest:**
+  - Positioned `⚡ Reload` in `.seu-header-right` immediately adjacent to the SEU numeric display (`current / max SEU`), exactly mirroring the placement of `🔄 Full Rest` in `.stamina-header-right`.
+  - Unified styling with `.btn-action-reset` featuring the translucent sci-fi cyan highlight theme (`#38bdf8`) and hover glow effects.
 
-### Real-Time Canvas Redraw & State Reactivity
-- **Instant Canvas Rendering:**
-  - Updated `token:moved`, `token:updated`, and `token:created` socket listeners in both `RpgVttView.vue` and `SpaceVttView.vue` to ensure shallow-clone reactivity (`tokens.value = [...tokens.value]`).
-  - Added string/numeric map ID normalization across token and ping socket events.
-  - Remote moves and tactical pings immediately update without requiring manual browser refreshes.
-
-### Token Condition Markers & Tactical Badges
-- **Visual Status Badges on Canvas:**
-  - Updated canvas render loops in `VttCanvas.vue` and `SpaceVttCanvas.vue` to parse both `token.status_effects` and `token.conditions`.
-  - Condition markers (⚡ Stunned, 💀 Unconscious, 🩸 Wounded, 🎯 Pinned, 🛡️ In Cover, 👣 Prone, 🧪 Poisoned, 🔥 Burning, 💥 Damaged, 🛰️ Adrift) now render directly as badges on token art.
-
-### OpenSpec Framework Integration
-- **Spec-Driven Development Tools:**
-  - Initialized OpenSpec in the workspace with `.agents/`, `.gemini/`, and `openspec/` configurations.
-  - Added automatic CLI installation checks to `startup.sh` and `Dockerfile`.
+### OpenSpec Change Integration
+- Fully tracked and applied through OpenSpec change `seu-quick-buttons-and-reload`.
 
 ---
 
 ## 3. Verification & Test Metrics
 
 - **Server Test Suite**: 19 test files passed, 256 total tests passed (100% passing).
-- **Client Build**: Clean Vite production build with zero errors.
-- **Socket Handshake Verification**: Verified HTTP and WebSocket handshake acceptance across public IP, private LAN, and loopback origins.
+- **Client Build**: Clean Vite production bundle compilation with zero errors or warnings.
+- **Service Verification**: Backend API (port 3000) and Frontend UI (port 3001) verified running and responding.
 
 ---
 
 ## 4. Git Artifacts & History
 
-- Tag: `v0.12.1`
-- Previous Tag: `v0.12.0`
+- Tag: `v0.12.2`
+- Previous Tag: `v0.12.1`
