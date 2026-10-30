@@ -411,10 +411,11 @@ describe('Maps & Tokens API & Socket.io', () => {
       });
       const npcId = npcRes.body.id;
 
-      // Player attempts to delete or update GM's NPC token -> 403
-      const badPut = await pAgent.put(`/api/tokens/${npcId}`).send({ name: 'Hacked NPC' });
-      expect(badPut.status).toBe(403);
+      // Player can move GM's NPC token (any player can move tokens)
+      const playerMoveNpc = await pAgent.put(`/api/tokens/${npcId}`).send({ x: 25, y: 25 });
+      expect(playerMoveNpc.status).toBe(200);
 
+      // But Player attempts to delete GM's NPC token -> 403
       const badDel = await pAgent.delete(`/api/tokens/${npcId}`);
       expect(badDel.status).toBe(403);
 
@@ -632,13 +633,19 @@ describe('Maps & Tokens API & Socket.io', () => {
       expect(badCreate.status).toBe(403);
       expect(badCreate.body.error).toBe('You do not own this character or ship');
 
-      // pilotBeta cannot update pilotAlpha's token (returns 403)
-      const badUpdate = await betaAgent.put(`/api/tokens/${alphaTokenId}`).send({
+      // pilotBeta CAN move pilotAlpha's token (any player can move any token)
+      const betaMoveAlpha = await betaAgent.put(`/api/tokens/${alphaTokenId}`).send({
         x: 100,
         y: 100,
       });
-      expect(badUpdate.status).toBe(403);
-      expect(badUpdate.body.error).toBe('Access denied');
+      expect(betaMoveAlpha.status).toBe(200);
+      expect(betaMoveAlpha.body.x).toBe(100);
+      expect(betaMoveAlpha.body.y).toBe(100);
+
+      // But pilotBeta CANNOT delete pilotAlpha's token (returns 403)
+      const badDelete = await betaAgent.delete(`/api/tokens/${alphaTokenId}`);
+      expect(badDelete.status).toBe(403);
+      expect(badDelete.body.error).toBe('Access denied');
     });
 
     it('disambiguates character_id between character_sheets and ship_sheets based on map_type', async () => {
@@ -696,14 +703,19 @@ describe('Maps & Tokens API & Socket.io', () => {
       });
       expect(validSpaceToken.status).toBe(201);
 
-      // Cross-entity permission check on PUT
-      // shipOwner cannot update validRpgToken
-      const badPutRpg = await shipAgent.put(`/api/tokens/${validRpgToken.body.id}`).send({ x: 50 });
-      expect(badPutRpg.status).toBe(403);
+      // Cross-entity permission check: any authenticated player can move tokens
+      const moveRpg = await shipAgent.put(`/api/tokens/${validRpgToken.body.id}`).send({ x: 50 });
+      expect(moveRpg.status).toBe(200);
 
-      // charOwner cannot update validSpaceToken
-      const badPutSpace = await charAgent.put(`/api/tokens/${validSpaceToken.body.id}`).send({ x: 50 });
-      expect(badPutSpace.status).toBe(403);
+      const moveSpace = await charAgent.put(`/api/tokens/${validSpaceToken.body.id}`).send({ x: 50 });
+      expect(moveSpace.status).toBe(200);
+
+      // But players cannot delete each other's tokens
+      const badDelRpg = await shipAgent.delete(`/api/tokens/${validRpgToken.body.id}`);
+      expect(badDelRpg.status).toBe(403);
+
+      const badDelSpace = await charAgent.delete(`/api/tokens/${validSpaceToken.body.id}`);
+      expect(badDelSpace.status).toBe(403);
     });
 
     it('emits map:activated with tokens when PUT /api/maps/:id activates a map', async () => {

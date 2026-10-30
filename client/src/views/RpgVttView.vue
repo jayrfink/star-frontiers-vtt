@@ -1746,7 +1746,10 @@ async function onTokenMoved({ id, x, y }) {
     if (res.ok) {
       const updated = await res.json();
       const idx = tokens.value.findIndex((t) => t.id === id);
-      if (idx !== -1) tokens.value[idx] = updated;
+      if (idx !== -1) {
+        tokens.value[idx] = updated;
+        tokens.value = [...tokens.value];
+      }
     }
   } catch (err) {
     console.error('Failed to move token:', err);
@@ -2187,27 +2190,34 @@ function setupSocketListeners() {
   });
 
   socket.on('token:created', onSocketTokenCreated = ({ token }) => {
-    if (activeMap.value && token.map_id === activeMap.value.id) {
+    if (activeMap.value && String(token.map_id) === String(activeMap.value.id)) {
       const exists = tokens.value.some((t) => t.id === token.id);
-      if (!exists) tokens.value.push(token);
+      if (!exists) {
+        tokens.value = [...tokens.value, token];
+      }
     }
   });
 
   socket.on('token:moved', onSocketTokenMoved = ({ token }) => {
-    if (activeMap.value && token.map_id === activeMap.value.id) {
+    if (activeMap.value && String(token.map_id) === String(activeMap.value.id)) {
       const idx = tokens.value.findIndex((t) => t.id === token.id);
       if (idx !== -1) {
-        tokens.value[idx].x = token.x;
-        tokens.value[idx].y = token.y;
+        tokens.value[idx] = { ...tokens.value[idx], ...token, x: token.x, y: token.y };
+        tokens.value = [...tokens.value];
+      } else {
+        tokens.value = [...tokens.value, token];
       }
     }
   });
 
   socket.on('token:updated', onSocketTokenUpdated = ({ token }) => {
-    if (activeMap.value && token.map_id === activeMap.value.id) {
+    if (activeMap.value && String(token.map_id) === String(activeMap.value.id)) {
       const idx = tokens.value.findIndex((t) => t.id === token.id);
       if (idx !== -1) {
         tokens.value[idx] = token;
+        tokens.value = [...tokens.value];
+      } else {
+        tokens.value = [...tokens.value, token];
       }
     }
   });
@@ -2220,7 +2230,7 @@ function setupSocketListeners() {
   });
 
   socket.on('ping:updated', onSocketPingUpdated = ({ mapId, ping }) => {
-    if (activeMap.value && mapId === activeMap.value.id && ping?.userId) {
+    if (activeMap.value && String(mapId) === String(activeMap.value.id) && ping?.userId) {
       activePings.value = {
         ...activePings.value,
         [ping.userId]: ping,
@@ -2229,7 +2239,7 @@ function setupSocketListeners() {
   });
 
   socket.on('ping:cleared', onSocketPingCleared = ({ mapId, userId, all }) => {
-    if (activeMap.value && mapId === activeMap.value.id) {
+    if (activeMap.value && String(mapId) === String(activeMap.value.id)) {
       if (all) {
         activePings.value = {};
       } else if (userId) {
@@ -2241,7 +2251,7 @@ function setupSocketListeners() {
   });
 
   socket.on('pings:sync', onSocketPingsSync = ({ mapId, pings }) => {
-    if (activeMap.value && mapId === activeMap.value.id) {
+    if (activeMap.value && String(mapId) === String(activeMap.value.id)) {
       const next = {};
       if (Array.isArray(pings)) {
         for (const p of pings) {

@@ -66,25 +66,37 @@ describe('LAN Network Performance & CORS Origin Validation', () => {
       expect(isOriginAllowed('http://desktop.local:3000')).toBe(true);
     });
 
-    it('rejects public untrusted domains and non-private IPs', () => {
+    it('allows any IP address (public or private) on any port', () => {
+      expect(isOriginAllowed('http://8.8.8.8:3001')).toBe(true);
+      expect(isOriginAllowed('http://73.126.44.174:3001')).toBe(true);
+      expect(isOriginAllowed('http://172.32.0.1:3001')).toBe(true);
+      expect(isOriginAllowed('http://172.15.255.255:3001')).toBe(true);
+      expect(isOriginAllowed('http://192.169.1.1:3001')).toBe(true);
+    });
+
+    it('rejects public untrusted domains not listed in ALLOWED_ORIGINS', () => {
       expect(isOriginAllowed('http://evil.com')).toBe(false);
       expect(isOriginAllowed('http://attacker.org:3000')).toBe(false);
-      expect(isOriginAllowed('http://8.8.8.8:3001')).toBe(false);
-      expect(isOriginAllowed('http://172.32.0.1:3001')).toBe(false);
-      expect(isOriginAllowed('http://172.15.255.255:3001')).toBe(false);
-      expect(isOriginAllowed('http://192.169.1.1:3001')).toBe(false);
     });
   });
 
-  describe('CORS and Compression over LAN', () => {
-    it('sets CORS headers for LAN origin', async () => {
-      const res = await request(app)
+  describe('CORS and Compression over LAN and Internet', () => {
+    it('sets CORS headers for LAN and public IP origins', async () => {
+      const lanRes = await request(app)
         .get('/api/auth/setup')
         .set('Origin', 'http://192.168.1.150:3001');
 
-      expect(res.status).toBe(200);
-      expect(res.headers['access-control-allow-origin']).toBe('http://192.168.1.150:3001');
-      expect(res.headers['access-control-allow-credentials']).toBe('true');
+      expect(lanRes.status).toBe(200);
+      expect(lanRes.headers['access-control-allow-origin']).toBe('http://192.168.1.150:3001');
+      expect(lanRes.headers['access-control-allow-credentials']).toBe('true');
+
+      const publicIpRes = await request(app)
+        .get('/api/auth/setup')
+        .set('Origin', 'http://73.126.44.174:3001');
+
+      expect(publicIpRes.status).toBe(200);
+      expect(publicIpRes.headers['access-control-allow-origin']).toBe('http://73.126.44.174:3001');
+      expect(publicIpRes.headers['access-control-allow-credentials']).toBe('true');
     });
 
     it('serves compressed responses when requested with Accept-Encoding: gzip', async () => {

@@ -584,32 +584,80 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // Status Icons (⚡ Stunned, 💀 Unconscious, 🩸 Wounded)
-  let statusEffects = token.status_effects;
-  if (typeof statusEffects === 'string') {
-    try {
-      statusEffects = JSON.parse(statusEffects);
-    } catch {
-      statusEffects = [];
+  // Status & Tactical Condition Badges (⚡ Stunned, 💀 Unconscious, 🩸 Wounded, 🎯 Pinned, 🛡️ In Cover, 👣 Prone, 🧪 Poisoned, 🔥 Burning)
+  const conditionIconMap = {
+    stunned: '⚡',
+    unconscious: '💀',
+    wounded: '🩸',
+    pinned: '🎯',
+    'in cover': '🛡️',
+    incover: '🛡️',
+    prone: '👣',
+    poisoned: '🧪',
+    burning: '🔥',
+    damaged: '💥',
+    adrift: '🛰️',
+    disabled: '⚡',
+    '⚡': '⚡',
+    '💀': '💀',
+    '🩸': '🩸',
+    '🎯': '🎯',
+    '🛡️': '🛡️',
+    '👣': '👣',
+    '🧪': '🧪',
+    '🔥': '🔥',
+    '💥': '💥',
+    '🛰️': '🛰️',
+  };
+
+  function parseEffectList(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [val.trim()];
+      }
+    }
+    return [];
+  }
+
+  function resolveConditionIcon(item) {
+    if (!item || typeof item !== 'string') return '';
+    const trimmed = item.trim();
+    const emojiMatch = trimmed.match(/^([\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|\p{Extended_Pictographic})/u);
+    if (emojiMatch) return emojiMatch[0];
+    const key = trimmed.toLowerCase();
+    return conditionIconMap[key] || trimmed;
+  }
+
+  const combinedEffects = [
+    ...parseEffectList(token.status_effects),
+    ...parseEffectList(token.conditions),
+  ];
+  const uniqueIcons = [];
+  for (const eff of combinedEffects) {
+    const icon = resolveConditionIcon(eff);
+    if (icon && !uniqueIcons.includes(icon)) {
+      uniqueIcons.push(icon);
     }
   }
-  if (statusEffects && Array.isArray(statusEffects) && statusEffects.length > 0) {
-    const iconMap = {
-      stunned: '⚡',
-      unconscious: '💀',
-      wounded: '🩸',
-      '⚡': '⚡',
-      '💀': '💀',
-      '🩸': '🩸',
-    };
-    const activeIcons = statusEffects.map(s => iconMap[s] || s);
-    const iconStr = activeIcons.join('');
-    
-    ctx.font = '12px sans-serif';
+
+  if (uniqueIcons.length > 0) {
+    const iconStr = uniqueIcons.join('');
+    ctx.save();
+    ctx.font = '14px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
     ctx.fillStyle = '#ffffff';
     ctx.fillText(iconStr, px + tokenPx - 2, py + 2);
+    ctx.restore();
   }
 
   // Vehicle Token Overlays (Speed badge & Damage condition icon)

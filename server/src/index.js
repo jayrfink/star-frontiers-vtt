@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import net from 'net';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import compression from 'compression';
@@ -98,6 +99,16 @@ export function isOriginAllowed(origin) {
   const allowed = getAllowedOrigins();
   if (allowed.has('*') || allowed.has(normalizedOrigin)) {
     return true;
+  }
+  try {
+    const url = new URL(normalizedOrigin);
+    const hostname = url.hostname.replace(/^\[|\]$/g, '');
+    // Allow any IP address (IPv4 or IPv6) connecting directly to the server
+    if (net.isIP(hostname)) {
+      return true;
+    }
+  } catch {
+    // ignore URL parse errors
   }
   return isPrivateNetworkOrigin(normalizedOrigin);
 }

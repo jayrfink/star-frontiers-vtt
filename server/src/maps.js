@@ -384,7 +384,15 @@ export function createMapRouter(db, io) {
 function canManageToken(db, userId, token) {
   if (!userId) return false;
   if (isGameMaster(db, userId)) return true;
-  // Non-GMs must NEVER manage (move, edit, or delete) GM-layer tokens, even if linked to their sheet
+  // Non-GMs must NEVER manage (move, edit, or delete) GM-layer tokens
+  if (token && token.layer === 'gm') return false;
+  // Any authenticated player can move and manage visible tokens
+  return true;
+}
+
+function canDeleteToken(db, userId, token) {
+  if (!userId) return false;
+  if (isGameMaster(db, userId)) return true;
   if (token && token.layer === 'gm') return false;
   if (!token || !token.character_id) return false;
   let mapType = 'rpg';
@@ -605,11 +613,11 @@ export function createTokenRouter(db, io) {
 
       const isGM = isGameMaster(db, req.session?.userId);
 
-      const status_effects = isGM
-        ? (Array.isArray(req.body.status_effects) ? req.body.status_effects : safeJsonParse(existing.status_effects, []))
+      const status_effects = req.body.status_effects !== undefined
+        ? (Array.isArray(req.body.status_effects) ? req.body.status_effects : safeJsonParse(req.body.status_effects, []))
         : safeJsonParse(existing.status_effects, []);
-      const conditions = isGM
-        ? (Array.isArray(req.body.conditions) ? req.body.conditions : safeJsonParse(existing.conditions, []))
+      const conditions = req.body.conditions !== undefined
+        ? (Array.isArray(req.body.conditions) ? req.body.conditions : safeJsonParse(req.body.conditions, []))
         : safeJsonParse(existing.conditions, []);
 
       // If the user is not a GameMaster, prevent modifying map_id, template_id, layer, size, max_hp, and vehicle_data.
@@ -729,7 +737,7 @@ export function createTokenRouter(db, io) {
         return res.status(404).json({ error: 'Token not found' });
       }
 
-      if (!canManageToken(db, req.session?.userId, existing)) {
+      if (!canDeleteToken(db, req.session?.userId, existing)) {
         return res.status(403).json({ error: 'Access denied' });
       }
 

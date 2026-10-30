@@ -614,20 +614,26 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     ctx.fillText(speed.toString(), cx + size * 0.7, cy - size * 0.7);
   }
 
-  // Status Icons (💥 Damaged, 🛰️ Adrift, ⚡ Disabled, 🔥 Burning, etc.)
-  const rawStatus = token.status_effects;
-  let statusEffects = [];
-  if (Array.isArray(rawStatus)) {
-    statusEffects = rawStatus;
-  } else if (typeof rawStatus === 'string' && rawStatus) {
-    try {
-      statusEffects = JSON.parse(rawStatus);
-    } catch {
-      statusEffects = [];
+  // Status & Tactical Condition Badges (💥 Damaged, 🛰️ Adrift, ⚡ Disabled, 🔥 Burning, ⚡ Stunned, 💀 Unconscious, 🩸 Wounded, etc.)
+  function parseEffectList(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [val.trim()];
+      }
     }
+    return [];
   }
 
-  if (!isCelestial && statusEffects.length > 0) {
+  function resolveConditionIcon(item) {
+    if (!item || typeof item !== 'string') return '';
+    const trimmed = item.trim();
+    const emojiMatch = trimmed.match(/^([\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|\p{Extended_Pictographic})/u);
+    if (emojiMatch) return emojiMatch[0];
     const iconMap = {
       damaged: '💥',
       adrift: '🛰️',
@@ -636,26 +642,42 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
       stunned: '⚡',
       unconscious: '💀',
       wounded: '🩸',
-      '💥': '💥',
-      '🛰️': '🛰️',
-      '⚡': '⚡',
-      '🔥': '🔥',
-      '💀': '💀',
-      '🩸': '🩸',
+      pinned: '🎯',
+      'in cover': '🛡️',
+      incover: '🛡️',
+      prone: '👣',
+      poisoned: '🧪',
     };
-    const activeIcons = statusEffects.map((s) => iconMap[s] || s);
-    const iconStr = activeIcons.join('');
+    const key = trimmed.toLowerCase();
+    return iconMap[key] || trimmed;
+  }
 
-    ctx.save();
-    ctx.font = `${Math.max(12, Math.round(size * 0.4))}px sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 1;
-    ctx.fillText(iconStr, cx - size * 0.85, cy - size * 0.85);
-    ctx.restore();
+  if (!isCelestial) {
+    const combinedEffects = [
+      ...parseEffectList(token.status_effects),
+      ...parseEffectList(token.conditions),
+    ];
+    const uniqueIcons = [];
+    for (const eff of combinedEffects) {
+      const icon = resolveConditionIcon(eff);
+      if (icon && !uniqueIcons.includes(icon)) {
+        uniqueIcons.push(icon);
+      }
+    }
+
+    if (uniqueIcons.length > 0) {
+      const iconStr = uniqueIcons.join('');
+      ctx.save();
+      ctx.font = `${Math.max(12, Math.round(size * 0.4))}px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      ctx.fillText(iconStr, cx - size * 0.85, cy - size * 0.85);
+      ctx.restore();
+    }
   }
 }
 
