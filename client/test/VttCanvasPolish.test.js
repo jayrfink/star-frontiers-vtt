@@ -75,9 +75,8 @@ describe('VttCanvas Hit-Testing, Event Handling & Lifecycle Polish', () => {
   describe('Bug 21: Stringified status_effects Parsing in VttCanvas', () => {
     it('safely parses token.status_effects JSON string before rendering icons', () => {
       const renderSection = content.slice(content.indexOf('function renderSingleToken'), content.indexOf('function drawInitials'));
-      expect(renderSection).toContain('let statusEffects = token.status_effects;');
-      expect(renderSection).toContain('typeof statusEffects === \'string\'');
-      expect(renderSection).toContain('statusEffects = JSON.parse(statusEffects);');
+      expect(renderSection).toContain('parseEffectList(token.status_effects)');
+      expect(renderSection).toContain('JSON.parse(val)');
     });
   });
 

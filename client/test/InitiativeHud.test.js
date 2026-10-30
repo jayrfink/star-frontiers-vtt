@@ -10,8 +10,8 @@ describe('Initiative Dice & HUD System', () => {
   const rpgContent = fs.readFileSync(rpgPath, 'utf8');
 
   describe('SpaceVttView Initiative Integration', () => {
-    it('has Initiative button in toolbar', () => {
-      expect(spaceContent).toMatch(/class="btn-tool btn-initiative"/);
+    it('has Initiative button in toolbar for GM only', () => {
+      expect(spaceContent).toMatch(/v-if="isGm"[^>]*class="btn-tool btn-initiative"/);
       expect(spaceContent).toMatch(/@click="rollInitiative"/);
       expect(spaceContent).toMatch(/Initiative/);
     });
@@ -50,8 +50,8 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('RpgVttView Initiative Integration', () => {
-    it('has Initiative button in toolbar', () => {
-      expect(rpgContent).toMatch(/class="btn-tool btn-initiative"/);
+    it('has Initiative button in toolbar for GM only', () => {
+      expect(rpgContent).toMatch(/v-if="isGm"[^>]*class="btn-tool btn-initiative"/);
       expect(rpgContent).toMatch(/@click="rollInitiative"/);
       expect(rpgContent).toMatch(/Initiative/);
     });

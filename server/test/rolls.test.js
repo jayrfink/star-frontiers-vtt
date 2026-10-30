@@ -310,8 +310,25 @@ describe('Rolls API & Sockets', () => {
     });
     expect(resValidDmg.status).toBe(201);
 
-    // Valid initiative roll accepted and retrievable
-    const resValidInit = await playerAgent.post('/api/rolls').send({
+    // Player cannot roll initiative (GM-only)
+    const resPlayerInit = await playerAgent.post('/api/rolls').send({
+      mode: 'space',
+      type: 'initiative',
+      label: '⚡ Combat Initiative',
+      total: 8,
+      breakdown: 'Players: 8 vs Opposition: 5',
+      rollSummary: {
+        playerRoll: 8,
+        oppRoll: 5,
+        winner: 'players',
+        valid: true
+      }
+    });
+    expect(resPlayerInit.status).toBe(403);
+    expect(resPlayerInit.body.error).toMatch(/GameMaster/i);
+
+    // Valid initiative roll accepted and retrievable when rolled by GM
+    const resValidInit = await gmAgent.post('/api/rolls').send({
       mode: 'space',
       type: 'initiative',
       label: '⚡ Combat Initiative',
@@ -330,7 +347,7 @@ describe('Rolls API & Sockets', () => {
     expect(resValidInit.body.rollSummary.oppRoll).toBe(5);
 
     // Invalid initiative rolls rejected
-    const resInvalidInitTotal = await playerAgent.post('/api/rolls').send({
+    const resInvalidInitTotal = await gmAgent.post('/api/rolls').send({
       mode: 'space',
       type: 'initiative',
       label: '⚡ Combat Initiative',
@@ -339,7 +356,7 @@ describe('Rolls API & Sockets', () => {
     });
     expect(resInvalidInitTotal.status).toBe(400);
 
-    const resInvalidInitDie = await playerAgent.post('/api/rolls').send({
+    const resInvalidInitDie = await gmAgent.post('/api/rolls').send({
       mode: 'space',
       type: 'initiative',
       label: '⚡ Combat Initiative',

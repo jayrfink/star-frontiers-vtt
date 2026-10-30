@@ -27,7 +27,7 @@ describe('SpaceVttCanvas Celestial Token Rendering', () => {
 
   it('guards status effects with !isCelestial', () => {
     const renderSection = content.slice(content.indexOf('function renderSingleToken'));
-    expect(renderSection).toMatch(/!isCelestial\s*&&\s*statusEffects\.length\s*>\s*0/);
+    expect(renderSection).toMatch(/if\s*\(!isCelestial\)\s*\{\s*const\s+combinedEffects/);
   });
 
   it('resets rotation to 0 for celestial tokens', () => {

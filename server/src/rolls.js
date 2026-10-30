@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireGM } from './middleware.js';
+import { requireAuth, requireGM, isGameMaster } from './middleware.js';
 
 function toIsoString(dateVal) {
   if (!dateVal) return new Date().toISOString();
@@ -67,6 +67,11 @@ export function createRollRouter(db, io) {
     }
     if (type !== 'percentile' && type !== 'damage' && type !== 'initiative') {
       return res.status(400).json({ error: 'Valid type ("percentile", "damage", or "initiative") is required' });
+    }
+    if (type === 'initiative') {
+      if (!isGameMaster(db, req.session?.userId)) {
+        return res.status(403).json({ error: 'Only GameMasters can roll initiative' });
+      }
     }
     if (typeof total !== 'number' || Number.isNaN(total) || !Number.isFinite(total)) {
       return res.status(400).json({ error: 'Invalid roll total: must be a finite number' });

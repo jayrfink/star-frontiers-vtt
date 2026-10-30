@@ -73,7 +73,7 @@
           <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5l13 13"/></svg> Clear All Pings
         </button>
         
-        <button class="btn-tool btn-initiative" @click="rollInitiative" title="Roll Combat Initiative (Players vs. Opposition 2d10)">
+        <button v-if="isGm" class="btn-tool btn-initiative" @click="rollInitiative" title="Roll Combat Initiative (Players vs. Opposition 2d10)">
           <svg class="tool-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Initiative
         </button>
 
@@ -1605,6 +1605,7 @@ function toggleDmgMenu() {
 }
 
 async function rollInitiative() {
+  if (!isGm.value) return;
   playDiceSound({ isRemote: false });
   const diceBox = await getReadyDiceBox();
   showInitiativeHud.value = false;
