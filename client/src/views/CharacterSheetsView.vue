@@ -211,15 +211,20 @@
         <section class="seu-section card">
           <div class="seu-header">
             <h4>⚡ SEU Energy Pool</h4>
-            <div class="seu-values">
-              <span class="current">{{ selectedChar.current_seu ?? 50 }}</span> /
-              <input
-                type="number"
-                v-model.number="selectedChar.max_seu"
-                @change="onMaxSeuChange"
-                class="input-max-seu"
-                min="0"
-              /> Max SEU
+            <div class="seu-header-right">
+              <button class="btn-action-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">
+                ⚡ Reload
+              </button>
+              <div class="seu-values">
+                <span class="current">{{ selectedChar.current_seu ?? 50 }}</span> /
+                <input
+                  type="number"
+                  v-model.number="selectedChar.max_seu"
+                  @change="onMaxSeuChange"
+                  class="input-max-seu"
+                  min="0"
+                /> Max SEU
+              </div>
             </div>
           </div>
           <div class="seu-bar-bg">
@@ -234,7 +239,6 @@
               <button class="btn-seu btn-sub" @click="adjustSeu(-1)" title="Fire Laser Pistol / Stunner (-1 SEU)">-1</button>
               <button class="btn-seu btn-add" @click="adjustSeu(+1)" title="Recharge / Add 1 SEU (+1 SEU)">+1</button>
               <button class="btn-seu btn-add" @click="adjustSeu(+5)" title="Recharge / Add 5 SEU (+5 SEU)">+5</button>
-              <button class="btn-seu btn-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">⚡ Reload</button>
             </div>
             <div class="freeform-delta-group">
               <input
@@ -1947,7 +1951,8 @@ export default {
   margin: 0;
   color: #3a859c;
 }
-.stamina-header-right {
+.stamina-header-right,
+.seu-header-right {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2028,7 +2033,8 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 
-.btn-action-reset {
+.btn-action-reset,
+.btn-action-reload {
   background: rgba(56, 189, 248, 0.15);
   border: 1px solid rgba(56, 189, 248, 0.4);
   color: #38bdf8;
@@ -2039,7 +2045,8 @@ export default {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.btn-action-reset:hover {
+.btn-action-reset:hover,
+.btn-action-reload:hover {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
@@ -2097,16 +2104,6 @@ export default {
 .btn-add:hover {
   background: #23863644;
   box-shadow: var(--sci-glow-green);
-}
-.btn-reload {
-  background: #1f6feb22;
-  color: #58a6ff;
-  border: 1px solid #58a6ff44;
-  margin-left: 6px;
-}
-.btn-reload:hover {
-  background: #1f6feb44;
-  box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
 }
 
 /* Primary Stats Grid */
