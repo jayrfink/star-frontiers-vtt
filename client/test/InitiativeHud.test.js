@@ -47,6 +47,11 @@ describe('Initiative Dice & HUD System', () => {
       expect(spaceContent).toMatch(/#400a22/);
       expect(spaceContent).toMatch(/#c9abb9/);
     });
+
+    it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
+      expect(spaceContent).toMatch(/box-shadow:\s*0\s+0\s+20px\s+rgba\(181,\s*238,\s*255,\s*0\.45\)/);
+      expect(spaceContent).toMatch(/text-shadow:\s*0\s+0\s+10px\s+rgba\(181,\s*238,\s*255,\s*0\.7\)/);
+    });
   });
 
   describe('RpgVttView Initiative Integration', () => {
@@ -85,6 +90,11 @@ describe('Initiative Dice & HUD System', () => {
       expect(rpgContent).toMatch(/#b5eeff/);
       expect(rpgContent).toMatch(/#400a22/);
       expect(rpgContent).toMatch(/#c9abb9/);
+    });
+
+    it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
+      expect(rpgContent).toMatch(/box-shadow:\s*0\s+0\s+20px\s+rgba\(181,\s*238,\s*255,\s*0\.45\)/);
+      expect(rpgContent).toMatch(/text-shadow:\s*0\s+0\s+10px\s+rgba\(181,\s*238,\s*255,\s*0\.7\)/);
     });
   });
 

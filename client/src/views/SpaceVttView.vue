@@ -3551,14 +3551,39 @@ onBeforeUnmount(() => {
   left: 50%;
   transform: translateX(-50%);
   background: rgba(11, 34, 46, 0.95);
-  border: 1px solid rgba(181, 238, 255, 0.5);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(181, 238, 255, 0.2);
+  border: 2px solid #b5eeff;
+  box-shadow: 0 0 20px rgba(181, 238, 255, 0.45), 0 8px 32px rgba(0, 0, 0, 0.8);
   border-radius: 8px;
   padding: 12px 18px;
   min-width: 290px;
   cursor: pointer;
   z-index: 250;
   backdrop-filter: blur(8px);
+}
+.initiative-hud-banner .hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+.initiative-hud-banner .hud-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(181, 238, 255, 0.85);
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(181, 238, 255, 0.4);
+}
+.initiative-hud-banner .hud-close {
+  background: transparent;
+  border: none;
+  color: #b5eeff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(181, 238, 255, 0.5);
 }
 .init-hud-body {
   display: flex;
@@ -3581,11 +3606,19 @@ onBeforeUnmount(() => {
   background: #0b222e;
   border: 2px solid #b5eeff;
   color: #b5eeff;
+  box-shadow: 0 0 12px rgba(181, 238, 255, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+.init-player-die .init-val {
+  text-shadow: 0 0 10px rgba(181, 238, 255, 0.7);
 }
 .init-opp-die {
   background: #400a22;
   border: 2px solid #c9abb9;
   color: #c9abb9;
+  box-shadow: 0 0 12px rgba(201, 171, 185, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+.init-opp-die .init-val {
+  text-shadow: 0 0 10px rgba(201, 171, 185, 0.7);
 }
 .init-label {
   font-size: 9px;
@@ -3603,6 +3636,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 900;
   color: #64748b;
+  text-shadow: 0 0 6px rgba(100, 116, 139, 0.5);
 }
 
 /* Roll Log Initiative Pills */
@@ -3619,6 +3653,7 @@ onBeforeUnmount(() => {
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
+  box-shadow: 0 0 6px rgba(181, 238, 255, 0.35);
 }
 .init-pill-opp {
   background: #400a22;
@@ -3627,6 +3662,7 @@ onBeforeUnmount(() => {
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
+  box-shadow: 0 0 6px rgba(201, 171, 185, 0.35);
 }
 
 /* Multi-Turn Flip & Burn */
@@ -5186,6 +5222,7 @@ onBeforeUnmount(() => {
   background: #0b222e;
   color: #b5eeff;
   border-color: rgba(181, 238, 255, 0.5);
+  box-shadow: 0 0 6px rgba(181, 238, 255, 0.35);
 }
 
 .roll-item-result {
