@@ -230,10 +230,11 @@
           </div>
           <div class="seu-controls">
             <div class="stepper-group">
-              <button class="btn-seu btn-sub" @click="adjustSeu(-1)" title="Fire Laser Pistol / Stunner (-1 SEU)">-1</button>
-              <button class="btn-seu btn-sub" @click="adjustSeu(-2)" title="Fire Laser Rifle (-2 SEU)">-2</button>
               <button class="btn-seu btn-sub" @click="adjustSeu(-5)" title="Heavy Laser / Screen Turn (-5 SEU)">-5</button>
-              <button class="btn-seu btn-add" @click="adjustSeu(+5)" title="Recharge / Add SEU (+5 SEU)">+5</button>
+              <button class="btn-seu btn-sub" @click="adjustSeu(-1)" title="Fire Laser Pistol / Stunner (-1 SEU)">-1</button>
+              <button class="btn-seu btn-add" @click="adjustSeu(+1)" title="Recharge / Add 1 SEU (+1 SEU)">+1</button>
+              <button class="btn-seu btn-add" @click="adjustSeu(+5)" title="Recharge / Add 5 SEU (+5 SEU)">+5</button>
+              <button class="btn-seu btn-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">⚡ Reload</button>
             </div>
             <div class="freeform-delta-group">
               <input
@@ -1242,6 +1243,12 @@ export default {
       this.selectedChar.current_seu = newSeu;
       this.updateCharacter();
     },
+    reloadSeu() {
+      if (!this.selectedChar) return;
+      const max = this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50;
+      this.selectedChar.current_seu = max;
+      this.updateCharacter();
+    },
     applySeuBurn() {
       if (!this.selectedChar) return;
       const delta = Number(this.seuDelta);
@@ -2090,6 +2097,16 @@ export default {
 .btn-add:hover {
   background: #23863644;
   box-shadow: var(--sci-glow-green);
+}
+.btn-reload {
+  background: #1f6feb22;
+  color: #58a6ff;
+  border: 1px solid #58a6ff44;
+  margin-left: 6px;
+}
+.btn-reload:hover {
+  background: #1f6feb44;
+  box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
 }
 
 /* Primary Stats Grid */
