@@ -1942,10 +1942,12 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('styles system buttons with a paler green for operational state and dark orange for damaged state', () => {
+    it('styles system buttons with a paler green for operational state and dark orange for damaged state with 30% darker backgrounds', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*color:\s*#7ee787;/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*color:\s*#e66a1f;/);
+      expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*background:\s*rgba\(32,\s*112,\s*47,\s*0\.12\);/);
+      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*background:\s*rgba\(153,\s*76,\s*28,\s*0\.16\);/);
     });
 
     it('renders the compact Hull Points and DCR meter applets in the right column', async () => {
