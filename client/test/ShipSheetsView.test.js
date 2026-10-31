@@ -1259,7 +1259,200 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(vm.newShipForm.user_id).toBe(1);
     });
   });
+
+  describe('ShipSheetsView - Ship Defenses Panel Upgrade', () => {
+    it('renames defensive screens header to "Defenses" and includes "+ Add Defense" button', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(content).toMatch(/<h4>Defenses<\/h4>/);
+      expect(content).not.toMatch(/<h4>Defensive Screens<\/h4>/);
+      expect(content).toMatch(/<button[^>]*class="btn-secondary"[^>]*@click="openAddDefenseModal"[^>]*>\+ Add Defense<\/button>/);
+    });
+
+    it('opens and closes add defense modal via openAddDefenseModal and Escape key', () => {
+      const vm = {
+        showAddDefenseModal: false,
+        customDefenseForm: null,
+        defenseFilterTab: 'All',
+      };
+      ShipSheetsView.methods.openAddDefenseModal.call(vm);
+      expect(vm.showAddDefenseModal).toBe(true);
+      expect(vm.customDefenseForm).toEqual({
+        name: '',
+        type: 'toggle',
+        current: 1,
+        max: 1,
+        description: '',
+      });
+      expect(vm.defenseFilterTab).toBe('All');
+
+      ShipSheetsView.methods.handleKeydown.call(vm, { key: 'Escape' });
+      expect(vm.showAddDefenseModal).toBe(false);
+    });
+
+    it('equips a canonical defense from catalog to selectedShip.defenses and calls updateShip', () => {
+      let updated = false;
+      const vm = {
+        showAddDefenseModal: true,
+        selectedShip: {
+          defenses: {
+            items: [],
+          },
+        },
+        normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+        updateShip() {
+          updated = true;
+        },
+      };
+
+      const protonScreen = {
+        id: 'proton_screen',
+        name: 'Proton Screen',
+        type: 'toggle',
+        category: 'Energy Screen',
+        description: 'Absorbs proton and energy attacks',
+      };
+
+      ShipSheetsView.methods.equipDefense.call(vm, protonScreen);
+
+      expect(vm.showAddDefenseModal).toBe(false);
+      expect(updated).toBe(true);
+      expect(vm.selectedShip.defenses.items.length).toBe(1);
+      expect(vm.selectedShip.defenses.items[0].name).toBe('Proton Screen');
+      expect(vm.selectedShip.defenses.items[0].type).toBe('toggle');
+      expect(vm.selectedShip.defenses.items[0].online).toBe(true);
+    });
+
+    it('equips a custom defense (counter type) to selectedShip.defenses and calls updateShip', () => {
+      let updated = false;
+      const vm = {
+        showAddDefenseModal: true,
+        customDefenseForm: {
+          name: 'ECM Jammer Pod',
+          type: 'counter',
+          current: 3,
+          max: 3,
+          description: 'Deployable jamming pods',
+        },
+        selectedShip: {
+          defenses: {
+            items: [],
+          },
+        },
+        normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+        updateShip() {
+          updated = true;
+        },
+      };
+
+      ShipSheetsView.methods.equipCustomDefense.call(vm);
+
+      expect(vm.showAddDefenseModal).toBe(false);
+      expect(updated).toBe(true);
+      expect(vm.selectedShip.defenses.items.length).toBe(1);
+      expect(vm.selectedShip.defenses.items[0].name).toBe('ECM Jammer Pod');
+      expect(vm.selectedShip.defenses.items[0].type).toBe('counter');
+      expect(vm.selectedShip.defenses.items[0].current).toBe(3);
+      expect(vm.selectedShip.defenses.items[0].max).toBe(3);
+    });
+
+    it('removes an equipped defense using removeDefense and calls updateShip', () => {
+      let updated = false;
+      const vm = {
+        selectedShip: {
+          defenses: {
+            reflective_hull: true,
+            items: [
+              { id: 'd1', name: 'Reflective Hull', type: 'toggle', online: true },
+              { id: 'd2', name: 'Masking Screens', type: 'counter', current: 2, max: 2 },
+            ],
+          },
+        },
+        normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+        updateShip() {
+          updated = true;
+        },
+      };
+
+      ShipSheetsView.methods.removeDefense.call(vm, 0);
+
+      expect(updated).toBe(true);
+      expect(vm.selectedShip.defenses.items.length).toBe(1);
+      expect(vm.selectedShip.defenses.items[0].name).toBe('Masking Screens');
+      expect(vm.selectedShip.defenses.reflective_hull).toBe(false);
+    });
+
+    it('toggles defense online/offline status using toggleDefense and decrements counter using useDefenseCounter', () => {
+      let updatedCount = 0;
+      const toggleItem = { id: 'd1', name: 'Proton Screen', type: 'toggle', online: false };
+      const counterItem = { id: 'd2', name: 'Masking Screens', type: 'counter', current: 2, max: 2 };
+
+      const vm = {
+        selectedShip: {
+          defenses: {
+            items: [toggleItem, counterItem],
+          },
+        },
+        normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+        updateShip() {
+          updatedCount++;
+        },
+      };
+
+      ShipSheetsView.methods.toggleDefense.call(vm, toggleItem);
+      expect(toggleItem.online).toBe(true);
+      expect(updatedCount).toBe(1);
+
+      ShipSheetsView.methods.useDefenseCounter.call(vm, counterItem);
+      expect(counterItem.current).toBe(1);
+      expect(updatedCount).toBe(2);
+
+      // Does not decrement below zero
+      counterItem.current = 0;
+      ShipSheetsView.methods.useDefenseCounter.call(vm, counterItem);
+      expect(counterItem.current).toBe(0);
+      expect(updatedCount).toBe(2);
+    });
+
+    it('maintains backwards compatibility for normalizeDefenses with presets and syncs legacy keys', () => {
+      const legacyDefenses = {
+        reflective_hull: true,
+        masking_screens_max: 2,
+        masking_screens_current: 2,
+        icm_max: 6,
+        icm_current: 5,
+      };
+
+      const normalized = ShipSheetsView.methods.normalizeDefenses(legacyDefenses);
+      expect(normalized.reflective_hull).toBe(true);
+      expect(normalized.masking_screens_max).toBe(2);
+      expect(normalized.masking_screens_current).toBe(2);
+      expect(normalized.icm_max).toBe(6);
+      expect(normalized.icm_current).toBe(5);
+      expect(Array.isArray(normalized.items)).toBe(true);
+      expect(normalized.items.length).toBe(3);
+
+      const rhItem = normalized.items.find((i) => i.name === 'Reflective Hull');
+      expect(rhItem).toBeDefined();
+      expect(rhItem.type).toBe('toggle');
+      expect(rhItem.online).toBe(true);
+
+      const msItem = normalized.items.find((i) => i.name === 'Masking Screens');
+      expect(msItem).toBeDefined();
+      expect(msItem.type).toBe('counter');
+      expect(msItem.max).toBe(2);
+      expect(msItem.current).toBe(2);
+
+      const icmItem = normalized.items.find((i) => i.name === 'ICMs');
+      expect(icmItem).toBeDefined();
+      expect(icmItem.type).toBe('counter');
+      expect(icmItem.max).toBe(6);
+      expect(icmItem.current).toBe(5);
+    });
+  });
 });
+
 
 
 

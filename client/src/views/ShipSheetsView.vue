@@ -232,103 +232,66 @@
 
         <!-- Defense & Armament Grid -->
         <div class="two-column-lists">
-          <!-- Defensive Screens -->
+          <!-- Defenses List -->
           <section class="card list-card">
             <div class="list-header">
-              <h4>Defensive Screens</h4>
+              <h4>Defenses</h4>
+              <button class="btn-secondary" @click="openAddDefenseModal">+ Add Defense</button>
             </div>
-            <div class="defenses-list">
-              <div class="defense-toggle-row">
-                <span class="defense-label">Reflective Hull</span>
-                <button
-                  :class="['toggle-btn', getDefenseVal('reflective_hull') ? 'active' : 'offline']"
-                  @click="toggleDefenseBool('reflective_hull')"
-                >
-                  {{ getDefenseVal('reflective_hull') ? 'ONLINE' : 'OFFLINE' }}
-                </button>
-              </div>
-              <div class="defense-toggle-row">
-                <span class="defense-label">Stasis Screen</span>
-                <button
-                  :class="['toggle-btn', getDefenseVal('stasis_screen') ? 'active' : 'offline']"
-                  @click="toggleDefenseBool('stasis_screen')"
-                >
-                  {{ getDefenseVal('stasis_screen') ? 'ONLINE' : 'OFFLINE' }}
-                </button>
-              </div>
-              <div class="defense-toggle-row">
-                <span class="defense-label">Stealth Screen</span>
-                <button
-                  :class="['toggle-btn', getDefenseVal('stealth_screen') ? 'active' : 'offline']"
-                  @click="toggleDefenseBool('stealth_screen')"
-                >
-                  {{ getDefenseVal('stealth_screen') ? 'ONLINE' : 'OFFLINE' }}
-                </button>
-              </div>
-              
-              <!-- Masking Screens -->
-              <div class="defense-counter-box">
-                <div class="defense-counter-header">
-                  <span class="defense-label">Masking Screens</span>
-                  <button
-                    class="btn-action"
-                    :disabled="getDefenseVal('masking_screens_current') <= 0"
-                    @click="deployMaskingScreen"
-                  >
-                    Deploy Screen
-                  </button>
+            <div v-if="!defenseList || defenseList.length === 0" class="empty-list">
+              No defensive systems equipped.
+            </div>
+            <div v-else class="defenses-list">
+              <template v-for="(defense, index) in defenseList" :key="defense.id || index">
+                <!-- Toggle Defense (Reflective Hull, Stasis Screen, Proton Screen, etc.) -->
+                <div v-if="defense.type !== 'counter'" class="defense-toggle-row">
+                  <span class="defense-label">{{ defense.name }}</span>
+                  <div class="defense-controls-row">
+                    <button
+                      :class="['toggle-btn', defense.online ? 'active' : 'offline']"
+                      @click="toggleDefense(defense)"
+                    >
+                      {{ defense.online ? 'ONLINE' : 'OFFLINE' }}
+                    </button>
+                    <button class="btn-remove" title="Remove Defense" @click="removeDefense(index)">✕</button>
+                  </div>
                 </div>
-                <div class="counter-inputs">
-                  <label>Current:</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedShip.defenses.masking_screens_current"
-                    @change="updateShip"
-                    min="0"
-                    class="item-level-input"
-                  />
-                  <label>Max:</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedShip.defenses.masking_screens_max"
-                    @change="updateShip"
-                    min="0"
-                    class="item-level-input"
-                  />
-                </div>
-              </div>
 
-              <!-- ICMs (Interceptors) -->
-              <div class="defense-counter-box">
-                <div class="defense-counter-header">
-                  <span class="defense-label">ICMs (Interceptors)</span>
-                  <button
-                    class="btn-action"
-                    :disabled="getDefenseVal('icm_current') <= 0"
-                    @click="launchICM"
-                  >
-                    Launch ICM
-                  </button>
+                <!-- Counter Defense (Masking Screens, ICMs, etc.) -->
+                <div v-else class="defense-counter-box">
+                  <div class="defense-counter-header">
+                    <span class="defense-label">{{ defense.name }}</span>
+                    <div class="defense-controls-row">
+                      <button
+                        class="btn-action"
+                        :disabled="defense.current <= 0"
+                        @click="useDefenseCounter(defense)"
+                      >
+                        {{ getDefenseActionLabel(defense) }}
+                      </button>
+                      <button class="btn-remove" title="Remove Defense" @click="removeDefense(index)">✕</button>
+                    </div>
+                  </div>
+                  <div class="counter-inputs">
+                    <label>Current:</label>
+                    <input
+                      type="number"
+                      v-model.number="defense.current"
+                      @change="onDefenseCounterChange"
+                      min="0"
+                      class="item-level-input"
+                    />
+                    <label>Max:</label>
+                    <input
+                      type="number"
+                      v-model.number="defense.max"
+                      @change="onDefenseCounterChange"
+                      min="0"
+                      class="item-level-input"
+                    />
+                  </div>
                 </div>
-                <div class="counter-inputs">
-                  <label>Current:</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedShip.defenses.icm_current"
-                    @change="updateShip"
-                    min="0"
-                    class="item-level-input"
-                  />
-                  <label>Max:</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedShip.defenses.icm_max"
-                    @change="updateShip"
-                    min="0"
-                    class="item-level-input"
-                  />
-                </div>
-              </div>
+              </template>
             </div>
           </section>
 
@@ -701,6 +664,135 @@
       </div>
     </div>
 
+    <!-- Equip Ship Defense Modal -->
+    <div v-if="showAddDefenseModal" class="modal-backdrop" @click.self="showAddDefenseModal = false">
+      <div class="modal-card weapon-picker-modal">
+        <div class="modal-header-row">
+          <h3>🛡️ Equip Ship Defense</h3>
+          <button type="button" class="btn-close-modal" @click="showAddDefenseModal = false">✕</button>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="weapon-filter-tabs">
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: defenseFilterTab === 'All' }"
+            @click="defenseFilterTab = 'All'"
+          >
+            All ({{ defenseCatalog.length }})
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: defenseFilterTab === 'Screen' }"
+            @click="defenseFilterTab = 'Screen'"
+          >
+            Screens &amp; Armor ({{ defenseCatalog.filter((d) => d.type === 'toggle').length }})
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: defenseFilterTab === 'Countermeasure' }"
+            @click="defenseFilterTab = 'Countermeasure'"
+          >
+            Countermeasures ({{ defenseCatalog.filter((d) => d.type === 'counter').length }})
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: defenseFilterTab === 'Custom' }"
+            @click="defenseFilterTab = 'Custom'"
+          >
+            Custom Defense
+          </button>
+        </div>
+
+        <!-- Defense Catalog List -->
+        <div v-if="defenseFilterTab !== 'Custom'" class="weapon-picker-list">
+          <div
+            v-for="defense in defenseCatalog"
+            :key="defense.id"
+            v-show="defenseFilterTab === 'All' || (defenseFilterTab === 'Screen' && defense.type === 'toggle') || (defenseFilterTab === 'Countermeasure' && defense.type === 'counter')"
+            class="weapon-picker-item"
+          >
+            <div class="weapon-picker-info">
+              <div class="weapon-picker-name-row">
+                <span class="weapon-picker-name">{{ defense.name }}</span>
+                <span class="weapon-picker-category">{{ defense.category }}</span>
+              </div>
+              <div class="weapon-picker-stats">
+                <span class="stat-pill" :class="defense.type === 'toggle' ? 'rng' : 'ammo'">
+                  {{ defense.type === 'toggle' ? '⚡ Toggle Screen' : `🔋 Max Charges: ${defense.max}` }}
+                </span>
+              </div>
+              <p class="weapon-picker-desc">{{ defense.description }}</p>
+            </div>
+            <button type="button" class="btn-equip-weapon" @click="equipDefense(defense)">
+              Equip
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Defense Form -->
+        <div v-else class="custom-weapon-panel">
+          <h4>Design Custom Ship Defense</h4>
+          <form @submit.prevent="equipCustomDefense">
+            <div class="form-group">
+              <label>Defense Name *</label>
+              <input
+                type="text"
+                v-model="customDefenseForm.name"
+                required
+                placeholder="e.g. Reinforced Kinetic Plating"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Defense Type</label>
+                <select v-model="customDefenseForm.type" class="form-select">
+                  <option value="toggle">Toggle Screen / Armor</option>
+                  <option value="counter">Countermeasure (Charges)</option>
+                </select>
+              </div>
+              <div class="form-group" v-if="customDefenseForm.type === 'counter'">
+                <label>Max Charges</label>
+                <input
+                  type="number"
+                  v-model.number="customDefenseForm.max"
+                  min="1"
+                  placeholder="2"
+                />
+              </div>
+              <div class="form-group" v-if="customDefenseForm.type === 'counter'">
+                <label>Current Charges</label>
+                <input
+                  type="number"
+                  v-model.number="customDefenseForm.current"
+                  min="0"
+                  placeholder="2"
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Description / Effect</label>
+              <input
+                type="text"
+                v-model="customDefenseForm.description"
+                placeholder="Optional description or tactical effects"
+              />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-modal-cancel" @click="showAddDefenseModal = false">Cancel</button>
+              <button type="submit" class="btn-modal-create" :disabled="!customDefenseForm.name?.trim()">
+                Equip Custom Defense
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Confirmation Modal (Bug 36) -->
     <div v-if="confirmModal.show" class="modal-backdrop" @click.self="cancelConfirmModal">
       <div class="modal-card modal-confirm">
@@ -727,6 +819,12 @@ import { SHIP_PRESETS, SHIP_HULL_SIZES } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../constants/shipWeapons.js';
+import {
+  SHIP_DEFENSES_CATALOG,
+  createDefenseInstance,
+  normalizeDefensesData,
+  syncLegacyDefenses,
+} from '../constants/shipDefenses.js';
 import {
   canFlipAndBurn,
   canMultiTurnFlip,
@@ -774,6 +872,16 @@ export default {
         ammo_max: 0,
         selectedTags: [],
         customRestrictions: '',
+      },
+      showAddDefenseModal: false,
+      defenseCatalog: SHIP_DEFENSES_CATALOG,
+      defenseFilterTab: 'All',
+      customDefenseForm: {
+        name: '',
+        type: 'toggle',
+        current: 1,
+        max: 1,
+        description: '',
       },
       registeredUsers: [],
       newShipForm: {
@@ -825,6 +933,14 @@ export default {
       if (this.hullPercentage > 25) return '#ff9800';
       return '#f44336';
     },
+    defenseList() {
+      if (!this.selectedShip || !this.selectedShip.defenses) return [];
+      if (Array.isArray(this.selectedShip.defenses)) return this.selectedShip.defenses;
+      if (!this.selectedShip.defenses.items) {
+        this.selectedShip.defenses = this.normalizeDefenses(this.selectedShip.defenses);
+      }
+      return this.selectedShip.defenses.items || [];
+    },
   },
   mounted() {
     this.fetchShips();
@@ -868,8 +984,13 @@ export default {
     canLumberingFlip,
     canSnapFlip,
     handleKeydown(e) {
-      if (e.key === 'Escape' && this.showAddWeaponModal) {
-        this.showAddWeaponModal = false;
+      if (e.key === 'Escape') {
+        if (this.showAddWeaponModal) {
+          this.showAddWeaponModal = false;
+        }
+        if (this.showAddDefenseModal) {
+          this.showAddDefenseModal = false;
+        }
       }
     },
     getCurrentUserId() {
@@ -917,16 +1038,7 @@ export default {
       }
     },
     normalizeDefenses(defenses) {
-      const def = defenses || {};
-      return {
-        reflective_hull: def.reflective_hull !== undefined ? def.reflective_hull : (def.reflect || false),
-        stasis_screen: def.stasis_screen || false,
-        stealth_screen: def.stealth_screen || false,
-        masking_screens_max: def.masking_screens_max !== undefined ? def.masking_screens_max : (def.masking ? 1 : 0),
-        masking_screens_current: def.masking_screens_current !== undefined ? def.masking_screens_current : (def.masking ? 1 : 0),
-        icm_max: def.icm_max !== undefined ? def.icm_max : (def.icm_count || 0),
-        icm_current: def.icm_current !== undefined ? def.icm_current : (def.icm_count || 0),
-      };
+      return normalizeDefensesData(defenses);
     },
     normalizeWeapons(weapons) {
       if (!Array.isArray(weapons)) return [];
@@ -1352,21 +1464,148 @@ export default {
         this.selectedShip.defenses = this.normalizeDefenses({});
       }
       this.selectedShip.defenses[key] = !this.selectedShip.defenses[key];
+      if (Array.isArray(this.selectedShip.defenses.items)) {
+        const item = this.selectedShip.defenses.items.find(
+          (d) => d.defense_id === key || d.id === key || d.name?.toLowerCase().replace(/\s+/g, '_') === key
+        );
+        if (item) {
+          item.online = this.selectedShip.defenses[key];
+        }
+      }
+      syncLegacyDefenses(this.selectedShip.defenses);
       this.updateShip();
     },
     deployMaskingScreen() {
-      if (!this.selectedShip.defenses) return;
-      if (this.selectedShip.defenses.masking_screens_current > 0) {
+      if (!this.selectedShip || !this.selectedShip.defenses) return;
+      const item = this.defenseList.find(
+        (d) => d.defense_id === 'masking_screens' || d.id === 'masking_screens' || d.name?.toLowerCase().includes('masking')
+      );
+      if (item && item.current > 0) {
+        item.current -= 1;
+      } else if (this.selectedShip.defenses.masking_screens_current > 0) {
         this.selectedShip.defenses.masking_screens_current -= 1;
+      }
+      syncLegacyDefenses(this.selectedShip.defenses);
+      this.updateShip();
+    },
+    launchICM() {
+      if (!this.selectedShip || !this.selectedShip.defenses) return;
+      const item = this.defenseList.find(
+        (d) => d.defense_id === 'icm' || d.id === 'icm' || d.name?.toLowerCase().includes('icm') || d.name?.toLowerCase().includes('interceptor')
+      );
+      if (item && item.current > 0) {
+        item.current -= 1;
+      } else if (this.selectedShip.defenses.icm_current > 0) {
+        this.selectedShip.defenses.icm_current -= 1;
+      }
+      syncLegacyDefenses(this.selectedShip.defenses);
+      this.updateShip();
+    },
+    openAddDefenseModal() {
+      this.showAddDefenseModal = true;
+      this.defenseFilterTab = 'All';
+      this.customDefenseForm = {
+        name: '',
+        type: 'toggle',
+        current: 1,
+        max: 1,
+        description: '',
+      };
+    },
+    equipDefense(defenseTemplate) {
+      if (!this.selectedShip) return;
+      if (!this.selectedShip.defenses) {
+        this.selectedShip.defenses = this.normalizeDefenses({});
+      }
+      if (!Array.isArray(this.selectedShip.defenses.items)) {
+        this.selectedShip.defenses = this.normalizeDefenses(this.selectedShip.defenses);
+      }
+      const instance = createDefenseInstance(defenseTemplate, {
+        online: defenseTemplate.type === 'toggle' ? true : false,
+      });
+      this.selectedShip.defenses.items.push(instance);
+      syncLegacyDefenses(this.selectedShip.defenses);
+      this.showAddDefenseModal = false;
+      this.updateShip();
+    },
+    equipCustomDefense() {
+      if (!this.selectedShip) return;
+      const name = (this.customDefenseForm?.name || '').trim();
+      if (!name) return;
+      if (!this.selectedShip.defenses) {
+        this.selectedShip.defenses = this.normalizeDefenses({});
+      }
+      if (!Array.isArray(this.selectedShip.defenses.items)) {
+        this.selectedShip.defenses = this.normalizeDefenses(this.selectedShip.defenses);
+      }
+      const instance = createDefenseInstance(this.customDefenseForm, {
+        name,
+        online: this.customDefenseForm.type === 'toggle' ? true : false,
+      });
+      this.selectedShip.defenses.items.push(instance);
+      syncLegacyDefenses(this.selectedShip.defenses);
+      this.showAddDefenseModal = false;
+      this.updateShip();
+    },
+    removeDefense(keyOrIndexOrItem) {
+      if (!this.selectedShip || !this.selectedShip.defenses) return;
+      if (!Array.isArray(this.selectedShip.defenses.items)) {
+        this.selectedShip.defenses = this.normalizeDefenses(this.selectedShip.defenses);
+      }
+      const items = this.selectedShip.defenses.items;
+      if (typeof keyOrIndexOrItem === 'number') {
+        items.splice(keyOrIndexOrItem, 1);
+      } else if (typeof keyOrIndexOrItem === 'string') {
+        const idx = items.findIndex(
+          (d) => d.id === keyOrIndexOrItem || d.defense_id === keyOrIndexOrItem || d.name === keyOrIndexOrItem
+        );
+        if (idx !== -1) {
+          items.splice(idx, 1);
+        } else if (this.selectedShip.defenses[keyOrIndexOrItem] !== undefined) {
+          delete this.selectedShip.defenses[keyOrIndexOrItem];
+        }
+      } else if (keyOrIndexOrItem && typeof keyOrIndexOrItem === 'object') {
+        const idx = items.indexOf(keyOrIndexOrItem);
+        if (idx !== -1) {
+          items.splice(idx, 1);
+        } else if (keyOrIndexOrItem.id) {
+          const idIdx = items.findIndex((d) => d.id === keyOrIndexOrItem.id);
+          if (idIdx !== -1) items.splice(idIdx, 1);
+        }
+      }
+      syncLegacyDefenses(this.selectedShip.defenses);
+      this.updateShip();
+    },
+    toggleDefense(defense) {
+      if (!defense) return;
+      defense.online = !defense.online;
+      if (this.selectedShip && this.selectedShip.defenses) {
+        syncLegacyDefenses(this.selectedShip.defenses);
+      }
+      this.updateShip();
+    },
+    useDefenseCounter(defense) {
+      if (!defense) return;
+      if (defense.current > 0) {
+        defense.current -= 1;
+        if (this.selectedShip && this.selectedShip.defenses) {
+          syncLegacyDefenses(this.selectedShip.defenses);
+        }
         this.updateShip();
       }
     },
-    launchICM() {
-      if (!this.selectedShip.defenses) return;
-      if (this.selectedShip.defenses.icm_current > 0) {
-        this.selectedShip.defenses.icm_current -= 1;
-        this.updateShip();
+    onDefenseCounterChange() {
+      if (this.selectedShip && this.selectedShip.defenses) {
+        syncLegacyDefenses(this.selectedShip.defenses);
       }
+      this.updateShip();
+    },
+    getDefenseActionLabel(defense) {
+      if (!defense || !defense.name) return 'Use';
+      const name = defense.name.toLowerCase();
+      if (name.includes('masking')) return 'Deploy Screen';
+      if (name.includes('icm') || name.includes('interceptor')) return 'Launch ICM';
+      return 'Deploy';
     },
     openAddWeaponModal() {
       this.showAddWeaponModal = true;
@@ -2292,6 +2531,12 @@ export default {
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid #30363d;
+}
+
+.defense-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .defense-label {
