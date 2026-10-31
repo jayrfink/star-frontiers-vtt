@@ -22,6 +22,8 @@ function formatCharacterSheet(row) {
   if (!row) return null;
   return {
     ...row,
+    user_id: Number(row.user_id),
+    owner_username: row.owner_username || '',
     max_seu: row.max_seu !== undefined && row.max_seu !== null ? Number(row.max_seu) : 50,
     current_seu: row.current_seu !== undefined && row.current_seu !== null ? Number(row.current_seu) : 50,
     psa: row.psa || 'Military',
@@ -48,7 +50,12 @@ export function createCharacterRouter(db, io) {
 
   router.get('/', (req, res) => {
     try {
-      const rows = db.prepare('SELECT * FROM character_sheets ORDER BY sort_order ASC, id ASC').all();
+      const rows = db.prepare(`
+        SELECT c.*, u.username AS owner_username
+        FROM character_sheets c
+        LEFT JOIN users u ON c.user_id = u.id
+        ORDER BY c.sort_order ASC, c.id ASC
+      `).all();
       res.json(rows.map(formatCharacterSheet));
     } catch (err) {
       console.error('Error listing characters:', err);
@@ -97,7 +104,12 @@ export function createCharacterRouter(db, io) {
 
   router.get('/:id', (req, res) => {
     try {
-      const row = db.prepare('SELECT * FROM character_sheets WHERE id = ?').get(req.params.id);
+      const row = db.prepare(`
+        SELECT c.*, u.username AS owner_username
+        FROM character_sheets c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.id = ?
+      `).get(req.params.id);
       if (!row) {
         return res.status(404).json({ error: 'Character sheet not found' });
       }
@@ -114,6 +126,7 @@ export function createCharacterRouter(db, io) {
       const {
         name,
         psa = 'Military',
+        user_id,
         gender = null,
         height = null,
         weight = null,
@@ -136,6 +149,16 @@ export function createCharacterRouter(db, io) {
 
       if (!name || typeof name !== 'string' || !name.trim() || !race || typeof race !== 'string' || !race.trim()) {
         return res.status(400).json({ error: 'Name and race are required' });
+      }
+
+      const isGM = isGameMaster(db, req.session.userId);
+      let ownerId = req.session.userId;
+      if (isGM && user_id !== undefined && user_id !== null) {
+        const targetUser = db.prepare('SELECT id, username FROM users WHERE id = ?').get(user_id);
+        if (!targetUser) {
+          return res.status(400).json({ error: 'Assigned user does not exist' });
+        }
+        ownerId = targetUser.id;
       }
 
       const characterName = name.trim();
@@ -175,12 +198,17 @@ export function createCharacterRouter(db, io) {
       `);
 
       const result = stmt.run(
-        req.session.userId, characterName, race, characterPsa, gender, height, weight,
+        ownerId, characterName, race, characterPsa, gender, height, weight,
         strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
-      const created = db.prepare('SELECT * FROM character_sheets WHERE id = ?').get(result.lastInsertRowid);
+      const created = db.prepare(`
+        SELECT c.*, u.username AS owner_username
+        FROM character_sheets c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.id = ?
+      `).get(result.lastInsertRowid);
       const sheet = formatCharacterSheet(created);
 
       if (io) {
@@ -205,6 +233,15 @@ export function createCharacterRouter(db, io) {
       const isGM = isGameMaster(db, req.session.userId);
       if (!isOwner && !isGM) {
         return res.status(403).json({ error: 'Access denied' });
+      }
+
+      let ownerId = existing.user_id;
+      if (isGM && req.body.user_id !== undefined && req.body.user_id !== null) {
+        const targetUser = db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.body.user_id);
+        if (!targetUser) {
+          return res.status(400).json({ error: 'Assigned user does not exist' });
+        }
+        ownerId = targetUser.id;
       }
 
       let race = req.body.race !== undefined ? req.body.race : existing.race;
@@ -264,7 +301,7 @@ export function createCharacterRouter(db, io) {
 
       const stmt = db.prepare(`
         UPDATE character_sheets SET
-          name = ?, race = ?, psa = ?, gender = ?, height = ?, weight = ?,
+          user_id = ?, name = ?, race = ?, psa = ?, gender = ?, height = ?, weight = ?,
           str = ?, sta = ?, current_sta = ?, max_seu = ?, current_seu = ?, dex = ?, rs = ?,
           int_stat = ?, log_stat = ?, per = ?, ldr = ?,
           racial_abilities = ?, skills = ?, inventory = ?, notes = ?, avatar_url = ?,
@@ -275,7 +312,7 @@ export function createCharacterRouter(db, io) {
       const avatarUrl = req.body.avatar_url !== undefined ? req.body.avatar_url : (existing.avatar_url || '');
 
       stmt.run(
-        name, race, characterPsa, gender, height, weight,
+        ownerId, name, race, characterPsa, gender, height, weight,
         strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal,
         intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, avatarUrl,
@@ -302,7 +339,12 @@ export function createCharacterRouter(db, io) {
         }
       }
 
-      const updated = db.prepare('SELECT * FROM character_sheets WHERE id = ?').get(req.params.id);
+      const updated = db.prepare(`
+        SELECT c.*, u.username AS owner_username
+        FROM character_sheets c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.id = ?
+      `).get(req.params.id);
       const sheet = formatCharacterSheet(updated);
 
       if (io) {

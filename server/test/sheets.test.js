@@ -299,6 +299,85 @@ describe('Sheets API & Socket.io', () => {
       expect(updateRes.body.race).toBe('Cyber Human');
     });
 
+    it('includes owner_username in character sheet responses', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmUser', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmUser', password: 'password123' });
+
+      const res = await gmAgent.post('/api/characters').send({ name: 'Hero', race: 'Human' });
+      expect(res.status).toBe(201);
+      expect(res.body.owner_username).toBe('gmUser');
+
+      const listRes = await gmAgent.get('/api/characters');
+      expect(listRes.body[0].owner_username).toBe('gmUser');
+    });
+
+    it('allows GM to assign character to another player login on create and update', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmBoss', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmBoss', password: 'password123' });
+
+      // Register player account
+      const playerReg = await gmAgent.post('/api/auth/register').send({ username: 'playerAlice', password: 'password123' });
+      const playerUser = playerReg.body;
+
+      // GM creates sheet assigned to playerAlice
+      const createRes = await gmAgent.post('/api/characters').send({
+        name: 'AliceChar',
+        race: 'Yazirian',
+        user_id: playerUser.id,
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.user_id).toBe(playerUser.id);
+      expect(createRes.body.owner_username).toBe('playerAlice');
+
+      // GM reassigns sheet back to GM
+      const gmInfo = (await gmAgent.get('/api/auth/me')).body;
+      const updateRes = await gmAgent.put(`/api/characters/${createRes.body.id}`).send({
+        user_id: gmInfo.id,
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.user_id).toBe(gmInfo.id);
+      expect(updateRes.body.owner_username).toBe('gmBoss');
+    });
+
+    it('rejects assignment to non-existent user_id with 400', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmRoot', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmRoot', password: 'password123' });
+
+      const res = await gmAgent.post('/api/characters').send({
+        name: 'GhostChar',
+        race: 'Human',
+        user_id: 99999,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/user.*exist/i);
+    });
+
+    it('prevents non-GM players from changing user_id', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmAdmin', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmAdmin', password: 'password123' });
+
+      const p1 = (await gmAgent.post('/api/auth/register').send({ username: 'playerOne', password: 'password123' })).body;
+      const p2 = (await gmAgent.post('/api/auth/register').send({ username: 'playerTwo', password: 'password123' })).body;
+
+      const p1Agent = request.agent(app);
+      await p1Agent.post('/api/auth/login').send({ username: 'playerOne', password: 'password123' });
+
+      const char = (await p1Agent.post('/api/characters').send({ name: 'P1Char', race: 'Human' })).body;
+      expect(char.user_id).toBe(p1.id);
+
+      // Player attempts to reassign sheet to playerTwo
+      const putRes = await p1Agent.put(`/api/characters/${char.id}`).send({
+        user_id: p2.id,
+        name: 'RenamedChar',
+      });
+      expect(putRes.status).toBe(200);
+      expect(putRes.body.user_id).toBe(p1.id); // Must remain playerOne
+    });
+
     it('validates invalid race or missing fields', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
