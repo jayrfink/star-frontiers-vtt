@@ -381,6 +381,21 @@ describe('ShipSheetsView - Weapon Selection & Renaming', () => {
     expect(vm.showAddWeaponModal).toBe(true);
   });
 
+  it('renders pencil edit mini icon with aqua eraser and cyan pencil body', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+
+    // Verify SVG icon markup within btn-rename-weapon
+    expect(vueFile).toMatch(/<button[^>]*class="[^"]*btn-rename-weapon[^"]*"[^>]*>[\s\S]*?<svg[^>]*class="[^"]*pencil-icon[^"]*"[\s\S]*?<\/button>/);
+    expect(vueFile).toMatch(/<path[^>]*class="[^"]*pencil-eraser[^"]*"[^>]*fill="aqua"/);
+    expect(vueFile).toMatch(/<path[^>]*class="[^"]*pencil-body[^"]*"[^>]*fill="cyan"/);
+
+    // Verify CSS styles
+    expect(vueFile).toMatch(/\.pencil-eraser\s*\{[^}]*fill:\s*aqua;?[^}]*\}/);
+    expect(vueFile).toMatch(/\.pencil-body\s*\{[^}]*fill:\s*cyan;?[^}]*\}/);
+  });
+
   it('determines weapon category and limitation explanation accurately', () => {
     const vm = {
       getWeaponCategory: ShipSheetsView.methods.getWeaponCategory,

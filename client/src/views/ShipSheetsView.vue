@@ -415,7 +415,13 @@
                         title="Rename weapon"
                         @click="startEditWeapon(index, wpn)"
                       >
-                        ✏️
+                        <svg class="pencil-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+                          <path class="pencil-eraser" d="M16.5 4.5 L19 2 a2.121 2.121 0 0 1 3 3 l-2.5 2.5 z" fill="aqua" />
+                          <path class="pencil-collar" d="M15 6 l1.5-1.5 3 3 L18 9 z" fill="#64748b" />
+                          <path class="pencil-body" d="M15 6 L6.5 14.5 l3 3 L18 9 z" fill="cyan" />
+                          <path class="pencil-tip" d="M6.5 14.5 l3 3 L3 21 z" fill="#38bdf8" />
+                          <path class="pencil-lead" d="M3 21 l2.2-0.8 -1.4-1.4 z" fill="#0d1117" />
+                        </svg>
                       </button>
                     </template>
                   </div>
@@ -3167,15 +3173,49 @@ export default {
   font-size: 0.8rem;
   cursor: pointer;
   padding: 2px 4px;
-  opacity: 0.5;
+  opacity: 0.7;
   transition: opacity 0.15s ease, transform 0.1s ease;
   line-height: 1;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-rename-weapon:hover {
   opacity: 1;
   transform: scale(1.2);
+}
+
+.btn-rename-weapon:hover .pencil-icon {
+  filter: drop-shadow(0 0 4px rgba(0, 255, 255, 0.7));
+}
+
+.pencil-icon {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.pencil-eraser {
+  fill: aqua;
+}
+
+.pencil-collar {
+  fill: #64748b;
+}
+
+.pencil-body {
+  fill: cyan;
+}
+
+.pencil-tip {
+  fill: #38bdf8;
+}
+
+.pencil-lead {
+  fill: #0d1117;
 }
 
 .range-unit {
