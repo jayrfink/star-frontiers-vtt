@@ -523,7 +523,7 @@
       <!-- Token Inspector Sidebar / Drawer -->
       <aside v-if="showTokenSidebar" class="token-sidebar">
         <div class="sidebar-header">
-          <h3>🎯 Token Inspector</h3>
+          <h3>Token Inspector</h3>
           <button class="close-btn" @click="showTokenSidebar = false">×</button>
         </div>
 
