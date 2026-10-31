@@ -55,35 +55,112 @@ log_error() {
   echo -e "${C_RED}[ERROR]${C_RESET} $*"
 }
 
+has_orbstack() {
+  command -v orbctl >/dev/null 2>&1 || command -v orb >/dev/null 2>&1
+}
+
+get_orbstack_status() {
+  if ! has_orbstack; then
+    echo "Unavailable"
+    return 1
+  fi
+  local status=""
+  if command -v orbctl >/dev/null 2>&1; then
+    status="$(orbctl status 2>/dev/null || true)"
+  fi
+  if [ -z "$status" ] && command -v orb >/dev/null 2>&1; then
+    status="$(orb status 2>/dev/null || true)"
+  fi
+  if [ -z "$status" ]; then
+    status="Stopped"
+  fi
+  # Clean up whitespace/newlines
+  status="$(echo "$status" | head -n1 | tr -d '\r\n')"
+  echo "$status"
+}
+
+is_docker_ready() {
+  if has_orbstack; then
+    local status
+    status="$(get_orbstack_status)"
+    if [ "$status" != "Running" ]; then
+      return 1
+    fi
+  fi
+  docker info >/dev/null 2>&1
+}
+
+ensure_orbstack_running() {
+  if ! has_orbstack; then
+    return 0
+  fi
+
+  local status
+  status="$(get_orbstack_status)"
+  if [ "$status" = "Running" ]; then
+    return 0
+  fi
+
+  log_info "OrbStack is currently ${status}. Launching OrbStack in background..."
+  if [ -d "/Applications/OrbStack.app" ]; then
+    open -g -a OrbStack 2>/dev/null || true
+  fi
+  if command -v orbctl >/dev/null 2>&1; then
+    orbctl start >/dev/null 2>&1 || true
+  elif command -v orb >/dev/null 2>&1; then
+    orb start >/dev/null 2>&1 || true
+  fi
+
+  local count=0
+  local max_wait=30
+  while [ $count -lt $max_wait ]; do
+    status="$(get_orbstack_status)"
+    if [ "$status" = "Running" ]; then
+      log_success "OrbStack is running and responsive."
+      return 0
+    fi
+    sleep 1
+    count=$((count + 1))
+  done
+
+  log_error "OrbStack failed to start within ${max_wait}s."
+  return 1
+}
+
+shutdown_orbstack() {
+  if ! has_orbstack; then
+    return 0
+  fi
+
+  local status
+  status="$(get_orbstack_status)"
+  if [ "$status" = "Running" ]; then
+    log_info "Stopping OrbStack service to conserve system resources..."
+    orbctl stop >/dev/null 2>&1 || orb stop >/dev/null 2>&1 || true
+    log_success "OrbStack service stopped."
+  fi
+}
+
 ensure_docker() {
+  ensure_orbstack_running
+
   if docker info >/dev/null 2>&1; then
     return 0
   fi
 
-  # Docker daemon is not responding. Check if OrbStack is installed and stopped.
-  if command -v orb >/dev/null 2>&1; then
-    local orb_state
-    orb_state="$(orb status 2>/dev/null || echo "Stopped")"
-    if [ "$orb_state" != "Running" ]; then
-      log_info "OrbStack/Docker daemon is stopped. Starting OrbStack via 'orb start'..."
-      orb start >/dev/null 2>&1 || true
-      local count=0
-      while [ $count -lt 15 ]; do
-        if docker info >/dev/null 2>&1; then
-          log_success "OrbStack is running and Docker daemon is responsive."
-          return 0
-        fi
-        sleep 1
-        count=$((count + 1))
-      done
+  local count=0
+  while [ $count -lt 15 ]; do
+    if docker info >/dev/null 2>&1; then
+      log_success "Docker daemon is responsive."
+      return 0
     fi
-  fi
+    sleep 1
+    count=$((count + 1))
+  done
 
-  if ! docker info >/dev/null 2>&1; then
-    log_error "Docker daemon is not running or not responding."
-    log_error "Please start OrbStack or Docker Desktop, then try again."
-    exit 1
-  fi
+  log_error "Docker daemon is not running or not responding."
+  log_error "Please start OrbStack or Docker Desktop, then try again."
+  exit 1
 }
 
 ensure_container() {
@@ -101,6 +178,9 @@ ensure_container() {
 }
 
 is_container_running() {
+  if ! is_docker_ready; then
+    return 1
+  fi
   docker ps --format '{{.Names}}' 2>/dev/null | grep -Eq "^${CONTAINER_NAME}\$"
 }
 
@@ -237,6 +317,7 @@ stop_all() {
   else
     log_info "Container '${CONTAINER_NAME}' is already stopped."
   fi
+  shutdown_orbstack
 }
 
 restart_backend() {
@@ -270,9 +351,25 @@ show_status() {
 
   # 1. Container & Services Status
   echo -e "\n${C_BOLD}[SERVICES]${C_RESET}"
+  if has_orbstack; then
+    local orb_st orb_st_upper
+    orb_st="$(get_orbstack_status)"
+    if [ "$orb_st" != "Running" ]; then
+      orb_st_upper=$(echo "$orb_st" | tr '[:lower:]' '[:upper:]')
+      echo -e "  OrbStack Daemon:             ${C_RED}${orb_st_upper}${C_RESET} (Start via './sf-vtt-ctl.sh start')"
+      echo -e "  Container (${CONTAINER_NAME}):     ${C_RED}STOPPED${C_RESET}"
+      echo -e "  Backend API (port 3000):     ${C_RED}STOPPED${C_RESET}"
+      echo -e "  Frontend UI (port 3001):     ${C_RED}STOPPED${C_RESET}"
+      echo -e "\n======================================================"
+      return 0
+    else
+      echo -e "  OrbStack Daemon:             ${C_GREEN}RUNNING${C_RESET}"
+    fi
+  fi
+
   if ! docker info >/dev/null 2>&1; then
     echo -e "  Docker Daemon:               ${C_RED}STOPPED${C_RESET} (Start OrbStack or Docker Desktop)"
-    echo -e "  Container (${CONTAINER_NAME}): ${C_RED}STOPPED${C_RESET}"
+    echo -e "  Container (${CONTAINER_NAME}):     ${C_RED}STOPPED${C_RESET}"
     echo -e "  Backend API (port 3000):     ${C_RED}STOPPED${C_RESET}"
     echo -e "  Frontend UI (port 3001):     ${C_RED}STOPPED${C_RESET}"
     echo -e "\n======================================================"
@@ -284,9 +381,9 @@ show_status() {
     c_id=$(docker ps --filter "name=^${CONTAINER_NAME}\$" --format '{{.ID}}')
     c_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER_NAME" 2>/dev/null || echo "unknown")
     c_uptime=$(docker ps --filter "name=^${CONTAINER_NAME}\$" --format '{{.RunningFor}}')
-    echo -e "  Container (${CONTAINER_NAME}): ${C_GREEN}RUNNING${C_RESET} (ID: ${c_id}, IP: ${c_ip}, Uptime: ${c_uptime})"
+    echo -e "  Container (${CONTAINER_NAME}):     ${C_GREEN}RUNNING${C_RESET} (ID: ${c_id}, IP: ${c_ip}, Uptime: ${c_uptime})"
   else
-    echo -e "  Container (${CONTAINER_NAME}): ${C_RED}STOPPED${C_RESET}"
+    echo -e "  Container (${CONTAINER_NAME}):     ${C_RED}STOPPED${C_RESET}"
   fi
 
   if is_backend_running; then
@@ -521,86 +618,88 @@ EOF
 
 # --- Main Entry Point ---
 
-ACTION="${1:-}"
-TARGET="${2:-all}"
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  ACTION="${1:-}"
+  TARGET="${2:-all}"
 
-case "$ACTION" in
-  start)
-    case "$TARGET" in
-      all)
-        start_all
-        ;;
-      backend|server|api)
-        start_backend
-        ;;
-      frontend|client|vite)
-        start_frontend
-        ;;
-      *)
-        log_error "Unknown start target: '$TARGET'. Use 'all', 'backend', or 'frontend'."
-        show_help
-        exit 1
-        ;;
-    esac
-    ;;
+  case "$ACTION" in
+    start)
+      case "$TARGET" in
+        all)
+          start_all
+          ;;
+        backend|server|api)
+          start_backend
+          ;;
+        frontend|client|vite)
+          start_frontend
+          ;;
+        *)
+          log_error "Unknown start target: '$TARGET'. Use 'all', 'backend', or 'frontend'."
+          show_help
+          exit 1
+          ;;
+      esac
+      ;;
 
-  stop)
-    case "$TARGET" in
-      all)
-        stop_all
-        ;;
-      backend|server|api)
-        stop_backend
-        ;;
-      frontend|client|vite)
-        stop_frontend
-        ;;
-      *)
-        log_error "Unknown stop target: '$TARGET'. Use 'all', 'backend', or 'frontend'."
-        show_help
-        exit 1
-        ;;
-    esac
-    ;;
+    stop)
+      case "$TARGET" in
+        all)
+          stop_all
+          ;;
+        backend|server|api)
+          stop_backend
+          ;;
+        frontend|client|vite)
+          stop_frontend
+          ;;
+        *)
+          log_error "Unknown stop target: '$TARGET'. Use 'all', 'backend', or 'frontend'."
+          show_help
+          exit 1
+          ;;
+      esac
+      ;;
 
-  restart)
-    case "$TARGET" in
-      all)
-        restart_all
-        ;;
-      backend|server|api)
-        restart_backend
-        ;;
-      frontend|client|vite)
-        restart_frontend
-        ;;
-      *)
-        log_error "Unknown restart target: '$TARGET'. Use 'all', 'backend', or 'frontend'."
-        show_help
-        exit 1
-        ;;
-    esac
-    ;;
+    restart)
+      case "$TARGET" in
+        all)
+          restart_all
+          ;;
+        backend|server|api)
+          restart_backend
+          ;;
+        frontend|client|vite)
+          restart_frontend
+          ;;
+        *)
+          log_error "Unknown restart target: '$TARGET'. Use 'all', 'backend', or 'frontend'."
+          show_help
+          exit 1
+          ;;
+      esac
+      ;;
 
-  status)
-    show_status
-    ;;
+    status)
+      show_status
+      ;;
 
-  logs)
-    show_logs "$TARGET"
-    ;;
+    logs)
+      show_logs "$TARGET"
+      ;;
 
-  help|--help|-h)
-    show_help
-    ;;
+    help|--help|-h)
+      show_help
+      ;;
 
-  "")
-    show_help
-    ;;
+    "")
+      show_help
+      ;;
 
-  *)
-    log_error "Unknown command: '$ACTION'"
-    show_help
-    exit 1
-    ;;
-esac
+    *)
+      log_error "Unknown command: '$ACTION'"
+      show_help
+      exit 1
+      ;;
+  esac
+fi
