@@ -3409,7 +3409,7 @@ export default {
 .notes-textarea {
   width: 100%;
   box-sizing: border-box;
-  background-color: #101010;
+  background-color: #000000;
   border: 1px solid #333;
   border-radius: 4px;
   color: #cecece;
