@@ -150,6 +150,31 @@ export function createGmNotesRouter(db) {
     }
   });
 
+  // PUT /api/gm-notes/sessions/:id/panels/reorder - Reorder panels in a session
+  router.put('/sessions/:id/panels/reorder', (req, res) => {
+    try {
+      const session = db.prepare('SELECT id FROM gm_sessions WHERE id = ?').get(req.params.id);
+      if (!session) {
+        return res.status(404).json({ error: 'GM session not found' });
+      }
+      const { order } = req.body || {};
+      if (!Array.isArray(order)) {
+        return res.status(400).json({ error: 'Order must be an array of panel IDs' });
+      }
+      const updateStmt = db.prepare('UPDATE gm_note_panels SET sort_order = ? WHERE id = ? AND session_id = ?');
+      const tx = db.transaction(() => {
+        order.forEach((panelId, idx) => {
+          updateStmt.run(idx, panelId, req.params.id);
+        });
+      });
+      tx();
+      res.json({ success: true, order });
+    } catch (err) {
+      console.error('Error reordering GM note panels:', err);
+      res.status(500).json({ error: 'Failed to reorder GM note panels' });
+    }
+  });
+
   // PUT /api/gm-notes/panels/:id - Update a note panel's title and/or content
   router.put('/panels/:id', (req, res) => {
     try {

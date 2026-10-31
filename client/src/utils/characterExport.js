@@ -122,7 +122,35 @@ export function formatCharacterAscii(char = {}) {
   lines.push('');
   lines.push('[ BACKGROUND & NOTES ]');
   lines.push(subDivider);
-  lines.push(char.notes && char.notes.trim() ? char.notes.trim() : '(No background notes recorded)');
+
+  let panels = [];
+  if (Array.isArray(char.note_panels) && char.note_panels.length > 0) {
+    panels = char.note_panels;
+  } else if (typeof char.notes === 'string' && char.notes.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(char.notes);
+      if (Array.isArray(parsed)) panels = parsed;
+    } catch {}
+  }
+
+  if (panels.length > 0) {
+    const populated = panels.filter((p) => p && ((p.title && p.title.trim()) || (p.content && p.content.trim())));
+    if (populated.length > 0) {
+      populated.forEach((p, idx) => {
+        const title = (p.title || `Note ${idx + 1}`).trim();
+        lines.push(`--- ${title} ---`);
+        lines.push((p.content || '').trim() || '(Empty)');
+        lines.push('');
+      });
+      if (lines[lines.length - 1] === '') lines.pop();
+    } else {
+      lines.push('(No background notes recorded)');
+    }
+  } else if (char.notes && char.notes.trim()) {
+    lines.push(char.notes.trim());
+  } else {
+    lines.push('(No background notes recorded)');
+  }
   lines.push('');
   lines.push(divider);
 

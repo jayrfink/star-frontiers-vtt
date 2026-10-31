@@ -478,17 +478,75 @@
         </div>
 
         <!-- Notes Section -->
-        <section class="card notes-section">
-          <div class="section-header">
+        <section class="notes-section">
+          <div class="section-header notes-section-header">
             <h4>Notes</h4>
+            <button
+              type="button"
+              class="btn-secondary btn-add-note-panel"
+              @click="addNotePanel"
+              title="Add Note Panel"
+            >
+              + Add Note Panel
+            </button>
           </div>
-          <textarea
-            v-model="selectedShip.notes"
-            @change="updateShip"
-            class="notes-textarea"
-            rows="4"
-            placeholder="Add notes..."
-          ></textarea>
+          <div v-if="!selectedShip.note_panels || selectedShip.note_panels.length === 0" class="panels-empty card">
+            <p>No note panels yet. Click <strong>+ Add Note Panel</strong> above to create one!</p>
+          </div>
+          <div v-else class="note-panels-grid">
+            <section
+              v-for="(panel, index) in selectedShip.note_panels"
+              :key="panel.id || index"
+              class="note-panel-card card"
+              :class="{ 'panel-drag-over': dragOverNotePanelIndex === index }"
+              draggable="true"
+              @dragstart="onNotePanelDragStart($event, index)"
+              @dragover.prevent="onNotePanelDragOver($event, index)"
+              @dragleave="onNotePanelDragLeave($event, index)"
+              @drop="onNotePanelDrop($event, index)"
+              @dragend="onNotePanelDragEnd"
+            >
+              <div class="panel-card-header">
+                <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+                <input
+                  type="text"
+                  v-model="panel.title"
+                  @change="updateNotePanels"
+                  class="panel-title-input"
+                  placeholder="Note Title"
+                />
+                <div class="reorder-actions">
+                  <button
+                    type="button"
+                    class="btn-reorder btn-move-up"
+                    title="Move Panel Up"
+                    :disabled="index === 0"
+                    @click.stop="moveNotePanel(index, -1)"
+                  >▲</button>
+                  <button
+                    type="button"
+                    class="btn-reorder btn-move-down"
+                    title="Move Panel Down"
+                    :disabled="index === selectedShip.note_panels.length - 1"
+                    @click.stop="moveNotePanel(index, 1)"
+                  >▼</button>
+                </div>
+                <button
+                  type="button"
+                  class="btn-delete-panel"
+                  title="Delete Note Panel"
+                  @click="deleteNotePanel(index)"
+                >✕</button>
+              </div>
+              <textarea
+                v-model="panel.content"
+                @change="updateNotePanels"
+                class="notes-textarea panel-content-textarea"
+                rows="6"
+                placeholder="Write notes, mission logs, repair logs..."
+              ></textarea>
+            </section>
+          </div>
         </section>
       </div>
     </main>
@@ -901,6 +959,34 @@ import {
 } from '../utils/flipAndBurn.js';
 import { downloadShipAscii } from '../utils/shipExport.js';
 
+export function parseShipNotePanels(notes) {
+  if (Array.isArray(notes)) {
+    return notes.map((p, idx) => ({
+      id: p.id || `p_${Date.now()}_${idx}`,
+      title: p.title !== undefined ? String(p.title) : 'Note',
+      content: p.content !== undefined ? String(p.content) : '',
+    }));
+  }
+  if (typeof notes === 'string' && notes.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(notes);
+      if (Array.isArray(parsed)) {
+        return parsed.map((p, idx) => ({
+          id: p.id || `p_${Date.now()}_${idx}`,
+          title: p.title !== undefined ? String(p.title) : 'Note',
+          content: p.content !== undefined ? String(p.content) : '',
+        }));
+      }
+    } catch {
+      // Fallback to legacy plain string
+    }
+  }
+  return [
+    { id: 'p_hist', title: 'History', content: '' },
+    { id: 'p_notes', title: 'Notes', content: (typeof notes === 'string' && !notes.trim().startsWith('[') ? notes : '') },
+  ];
+}
+
 export default {
   name: 'ShipSheetsView',
   components: {
@@ -918,6 +1004,8 @@ export default {
       errorMessage: '',
       draggedShipIndex: null,
       dragOverShipIndex: null,
+      draggedNotePanelIndex: null,
+      dragOverNotePanelIndex: null,
       confirmModal: {
         show: false,
         message: '',
@@ -1164,6 +1252,11 @@ export default {
       copy.defenses = this.normalizeDefenses(copy.defenses);
       copy.weapons = this.normalizeWeapons(copy.weapons);
       copy.notes = copy.notes || '';
+      if (Array.isArray(copy.note_panels)) {
+        copy.note_panels = parseShipNotePanels(copy.note_panels);
+      } else {
+        copy.note_panels = parseShipNotePanels(copy.notes);
+      }
       copy.user_id = copy.user_id !== undefined && copy.user_id !== null ? Number(copy.user_id) : null;
       copy.owner_username = copy.owner_username || '';
       return copy;
@@ -1951,6 +2044,88 @@ export default {
     onDragEnd() {
       this.draggedShipIndex = null;
       this.dragOverShipIndex = null;
+    },
+    parseNotePanels(notes) {
+      return parseShipNotePanels(notes);
+    },
+    addNotePanel(defaultTitle = 'New Note') {
+      if (!this.selectedShip) return;
+      if (!Array.isArray(this.selectedShip.note_panels)) {
+        this.selectedShip.note_panels = this.parseNotePanels(this.selectedShip.notes);
+      }
+      const nextNum = this.selectedShip.note_panels.length + 1;
+      const title = typeof defaultTitle === 'string' && defaultTitle !== 'New Note'
+        ? defaultTitle
+        : `Note ${nextNum}`;
+      this.selectedShip.note_panels.push({
+        id: `panel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        title,
+        content: '',
+      });
+      this.updateNotePanels();
+    },
+    deleteNotePanel(index) {
+      if (!this.selectedShip || !Array.isArray(this.selectedShip.note_panels)) return;
+      if (typeof confirm === 'function' && !confirm('Delete this note panel?')) {
+        return;
+      }
+      this.selectedShip.note_panels.splice(index, 1);
+      this.updateNotePanels();
+    },
+    moveNotePanel(index, direction) {
+      if (!this.selectedShip || !Array.isArray(this.selectedShip.note_panels)) return;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= this.selectedShip.note_panels.length) return;
+      const [moved] = this.selectedShip.note_panels.splice(index, 1);
+      this.selectedShip.note_panels.splice(targetIndex, 0, moved);
+      this.updateNotePanels();
+    },
+    onNotePanelDragStart(event, index) {
+      const tag = event.target?.tagName?.toLowerCase();
+      if (['input', 'textarea', 'button'].includes(tag)) {
+        event.preventDefault();
+        return;
+      }
+      this.draggedNotePanelIndex = index;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+      }
+    },
+    onNotePanelDragOver(event, index) {
+      if (this.draggedNotePanelIndex === null) return;
+      event.preventDefault();
+      if (this.draggedNotePanelIndex !== index) {
+        this.dragOverNotePanelIndex = index;
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = 'move';
+        }
+      }
+    },
+    onNotePanelDragLeave(event, index) {
+      if (this.dragOverNotePanelIndex === index) {
+        this.dragOverNotePanelIndex = null;
+      }
+    },
+    onNotePanelDrop(event, targetIndex) {
+      event.preventDefault();
+      this.dragOverNotePanelIndex = null;
+      const fromIndex = this.draggedNotePanelIndex;
+      this.draggedNotePanelIndex = null;
+      if (fromIndex === null || fromIndex === undefined || fromIndex === targetIndex) return;
+      if (!this.selectedShip || !Array.isArray(this.selectedShip.note_panels)) return;
+      const [moved] = this.selectedShip.note_panels.splice(fromIndex, 1);
+      this.selectedShip.note_panels.splice(targetIndex, 0, moved);
+      this.updateNotePanels();
+    },
+    onNotePanelDragEnd() {
+      this.draggedNotePanelIndex = null;
+      this.dragOverNotePanelIndex = null;
+    },
+    updateNotePanels() {
+      if (!this.selectedShip) return;
+      this.selectedShip.notes = JSON.stringify(this.selectedShip.note_panels);
+      this.updateShip();
     },
     async saveShipOrder(previousShips) {
       this.errorMessage = '';
@@ -3521,6 +3696,79 @@ export default {
   outline: none;
   border-color: #2394a6;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
+}
+
+.notes-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-add-note-panel {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+}
+
+.note-panels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 16px;
+}
+
+.note-panel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title-input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #334155;
+  color: #00ffff;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.panel-title-input:focus {
+  outline: none;
+  border-color: #2394a6;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
+}
+
+.btn-delete-panel {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.btn-delete-panel:hover {
+  color: #f87171;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.note-panel-card.panel-drag-over {
+  border-color: #2394a6;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.25);
+}
+
+.panels-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 24px 16px;
 }
 
 .weapon-title-input {

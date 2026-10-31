@@ -114,4 +114,42 @@ describe('GM Notes API (/api/gm-notes)', () => {
     expect(updateRes.body.content).not.toBe('null');
     expect(updateRes.body.content).toBe(''); // cleared to empty string, never "null"
   });
+
+  it('reorders note panels in a session and updates sort_order', async () => {
+    const sessionRes = await gmAgent.post('/api/gm-notes/sessions').send({ title: 'Reorder Test Session' });
+    const sessionId = sessionRes.body.id;
+
+    // Default session created with "Introduction" (panel 1)
+    const p1 = (await gmAgent.get(`/api/gm-notes/sessions/${sessionId}/panels`)).body[0];
+
+    const p2Res = await gmAgent.post(`/api/gm-notes/sessions/${sessionId}/panels`).send({ title: 'Panel Two' });
+    const p2 = p2Res.body;
+
+    const p3Res = await gmAgent.post(`/api/gm-notes/sessions/${sessionId}/panels`).send({ title: 'Panel Three' });
+    const p3 = p3Res.body;
+
+    // Verify initial order: p1, p2, p3
+    const initialPanels = (await gmAgent.get(`/api/gm-notes/sessions/${sessionId}/panels`)).body;
+    expect(initialPanels.map((p) => p.id)).toEqual([p1.id, p2.id, p3.id]);
+
+    // Reorder: p3, p1, p2
+    const reorderRes = await gmAgent
+      .put(`/api/gm-notes/sessions/${sessionId}/panels/reorder`)
+      .send({ order: [p3.id, p1.id, p2.id] });
+    expect(reorderRes.status).toBe(200);
+    expect(reorderRes.body.success).toBe(true);
+
+    // Verify persisted new order
+    const updatedPanels = (await gmAgent.get(`/api/gm-notes/sessions/${sessionId}/panels`)).body;
+    expect(updatedPanels.map((p) => p.id)).toEqual([p3.id, p1.id, p2.id]);
+    expect(updatedPanels[0].title).toBe('Panel Three');
+    expect(updatedPanels[1].title).toBe('Introduction');
+    expect(updatedPanels[2].title).toBe('Panel Two');
+
+    // Rejects non-array order
+    const invalidRes = await gmAgent
+      .put(`/api/gm-notes/sessions/${sessionId}/panels/reorder`)
+      .send({ order: 'not-an-array' });
+    expect(invalidRes.status).toBe(400);
+  });
 });

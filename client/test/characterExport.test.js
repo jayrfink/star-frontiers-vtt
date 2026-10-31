@@ -101,4 +101,42 @@ describe('formatCharacterAscii Utility', () => {
     expect(text).not.toContain('null');
     expect(text).not.toContain('NaN');
   });
+
+  it('formats multiple populated note panels cleanly in ASCII output', () => {
+    const charWithPanels = {
+      name: 'Wilks',
+      race: 'Vrusk',
+      note_panels: [
+        { id: 'p1', title: 'Background', content: 'Grew up on Pale near the sulfur fields.' },
+        { id: 'p2', title: 'Notes', content: 'Met with UPF intelligence operative in Port Loren.' },
+        { id: 'p3', title: 'Mission Log', content: 'Scouted Sathar outpost on Volturnus.' },
+      ],
+    };
+
+    const text = formatCharacterAscii(charWithPanels);
+    expect(text).toContain('[ BACKGROUND & NOTES ]');
+    expect(text).toContain('--- Background ---');
+    expect(text).toContain('Grew up on Pale near the sulfur fields.');
+    expect(text).toContain('--- Notes ---');
+    expect(text).toContain('Met with UPF intelligence operative in Port Loren.');
+    expect(text).toContain('--- Mission Log ---');
+    expect(text).toContain('Scouted Sathar outpost on Volturnus.');
+  });
+
+  it('handles JSON serialized note panels in notes string', () => {
+    const charWithJsonNotes = {
+      name: 'Wilks',
+      race: 'Vrusk',
+      notes: JSON.stringify([
+        { id: 'p1', title: 'History', content: 'Former marine.' },
+        { id: 'p2', title: 'Notes', content: 'Currently contracted.' },
+      ]),
+    };
+
+    const text = formatCharacterAscii(charWithJsonNotes);
+    expect(text).toContain('--- History ---');
+    expect(text).toContain('Former marine.');
+    expect(text).toContain('--- Notes ---');
+    expect(text).toContain('Currently contracted.');
+  });
 });

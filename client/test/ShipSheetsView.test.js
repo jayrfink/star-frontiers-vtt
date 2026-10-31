@@ -130,6 +130,116 @@ describe('ShipSheetsView - Ship Notes Section', () => {
       global.fetch = origFetch;
     }
   });
+
+  it('initializes ship note panels with History and Notes in 1 row', () => {
+    const vm = {
+      normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+      normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
+    };
+    const ship = ShipSheetsView.methods.normalizeShip.call(vm, { name: 'UPF Strike' });
+    expect(ship.note_panels).toBeDefined();
+    expect(ship.note_panels.length).toBe(2);
+    expect(ship.note_panels[0].title).toBe('History');
+    expect(ship.note_panels[0].content).toBe('');
+    expect(ship.note_panels[1].title).toBe('Notes');
+    expect(ship.note_panels[1].content).toBe('');
+  });
+
+  it('loads legacy plain text notes into the Notes panel with History empty', () => {
+    const vm = {
+      normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
+      normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
+    };
+    const ship = ShipSheetsView.methods.normalizeShip.call(vm, {
+      name: 'UPF Strike',
+      notes: 'Commissioned in Year 58 of Second Sathar War.',
+    });
+    expect(ship.note_panels.length).toBe(2);
+    expect(ship.note_panels[0].title).toBe('History');
+    expect(ship.note_panels[0].content).toBe('');
+    expect(ship.note_panels[1].title).toBe('Notes');
+    expect(ship.note_panels[1].content).toBe('Commissioned in Year 58 of Second Sathar War.');
+  });
+
+  it('adds, deletes, and reorders note panels updating serialized notes', () => {
+    let updatedShipCalled = 0;
+    const vm = {
+      selectedShip: {
+        id: 1,
+        name: 'UPF Strike',
+        notes: '',
+        note_panels: [
+          { id: 'p1', title: 'History', content: 'Built at Clarion' },
+          { id: 'p2', title: 'Notes', content: 'Needs sub-light calibration' },
+        ],
+      },
+      updateShip() {
+        updatedShipCalled++;
+      },
+      parseNotePanels: ShipSheetsView.methods.parseNotePanels,
+      updateNotePanels: ShipSheetsView.methods.updateNotePanels,
+      addNotePanel: ShipSheetsView.methods.addNotePanel,
+      deleteNotePanel: ShipSheetsView.methods.deleteNotePanel,
+      moveNotePanel: ShipSheetsView.methods.moveNotePanel,
+    };
+
+    // 1. Add Note Panel
+    vm.addNotePanel('Damage Report');
+    expect(vm.selectedShip.note_panels.length).toBe(3);
+    expect(vm.selectedShip.note_panels[2].title).toBe('Damage Report');
+    expect(updatedShipCalled).toBe(1);
+    const parsedNotes = JSON.parse(vm.selectedShip.notes);
+    expect(parsedNotes.length).toBe(3);
+
+    // 2. Reorder (move 3rd panel up)
+    vm.moveNotePanel(2, -1);
+    expect(vm.selectedShip.note_panels[1].title).toBe('Damage Report');
+    expect(vm.selectedShip.note_panels[2].title).toBe('Notes');
+    expect(updatedShipCalled).toBe(2);
+
+    // 3. Delete panel
+    const origConfirm = global.confirm;
+    global.confirm = () => true;
+    try {
+      vm.deleteNotePanel(0);
+      expect(vm.selectedShip.note_panels.length).toBe(2);
+      expect(vm.selectedShip.note_panels[0].title).toBe('Damage Report');
+      expect(updatedShipCalled).toBe(3);
+    } finally {
+      global.confirm = origConfirm;
+    }
+  });
+
+  it('reorders ship note panels via drag-and-drop onNotePanelDrop', () => {
+    let updatedShipCalled = false;
+    const vm = {
+      draggedNotePanelIndex: 0,
+      dragOverNotePanelIndex: 1,
+      selectedShip: {
+        id: 1,
+        name: 'UPF Strike',
+        notes: '',
+        note_panels: [
+          { id: 'p1', title: 'History', content: 'Built at Clarion' },
+          { id: 'p2', title: 'Notes', content: 'Needs sub-light calibration' },
+        ],
+      },
+      updateShip() {
+        updatedShipCalled = true;
+      },
+      updateNotePanels: ShipSheetsView.methods.updateNotePanels,
+      onNotePanelDrop: ShipSheetsView.methods.onNotePanelDrop,
+    };
+
+    const mockEvent = { preventDefault: () => {} };
+    vm.onNotePanelDrop(mockEvent, 1);
+
+    expect(vm.selectedShip.note_panels[0].title).toBe('Notes');
+    expect(vm.selectedShip.note_panels[1].title).toBe('History');
+    expect(vm.draggedNotePanelIndex).toBeNull();
+    expect(vm.dragOverNotePanelIndex).toBeNull();
+    expect(updatedShipCalled).toBe(true);
+  });
 });
 
 describe('ShipSheetsView - Weapon Selection & Renaming', () => {

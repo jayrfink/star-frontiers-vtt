@@ -213,4 +213,56 @@ describe('GmNotesView Component', () => {
     expect(source).toMatch(/\.btn-add-panel\s*\{[^}]*background:\s*#082d33/);
     expect(source).toMatch(/\.btn-add-panel\s*\{[^}]*border:\s*1px\s+solid\s+#2394a6/);
   });
+
+  it('allows reordering note panels via up/down buttons and persists order to API', async () => {
+    const originalFetch = global.fetch;
+    const reorderCalls = [];
+    global.fetch = vi.fn(async (url, options = {}) => {
+      if (url === '/api/gm-notes/sessions') {
+        return { ok: true, json: async () => [{ id: 1, title: 'Session 1' }] };
+      }
+      if (url === '/api/gm-notes/sessions/1/panels' && (!options.method || options.method === 'GET')) {
+        return {
+          ok: true,
+          json: async () => [
+            { id: 10, session_id: 1, title: 'First Panel', content: '1' },
+            { id: 20, session_id: 1, title: 'Second Panel', content: '2' },
+          ],
+        };
+      }
+      if (url === '/api/gm-notes/sessions/1/panels/reorder' && options.method === 'PUT') {
+        reorderCalls.push(JSON.parse(options.body));
+        return { ok: true, json: async () => ({ success: true }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    try {
+      const wrapper = mount(GmNotesView);
+      await flushPromises();
+
+      const panels = wrapper.findAll('.note-panel-card');
+      expect(panels).toHaveLength(2);
+
+      // Move first panel down
+      const downBtns = wrapper.findAll('.btn-reorder.btn-move-down');
+      expect(downBtns).toHaveLength(2);
+      expect(downBtns[0].attributes('disabled')).toBeUndefined();
+      expect(downBtns[1].attributes('disabled')).toBeDefined();
+
+      await downBtns[0].trigger('click');
+      await flushPromises();
+
+      // Verified order in DOM is swapped
+      const titleInputs = wrapper.findAll('.panel-title-input');
+      expect(titleInputs[0].element.value).toBe('Second Panel');
+      expect(titleInputs[1].element.value).toBe('First Panel');
+
+      // Verified API call sent new order: [20, 10]
+      expect(reorderCalls).toHaveLength(1);
+      expect(reorderCalls[0].order).toEqual([20, 10]);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });

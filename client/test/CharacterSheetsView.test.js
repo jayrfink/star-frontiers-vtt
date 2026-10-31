@@ -280,6 +280,107 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(charContent).toMatch(/\.notes-textarea\s*\{[^}]*background:\s*#0d1117;?[^}]*border:\s*1px solid #30363d;?[^}]*\}/);
       expect(shipContent).toMatch(/\.notes-textarea\s*\{[^}]*background:\s*#0d1117;?[^}]*border:\s*1px solid #30363d;?[^}]*\}/);
     });
+
+    it('initializes character note panels with Background and Notes in 1 row', () => {
+      const normalize = CharacterSheetsView.methods.normalizeCharacterData;
+      const char = normalize({ name: 'Wilf' });
+      expect(char.note_panels).toBeDefined();
+      expect(char.note_panels.length).toBe(2);
+      expect(char.note_panels[0].title).toBe('Background');
+      expect(char.note_panels[0].content).toBe('');
+      expect(char.note_panels[1].title).toBe('Notes');
+      expect(char.note_panels[1].content).toBe('');
+    });
+
+    it('loads legacy plain text notes into the Notes panel with Background empty', () => {
+      const normalize = CharacterSheetsView.methods.normalizeCharacterData;
+      const char = normalize({ name: 'Wilf', notes: 'Native of Gran Quivera.' });
+      expect(char.note_panels.length).toBe(2);
+      expect(char.note_panels[0].title).toBe('Background');
+      expect(char.note_panels[0].content).toBe('');
+      expect(char.note_panels[1].title).toBe('Notes');
+      expect(char.note_panels[1].content).toBe('Native of Gran Quivera.');
+    });
+
+    it('adds, deletes, and reorders note panels updating serialized notes', () => {
+      let updatedCharCalled = 0;
+      const vm = {
+        selectedChar: {
+          id: 1,
+          name: 'Wilf',
+          notes: '',
+          note_panels: [
+            { id: 'p1', title: 'Background', content: 'Pale native' },
+            { id: 'p2', title: 'Notes', content: 'Contact at Port Loren' },
+          ],
+        },
+        updateCharacter() {
+          updatedCharCalled++;
+        },
+        parseNotePanels: CharacterSheetsView.methods.parseNotePanels,
+        updateNotePanels: CharacterSheetsView.methods.updateNotePanels,
+        addNotePanel: CharacterSheetsView.methods.addNotePanel,
+        deleteNotePanel: CharacterSheetsView.methods.deleteNotePanel,
+        moveNotePanel: CharacterSheetsView.methods.moveNotePanel,
+      };
+
+      // 1. Add Note Panel
+      vm.addNotePanel('Equipment Locker');
+      expect(vm.selectedChar.note_panels.length).toBe(3);
+      expect(vm.selectedChar.note_panels[2].title).toBe('Equipment Locker');
+      expect(updatedCharCalled).toBe(1);
+      const parsedNotes = JSON.parse(vm.selectedChar.notes);
+      expect(parsedNotes.length).toBe(3);
+
+      // 2. Reorder (move 3rd panel up)
+      vm.moveNotePanel(2, -1);
+      expect(vm.selectedChar.note_panels[1].title).toBe('Equipment Locker');
+      expect(vm.selectedChar.note_panels[2].title).toBe('Notes');
+      expect(updatedCharCalled).toBe(2);
+
+      // 3. Delete panel (disable confirm modal via mock if needed)
+      const origConfirm = global.confirm;
+      global.confirm = () => true;
+      try {
+        vm.deleteNotePanel(0);
+        expect(vm.selectedChar.note_panels.length).toBe(2);
+        expect(vm.selectedChar.note_panels[0].title).toBe('Equipment Locker');
+        expect(updatedCharCalled).toBe(3);
+      } finally {
+        global.confirm = origConfirm;
+      }
+    });
+
+    it('reorders note panels via drag-and-drop onNotePanelDrop', () => {
+      let updatedCharCalled = false;
+      const vm = {
+        draggedNotePanelIndex: 0,
+        dragOverNotePanelIndex: 1,
+        selectedChar: {
+          id: 1,
+          name: 'Wilf',
+          notes: '',
+          note_panels: [
+            { id: 'p1', title: 'Background', content: 'Item 1' },
+            { id: 'p2', title: 'Notes', content: 'Item 2' },
+          ],
+        },
+        updateCharacter() {
+          updatedCharCalled = true;
+        },
+        updateNotePanels: CharacterSheetsView.methods.updateNotePanels,
+        onNotePanelDrop: CharacterSheetsView.methods.onNotePanelDrop,
+      };
+
+      const mockEvent = { preventDefault: () => {} };
+      vm.onNotePanelDrop(mockEvent, 1);
+
+      expect(vm.selectedChar.note_panels[0].title).toBe('Notes');
+      expect(vm.selectedChar.note_panels[1].title).toBe('Background');
+      expect(vm.draggedNotePanelIndex).toBeNull();
+      expect(vm.dragOverNotePanelIndex).toBeNull();
+      expect(updatedCharCalled).toBe(true);
+    });
   });
 
   describe('Equipment Catalog Category Filtering & Tabs', () => {

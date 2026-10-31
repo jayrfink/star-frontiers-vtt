@@ -108,7 +108,35 @@ export function formatShipAscii(ship = {}) {
   lines.push('');
   lines.push('[ SHIP LOG & MISSION NOTES ]');
   lines.push(subDivider);
-  lines.push(ship.notes && ship.notes.trim() ? ship.notes.trim() : '(No ship notes recorded)');
+
+  let panels = [];
+  if (Array.isArray(ship.note_panels) && ship.note_panels.length > 0) {
+    panels = ship.note_panels;
+  } else if (typeof ship.notes === 'string' && ship.notes.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(ship.notes);
+      if (Array.isArray(parsed)) panels = parsed;
+    } catch {}
+  }
+
+  if (panels.length > 0) {
+    const populated = panels.filter((p) => p && ((p.title && p.title.trim()) || (p.content && p.content.trim())));
+    if (populated.length > 0) {
+      populated.forEach((p, idx) => {
+        const title = (p.title || `Note ${idx + 1}`).trim();
+        lines.push(`--- ${title} ---`);
+        lines.push((p.content || '').trim() || '(Empty)');
+        lines.push('');
+      });
+      if (lines[lines.length - 1] === '') lines.pop();
+    } else {
+      lines.push('(No ship notes recorded)');
+    }
+  } else if (ship.notes && ship.notes.trim()) {
+    lines.push(ship.notes.trim());
+  } else {
+    lines.push('(No ship notes recorded)');
+  }
   lines.push('');
   lines.push(divider);
 

@@ -83,11 +83,18 @@
         </div>
         <div v-else class="note-panels-grid">
           <section
-            v-for="panel in panels"
+            v-for="(panel, index) in panels"
             :key="panel.id"
             class="note-panel-card card"
+            :class="{ 'panel-drag-over': dragOverPanelIndex === index }"
+            draggable="true"
+            @dragstart="onPanelDragStart($event, index)"
+            @dragover.prevent="onPanelDragOver($event, index)"
+            @dragleave="onPanelDragLeave($event, index)"
+            @drop="onPanelDrop($event, index)"
           >
             <div class="panel-card-header">
+              <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
               <input
                 type="text"
                 v-model="panel.title"
@@ -96,6 +103,22 @@
                 placeholder="Note Title (e.g. Introduction, Part 1)"
               />
               <span v-if="savingPanelId === panel.id" class="save-status">Saving...</span>
+              <div class="reorder-actions">
+                <button
+                  type="button"
+                  class="btn-reorder btn-move-up"
+                  title="Move Panel Up"
+                  :disabled="index === 0"
+                  @click.stop="movePanel(index, -1)"
+                >▲</button>
+                <button
+                  type="button"
+                  class="btn-reorder btn-move-down"
+                  title="Move Panel Down"
+                  :disabled="index === panels.length - 1"
+                  @click.stop="movePanel(index, 1)"
+                >▼</button>
+              </div>
               <button
                 type="button"
                 class="btn-delete-panel"
@@ -129,6 +152,8 @@ const panels = ref([]);
 const loadingSessions = ref(false);
 const loadingPanels = ref(false);
 const savingPanelId = ref(null);
+const draggedPanelIndex = ref(null);
+const dragOverPanelIndex = ref(null);
 let currentFetchSessionId = null;
 
 const panelPresets = ['Introduction', 'Part 1', 'Part 2', 'Readout', 'Adversaries'];
@@ -314,6 +339,69 @@ async function deletePanel(panelId) {
   } catch (err) {
     console.error('Failed to delete note panel:', err);
   }
+}
+
+async function movePanel(index, direction) {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= panels.value.length) return;
+  const [moved] = panels.value.splice(index, 1);
+  panels.value.splice(targetIndex, 0, moved);
+  await persistPanelOrder();
+}
+
+async function persistPanelOrder() {
+  if (!selectedSession.value) return;
+  const order = panels.value.map((p) => p.id);
+  try {
+    await fetch(`/api/gm-notes/sessions/${selectedSession.value.id}/panels/reorder`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ order }),
+    });
+  } catch (err) {
+    console.error('Failed to reorder GM note panels:', err);
+  }
+}
+
+function onPanelDragStart(event, index) {
+  const tag = event.target?.tagName?.toLowerCase();
+  if (['input', 'textarea', 'button'].includes(tag)) {
+    event.preventDefault();
+    return;
+  }
+  draggedPanelIndex.value = index;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(index));
+  }
+}
+
+function onPanelDragOver(event, index) {
+  event.preventDefault();
+  if (draggedPanelIndex.value !== null && draggedPanelIndex.value !== index) {
+    dragOverPanelIndex.value = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+}
+
+function onPanelDragLeave(event, index) {
+  if (dragOverPanelIndex.value === index) {
+    dragOverPanelIndex.value = null;
+  }
+}
+
+async function onPanelDrop(event, targetIndex) {
+  event.preventDefault();
+  dragOverPanelIndex.value = null;
+  const fromIndex = draggedPanelIndex.value;
+  draggedPanelIndex.value = null;
+  if (fromIndex === null || fromIndex === targetIndex) return;
+  const [moved] = panels.value.splice(fromIndex, 1);
+  panels.value.splice(targetIndex, 0, moved);
+  await persistPanelOrder();
 }
 
 onMounted(() => {
@@ -594,6 +682,53 @@ onMounted(() => {
   color: #f87171;
   border-color: #ef4444;
   background: rgba(239, 68, 68, 0.12);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #6e7681;
+  font-size: 1rem;
+  user-select: none;
+  padding: 0 4px;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.reorder-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-reorder {
+  background: transparent;
+  border: none;
+  color: #6e7681;
+  cursor: pointer;
+  padding: 1px 4px;
+  font-size: 9px;
+  line-height: 1;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-reorder:hover:not(:disabled) {
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.15);
+}
+
+.btn-reorder:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.note-panel-card.panel-drag-over {
+  border-color: #2394a6;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.25);
 }
 
 .panel-content-textarea {

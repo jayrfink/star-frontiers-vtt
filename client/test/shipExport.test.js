@@ -72,6 +72,44 @@ describe('formatShipAscii Utility', () => {
     expect(text).not.toContain('null');
   });
 
+  it('formats multiple populated note panels cleanly in ASCII output', () => {
+    const shipWithPanels = {
+      name: 'UPF Star Hawk',
+      type: 'Corvette',
+      note_panels: [
+        { id: 'p1', title: 'History', content: 'Constructed at the Cassidine orbital shipyard.' },
+        { id: 'p2', title: 'Notes', content: 'Armed with experimental electron battery.' },
+        { id: 'p3', title: 'Mission Log', content: 'Patrolled Prenglar star system.' },
+      ],
+    };
+
+    const text = formatShipAscii(shipWithPanels);
+    expect(text).toContain('[ SHIP LOG & MISSION NOTES ]');
+    expect(text).toContain('--- History ---');
+    expect(text).toContain('Constructed at the Cassidine orbital shipyard.');
+    expect(text).toContain('--- Notes ---');
+    expect(text).toContain('Armed with experimental electron battery.');
+    expect(text).toContain('--- Mission Log ---');
+    expect(text).toContain('Patrolled Prenglar star system.');
+  });
+
+  it('handles JSON serialized note panels in ship notes string', () => {
+    const shipWithJsonNotes = {
+      name: 'UPF Star Hawk',
+      type: 'Corvette',
+      notes: JSON.stringify([
+        { id: 'p1', title: 'History', content: 'Participated in Battle of Volturnus.' },
+        { id: 'p2', title: 'Notes', content: 'Hull repaired to full integrity.' },
+      ]),
+    };
+
+    const text = formatShipAscii(shipWithJsonNotes);
+    expect(text).toContain('--- History ---');
+    expect(text).toContain('Participated in Battle of Volturnus.');
+    expect(text).toContain('--- Notes ---');
+    expect(text).toContain('Hull repaired to full integrity.');
+  });
+
   it('downloadShipAscii returns export details and creates download link', () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
     const appendChildSpy = vi.spyOn(document.body, 'appendChild');
