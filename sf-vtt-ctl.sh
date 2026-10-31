@@ -359,16 +359,26 @@ else:
   local db_file="$DIR/data/app.db"
   local sess_file="$DIR/data/sessions.db"
 
+  run_sqlite() {
+    local target_db="$1"
+    local sql_query="$2"
+    if is_container_running; then
+      docker exec "$CONTAINER_NAME" sqlite3 "$target_db" "$sql_query" 2>/dev/null || true
+    else
+      sqlite3 "$target_db" "$sql_query" 2>/dev/null || true
+    fi
+  }
+
   if [ -f "$sess_file" ] && [ -f "$db_file" ]; then
     local active_sessions
-    active_sessions=$(sqlite3 "$sess_file" "
+    active_sessions=$(run_sqlite "$sess_file" "
       ATTACH DATABASE '$db_file' AS app;
       SELECT u.username, u.role, datetime(s.expired/1000, 'unixepoch', 'localtime') as expires_at
       FROM sessions s
       JOIN app.users u ON u.id = json_extract(s.sess, '$.userId')
       WHERE s.expired > (strftime('%s', 'now') * 1000)
       ORDER BY s.expired DESC;
-    " 2>/dev/null || true)
+    ")
 
     if [ -n "$active_sessions" ]; then
       echo -e "  ${C_BOLD}Active Logged-In Sessions:${C_RESET}"
@@ -383,7 +393,7 @@ else:
 
     # Recent historical sessions
     local recent_sessions
-    recent_sessions=$(sqlite3 "$sess_file" "
+    recent_sessions=$(run_sqlite "$sess_file" "
       ATTACH DATABASE '$db_file' AS app;
       SELECT u.username, u.role, datetime(s.expired/1000, 'unixepoch', 'localtime') as expires_at
       FROM sessions s
@@ -391,7 +401,7 @@ else:
       WHERE s.expired <= (strftime('%s', 'now') * 1000)
       ORDER BY s.expired DESC
       LIMIT 3;
-    " 2>/dev/null || true)
+    ")
 
     if [ -n "$recent_sessions" ]; then
       echo -e "  ${C_BOLD}Recently Active Users (Expired Sessions):${C_RESET}"
@@ -402,12 +412,12 @@ else:
 
     # Registered user summary
     local user_summary
-    user_summary=$(sqlite3 "$db_file" "
+    user_summary=$(run_sqlite "$db_file" "
       SELECT count(*) as total,
              sum(case when role = 'GameMaster' then 1 else 0 end) as gms,
              sum(case when role = 'Player' then 1 else 0 end) as players
       FROM users;
-    " 2>/dev/null || true)
+    ")
 
     if [ -n "$user_summary" ]; then
       IFS="|" read -r tot gms ply <<< "$user_summary"
@@ -421,12 +431,12 @@ else:
   echo -e "\n${C_BOLD}[ACTIVE VTT WORLD & CAMPAIGN]${C_RESET}"
   if [ -f "$db_file" ]; then
     local active_maps
-    active_maps=$(sqlite3 "$db_file" "
+    active_maps=$(run_sqlite "$db_file" "
       SELECT name, map_type, width, height, grid_size,
              (SELECT count(*) FROM tokens WHERE map_id = maps.id) as token_count
       FROM maps
       WHERE is_active = 1;
-    " 2>/dev/null || true)
+    ")
 
     if [ -n "$active_maps" ]; then
       while IFS="|" read -r m_name m_type m_w m_h m_grid m_tokens; do
@@ -439,12 +449,12 @@ else:
     fi
 
     local counts
-    counts=$(sqlite3 "$db_file" "
+    counts=$(run_sqlite "$db_file" "
       SELECT (SELECT count(*) FROM character_sheets),
              (SELECT count(*) FROM ship_sheets),
              (SELECT count(*) FROM adversary_templates),
              (SELECT count(*) FROM roll_logs);
-    " 2>/dev/null || true)
+    ")
 
     if [ -n "$counts" ]; then
       IFS="|" read -r n_chars n_ships n_adv n_rolls <<< "$counts"

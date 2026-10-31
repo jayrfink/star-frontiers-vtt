@@ -63,11 +63,19 @@ export class BetterSqlite3Store extends session.Store {
         this.destroy(sid, () => {});
         return fn ? fn(null, null) : null;
       }
-      const data = JSON.parse(row.sess);
+      let data;
+      try {
+        data = JSON.parse(row.sess);
+      } catch (parseErr) {
+        console.warn(`[BetterSqlite3Store] Corrupted session JSON for sid ${sid}, destroying:`, parseErr.message);
+        this.destroy(sid, () => {});
+        return fn ? fn(null, null) : null;
+      }
       return fn ? fn(null, data) : data;
     } catch (err) {
-      if (fn) return fn(err);
-      throw err;
+      console.warn(`[BetterSqlite3Store] Error reading session sid ${sid}:`, err.message);
+      if (fn) return fn(null, null);
+      return null;
     }
   }
 
@@ -113,7 +121,8 @@ export class BetterSqlite3Store extends session.Store {
       this.db.prepare(`UPDATE ${this.table} SET expired = ? WHERE sid = ?`).run(expired, sid);
       if (fn) fn(null);
     } catch (err) {
-      if (fn) fn(err);
+      console.warn(`[BetterSqlite3Store] Error touching session sid ${sid}:`, err.message);
+      if (fn) fn(null);
       else throw err;
     }
   }

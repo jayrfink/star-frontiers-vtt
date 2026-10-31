@@ -778,6 +778,31 @@ describe('Auth API', () => {
           fs.rmSync(tmpDir, { recursive: true, force: true });
         }
       });
+
+      it('gracefully handles corrupt session JSON or read errors by returning null instead of throwing or crashing with 500', async () => {
+        const tmpDir = path.join(os.tmpdir(), `sf-sess-corrupt-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+        fs.mkdirSync(tmpDir, { recursive: true });
+        try {
+          const store = new BetterSqlite3Store({ dir: tmpDir, db: 'sessions.db' });
+          // Insert a corrupt session payload directly
+          store.db.prepare('INSERT INTO sessions (sid, expired, sess) VALUES (?, ?, ?)')
+            .run('corrupt-sid', Date.now() + 100000, 'NOT_VALID_JSON{');
+
+          const result = await new Promise((resolve) => {
+            store.get('corrupt-sid', (err, data) => {
+              resolve({ err, data });
+            });
+          });
+
+          // Must return data: null without passing err to callback (which prevents 500 crashes)
+          expect(result.err).toBeNull();
+          expect(result.data).toBeNull();
+
+          store.close();
+        } finally {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
     });
 
     // Bug 2: Invalidate sessions from sessions.db on DELETE /api/auth/users/:id
