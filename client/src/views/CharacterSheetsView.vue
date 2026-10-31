@@ -1953,7 +1953,7 @@ export default {
 .header-main {
   display: flex;
   gap: 16px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .header-content {
