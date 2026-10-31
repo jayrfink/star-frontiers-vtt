@@ -355,14 +355,14 @@ export default {
   width: 380px;
   max-width: 90vw;
   max-height: calc(100vh - 100px);
-  background-color: #0b1320;
-  border: 1px solid #1e293b;
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(0, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   z-index: 150;
-  color: #f1f5f9;
+  color: #e6edf3;
   overflow: hidden;
   font-family: inherit;
 }
@@ -372,8 +372,8 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  background-color: #111d33;
-  border-bottom: 1px solid #1e293b;
+  background-color: #21262d;
+  border-bottom: 1px solid #30363d;
 }
 
 .hud-header-left {
@@ -386,12 +386,12 @@ export default {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 2px solid #00e5ff;
+  border: 2px solid #00ffff;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #030712;
+  background: #0d1117;
 }
 
 .hud-avatar-circle img {
@@ -408,7 +408,7 @@ export default {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #f8fafc;
+  color: #e6edf3;
 }
 
 .hud-type-badge {
@@ -417,8 +417,9 @@ export default {
   font-weight: bold;
   padding: 1px 6px;
   border-radius: 4px;
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: #082d33;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  color: #00ffff;
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -427,15 +428,16 @@ export default {
 .hud-close-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #8b949e;
   font-size: 1.1rem;
   cursor: pointer;
   padding: 4px;
   line-height: 1;
+  transition: color 0.15s ease;
 }
 
 .hud-close-btn:hover {
-  color: #f8fafc;
+  color: #00ffff;
 }
 
 .hud-body {
@@ -453,8 +455,8 @@ export default {
 }
 
 .tracker-group {
-  background-color: #131f37;
-  border: 1px solid #1e293b;
+  background-color: #21262d;
+  border: 1px solid #30363d;
   border-radius: 6px;
   padding: 10px;
   display: flex;
@@ -472,7 +474,7 @@ export default {
   font-size: 0.75rem;
   font-weight: bold;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #8b949e;
   letter-spacing: 0.5px;
 }
 
@@ -496,13 +498,13 @@ export default {
 .speed-readout {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: #00ffff;
   font-family: monospace;
 }
 
 .speed-kph {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #8b949e;
 }
 
 .speed-input-wrapper {
@@ -517,14 +519,21 @@ export default {
 }
 
 .tracker-input {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   border-radius: 4px;
-  color: #f8fafc;
+  color: #e6edf3;
   padding: 3px 6px;
   font-size: 0.85rem;
   width: 55px;
   text-align: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tracker-input:focus {
+  outline: none;
+  border-color: #00ffff;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.35);
 }
 
 .speed-controls-row {
@@ -578,16 +587,16 @@ export default {
 .battery-readout {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #38bdf8;
+  color: #00ffff;
   font-family: monospace;
 }
 
 .battery-meter {
   height: 8px;
-  background-color: #0f172a;
+  background-color: #0d1117;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid #334155;
+  border: 1px solid #30363d;
 }
 
 .battery-fill {
@@ -602,31 +611,33 @@ export default {
 
 .chip {
   flex: 1;
-  background-color: #1e293b;
-  border: 1px solid #334155;
-  color: #cbd5e1;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  color: #e6edf3;
   border-radius: 4px;
   padding: 4px 0;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
 }
 
 .chip:hover {
-  background-color: #334155;
-  color: #ffffff;
+  background-color: #30363d;
+  color: #00ffff;
 }
 
 .chip-recharge {
   flex: 1.5;
-  background-color: rgba(14, 165, 233, 0.2);
-  border-color: #0ea5e9;
-  color: #38bdf8;
+  background-color: #082d33;
+  border-color: rgba(0, 255, 255, 0.4);
+  color: #00ffff;
 }
 
 .chip-recharge:hover {
-  background-color: rgba(14, 165, 233, 0.35);
+  background-color: #0d3b44;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
 }
 
 .conditions-group {
@@ -642,9 +653,9 @@ export default {
 }
 
 .cond-pill {
-  background-color: #1e293b;
-  border: 1px solid #334155;
-  color: #94a3b8;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  color: #8b949e;
   border-radius: 4px;
   padding: 3px 7px;
   font-size: 0.72rem;
@@ -653,8 +664,8 @@ export default {
 }
 
 .cond-pill:hover {
-  border-color: #64748b;
-  color: #cbd5e1;
+  border-color: #58a6ff;
+  color: #e6edf3;
 }
 
 .cond-pill.active {
@@ -682,14 +693,15 @@ export default {
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid #38bdf8;
-  background-color: rgba(56, 189, 248, 0.15);
-  color: #e0f2fe;
-  transition: background-color 0.15s ease;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  background-color: #082d33;
+  color: #00ffff;
+  transition: all 0.15s ease;
 }
 
 .btn-dice-action:hover {
-  background-color: rgba(56, 189, 248, 0.3);
+  background-color: #0d3b44;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
 }
 
 .btn-roll-damage {
@@ -716,26 +728,28 @@ export default {
 
 .note-label {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: #8b949e;
   text-transform: uppercase;
 }
 
 .note-input {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   border-radius: 4px;
-  color: #f8fafc;
+  color: #e6edf3;
   padding: 5px 8px;
   font-size: 0.8rem;
+  transition: border-color 0.15s ease;
 }
 
 .note-input:focus {
   outline: none;
-  border-color: #38bdf8;
+  border-color: #00ffff;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
 }
 
 .reference-card {
-  border-top: 1px solid #1e293b;
+  border-top: 1px solid #30363d;
   padding-top: 10px;
 }
 
@@ -743,7 +757,7 @@ export default {
   margin: 0 0 6px 0;
   font-size: 0.8rem;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #00ffff;
   letter-spacing: 0.5px;
 }
 
@@ -754,7 +768,8 @@ export default {
 }
 
 .overview-item {
-  background-color: #131f37;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   padding: 6px 8px;
   border-radius: 4px;
   display: flex;
@@ -763,19 +778,19 @@ export default {
 
 .item-label {
   font-size: 0.65rem;
-  color: #64748b;
+  color: #8b949e;
   text-transform: uppercase;
 }
 
 .item-value {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: #e6edf3;
 }
 
 .ref-desc {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: #8b949e;
   margin: 6px 0 0 0;
   line-height: 1.4;
   font-style: italic;

@@ -311,14 +311,14 @@ export default {
   width: 360px;
   max-width: 90vw;
   max-height: calc(100vh - 100px);
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(0, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   z-index: 150;
-  color: #f8fafc;
+  color: #e6edf3;
   overflow: hidden;
   font-family: inherit;
 }
@@ -328,8 +328,8 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  background-color: #1e293b;
-  border-bottom: 1px solid #334155;
+  background-color: #21262d;
+  border-bottom: 1px solid #30363d;
 }
 
 .hud-header-left {
@@ -347,7 +347,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #020617;
+  background: #0d1117;
 }
 
 .hud-avatar-circle img {
@@ -360,7 +360,7 @@ export default {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #f8fafc;
+  color: #e6edf3;
 }
 
 .hud-tier-badge {
@@ -376,16 +376,17 @@ export default {
 .hud-close-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #8b949e;
   font-size: 1.1rem;
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .hud-close-btn:hover {
-  color: #ffffff;
-  background-color: #334155;
+  color: #00ffff;
+  background-color: #30363d;
 }
 
 .hud-body {
@@ -418,7 +419,7 @@ export default {
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #8b949e;
   letter-spacing: 0.05em;
 }
 
@@ -435,19 +436,21 @@ export default {
 
 .tracker-input {
   width: 58px;
-  background-color: #020617;
-  border: 1px solid #334155;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   border-radius: 4px;
-  color: #f8fafc;
+  color: #e6edf3;
   font-weight: bold;
   font-size: 1rem;
   padding: 4px 6px;
   text-align: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tracker-input:focus {
   outline: none;
-  border-color: #38bdf8;
+  border-color: #00ffff;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.35);
 }
 
 .tracker-slash {
@@ -456,7 +459,7 @@ export default {
 
 .tracker-max {
   font-size: 0.95rem;
-  color: #94a3b8;
+  color: #8b949e;
   margin-right: 6px;
 }
 
@@ -500,9 +503,9 @@ export default {
 }
 
 .cond-pill {
-  background-color: #1e293b;
-  border: 1px solid #334155;
-  color: #94a3b8;
+  background-color: #21262d;
+  border: 1px solid #30363d;
+  color: #8b949e;
   font-size: 0.75rem;
   padding: 3px 7px;
   border-radius: 12px;
@@ -511,18 +514,20 @@ export default {
 }
 
 .cond-pill:hover {
-  border-color: #64748b;
+  border-color: #58a6ff;
+  color: #e6edf3;
 }
 
 .cond-pill.active {
-  background-color: #0369a1;
-  color: #ffffff;
-  border-color: #38bdf8;
+  background-color: #082d33;
+  color: #00ffff;
+  border-color: #00ffff;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
 }
 
 /* Reference Card Styles */
 .reference-card {
-  border-top: 1px solid #334155;
+  border-top: 1px solid #30363d;
   padding-top: 12px;
 }
 
@@ -530,7 +535,8 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  background-color: #1e293b;
+  background-color: #21262d;
+  border: 1px solid #30363d;
   padding: 10px;
   border-radius: 6px;
 }
@@ -546,20 +552,20 @@ export default {
 
 .item-label {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: #8b949e;
   text-transform: uppercase;
 }
 
 .item-value {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #f8fafc;
+  color: #e6edf3;
 }
 
 .section-title {
   font-size: 0.82rem;
   text-transform: uppercase;
-  color: #38bdf8;
+  color: #00ffff;
   margin: 10px 0 6px 0;
   letter-spacing: 0.05em;
 }
@@ -571,8 +577,8 @@ export default {
 }
 
 .action-card {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+  background-color: #21262d;
+  border: 1px solid #30363d;
   border-radius: 6px;
   padding: 10px;
 }
@@ -586,12 +592,13 @@ export default {
 .action-name {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #f8fafc;
+  color: #e6edf3;
 }
 
 .action-pct-badge {
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: #082d33;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  color: #00ffff;
   font-size: 0.75rem;
   font-weight: bold;
   padding: 2px 6px;
@@ -606,16 +613,17 @@ export default {
 
 .detail-chip {
   font-size: 0.72rem;
-  background-color: #0f172a;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   padding: 2px 6px;
   border-radius: 4px;
-  color: #cbd5e1;
+  color: #8b949e;
 }
 
 .action-desc {
   margin: 4px 0 8px 0;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: #8b949e;
 }
 
 .action-buttons-row {
@@ -628,22 +636,25 @@ export default {
   padding: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .btn-action-roll.hit {
-  background-color: #0284c7;
+  background-color: #238636;
+  border-color: #3fb950;
   color: #ffffff;
 }
 
 .btn-action-roll.hit:hover {
-  background-color: #0369a1;
+  background-color: #2ea043;
 }
 
 .btn-action-roll.dmg {
   background-color: #d97706;
+  border-color: #f59e0b;
   color: #ffffff;
 }
 
@@ -658,10 +669,11 @@ export default {
 }
 
 .trait-card {
-  background-color: #1e293b;
+  background-color: #21262d;
+  border: 1px solid #30363d;
   padding: 8px 10px;
   border-radius: 4px;
   font-size: 0.78rem;
-  color: #cbd5e1;
+  color: #e6edf3;
 }
 </style>
