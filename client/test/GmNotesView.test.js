@@ -193,4 +193,24 @@ describe('GmNotesView Component', () => {
     expect(source).not.toContain('list-style: border-box');
     expect(source).toContain('box-sizing: border-box');
   });
+
+  it('renders GM Sessions header without the mini icon', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../src/views/GmNotesView.vue'), 'utf-8');
+    expect(source).toContain('<h3>GM Sessions</h3>');
+    expect(source).not.toContain('<h3>📓 GM Sessions</h3>');
+  });
+
+  it('styles GM Sessions buttons with VTT-themed teal/aqua #082d33 and #2394a6 instead of blue #0284c7', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../src/views/GmNotesView.vue'), 'utf-8');
+    expect(source).not.toMatch(/\.btn-new-session\s*\{[^}]*background:\s*#0284c7/);
+    expect(source).toMatch(/\.btn-new-session\s*\{[^}]*background:\s*#082d33/);
+    expect(source).toMatch(/\.btn-new-session\s*\{[^}]*border:\s*1px\s+solid\s+#2394a6/);
+    expect(source).not.toMatch(/\.btn-add-panel\s*\{[^}]*background:\s*#0284c7/);
+    expect(source).toMatch(/\.btn-add-panel\s*\{[^}]*background:\s*#082d33/);
+    expect(source).toMatch(/\.btn-add-panel\s*\{[^}]*border:\s*1px\s+solid\s+#2394a6/);
+  });
 });

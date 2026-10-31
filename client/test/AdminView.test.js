@@ -598,5 +598,17 @@ describe('AdminView.vue - Uploads & Assets File Manager', () => {
       expect(instance.users.value).toHaveLength(2);
     });
   });
+
+  describe('Theming and Styling', () => {
+    it('styles AdminView headers and secondary buttons with VTT-themed aqua/teal', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const source = fs.readFileSync(path.resolve(__dirname, '../src/views/AdminView.vue'), 'utf-8');
+      expect(source).toMatch(/\.admin-header\s+h2\s*\{[^}]*color:\s*#00ffff/);
+      expect(source).toMatch(/\.admin-card\s+h3\s*\{[^}]*color:\s*#2394a6/);
+      expect(source).toMatch(/\.btn-secondary\s*\{[^}]*background(-color)?:\s*#082d33/);
+      expect(source).toMatch(/\.btn-secondary\s*\{[^}]*border:\s*1px\s+solid\s+#2394a6/);
+    });
+  });
 });
 

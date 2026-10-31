@@ -3,7 +3,7 @@
     <!-- Left Sidebar: Campaign Sessions -->
     <aside class="sessions-sidebar">
       <div class="sidebar-header">
-        <h3>📓 GM Sessions</h3>
+        <h3>GM Sessions</h3>
         <button type="button" class="btn-primary btn-new-session" @click="createNewSession">
           + New Session
         </button>
@@ -350,22 +350,25 @@ onMounted(() => {
 .sidebar-header h3 {
   margin: 0;
   font-size: 1rem;
-  color: #38bdf8;
+  color: #00ffff;
 }
 
 .btn-new-session {
-  background: #0284c7;
-  color: #cecece;
-  border: 1px solid #38bdf8;
+  background: #082d33;
+  color: #00ffff;
+  border: 1px solid #2394a6;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 
 .btn-new-session:hover {
-  background: #0369a1;
+  background: #0d3b44;
+  border-color: #33b5cb;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
 }
 
 .session-list {
@@ -391,12 +394,13 @@ onMounted(() => {
 }
 
 .gm-session-item:hover {
-  background: rgba(56, 189, 248, 0.08);
+  background: rgba(0, 255, 255, 0.08);
 }
 
 .gm-session-item.active {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: #38bdf8;
+  background: #082d33;
+  border-color: #2394a6;
+  border-left: 4px solid aquamarine;
 }
 
 .session-title-text {
@@ -405,6 +409,10 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.gm-session-item.active .session-title-text {
+  color: aquamarine;
 }
 
 .btn-delete-small {
@@ -485,17 +493,20 @@ onMounted(() => {
 }
 
 .btn-add-panel {
-  background: #0284c7;
-  border: 1px solid #38bdf8;
-  color: #cecece;
+  background: #082d33;
+  border: 1px solid #2394a6;
+  color: #00ffff;
   font-weight: 600;
   padding: 8px 14px;
   border-radius: 6px;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 
 .btn-add-panel:hover {
-  background: #0369a1;
+  background: #0d3b44;
+  border-color: #33b5cb;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
 }
 
 .preset-chips {
@@ -507,7 +518,7 @@ onMounted(() => {
 
 .preset-label {
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: #2394a6;
   text-transform: uppercase;
   font-weight: 600;
 }
@@ -524,8 +535,9 @@ onMounted(() => {
 }
 
 .btn-preset-chip:hover {
-  border-color: #38bdf8;
-  color: #38bdf8;
+  border-color: #2394a6;
+  color: #00ffff;
+  background: rgba(35, 148, 166, 0.15);
 }
 
 .note-panels-grid {
@@ -550,11 +562,18 @@ onMounted(() => {
   flex: 1;
   background: #0d1117;
   border: 1px solid #334155;
-  color: #38bdf8;
+  color: #00ffff;
   font-size: 1rem;
   font-weight: 700;
   padding: 6px 10px;
   border-radius: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.panel-title-input:focus {
+  outline: none;
+  border-color: #2394a6;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
 }
 
 .save-status {

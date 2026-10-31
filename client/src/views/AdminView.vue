@@ -964,6 +964,7 @@ defineExpose({
 .admin-header h2 {
   font-size: 22px;
   margin-bottom: 4px;
+  color: #00ffff;
 }
 
 .subtitle {
@@ -1011,6 +1012,7 @@ defineExpose({
 .admin-card h3 {
   font-size: 16px;
   margin-bottom: 16px;
+  color: #2394a6;
 }
 
 .card-header-row {
@@ -1193,7 +1195,7 @@ defineExpose({
 .users-table th,
 .assets-table th,
 .tokens-table th {
-  color: var(--text-secondary);
+  color: #3a859c;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -1254,21 +1256,23 @@ defineExpose({
 }
 
 .btn-secondary {
-  background-color: #000000 !important;
-  background: #000000 !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
-  border: 1px solid teal !important;
+  background-color: #082d33 !important;
+  background: #082d33 !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  border: 1px solid #2394a6 !important;
+  border-radius: var(--radius);
   font-weight: 600;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #0d3b44 !important;
+  background: #0d3b44 !important;
+  border-color: #33b5cb !important;
+  color: #00ffff !important;
+  -webkit-text-fill-color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
 }
 
 .btn-danger {
