@@ -2813,7 +2813,7 @@ export default {
 
 .btn-shift {
   background: #000000;
-  border: 1px solid teal;
+  border: 1px solid #00a8a8;
   color: aqua;
   font-size: 0.65rem;
   padding: 2px 5px;
@@ -2822,10 +2822,10 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 .btn-shift:hover {
-  background: #051414;
-  border-color: #00a8a8;
-  color: #00a8a8;
-  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
+  background: #082020;
+  border-color: #00dada;
+  color: #00dada;
+  box-shadow: 0 0 6px rgba(0, 218, 218, 0.4);
 }
 .btn-shift:active {
   transform: translateY(1px);
@@ -3099,9 +3099,9 @@ export default {
 .btn-secondary {
   background-color: #000000 !important;
   background: #000000 !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
-  border: 1px solid teal !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  border: 1px solid #00a8a8 !important;
   padding: 5px 12px;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -3111,11 +3111,11 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 .btn-secondary:hover:not(:disabled) {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 .btn-secondary:active:not(:disabled) {
   transform: translateY(1px);
@@ -3227,9 +3227,9 @@ export default {
 .modal-card .btn-modal-cancel {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   padding: 6px 14px;
   border-radius: var(--radius, 4px);
   font-size: 13px;
@@ -3239,11 +3239,11 @@ export default {
 }
 
 .modal-card .btn-modal-cancel:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .modal-card .btn-modal-create {
@@ -3553,9 +3553,9 @@ export default {
 .btn-browse-avatar {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   border-radius: var(--radius, 4px);
   padding: 6px 14px;
   font-size: 13px;
@@ -3565,11 +3565,11 @@ export default {
 }
 
 .btn-browse-avatar:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .notes-section {

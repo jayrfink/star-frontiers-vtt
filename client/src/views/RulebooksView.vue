@@ -927,9 +927,9 @@ onMounted(() => {
 .page-btn {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   padding: 6px 12px;
   border-radius: var(--radius);
   font-size: 13px;
@@ -939,11 +939,11 @@ onMounted(() => {
 }
 
 .page-btn:hover:not(:disabled) {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .page-btn:disabled {

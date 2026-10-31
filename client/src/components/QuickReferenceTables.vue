@@ -1075,9 +1075,9 @@ const noResults = computed(() => {
   font-size: 12px;
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   font-weight: 600;
   border-radius: var(--radius);
   cursor: pointer;
@@ -1085,10 +1085,10 @@ const noResults = computed(() => {
 }
 
 .clear-filter-btn:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 </style>

@@ -836,8 +836,8 @@ export default {
 
 .btn-footer-cancel {
   background: #000000;
-  border: 1px solid teal;
-  color: teal;
+  border: 1px solid #00a8a8;
+  color: #00a8a8;
   padding: 6px 14px;
   border-radius: 4px;
   font-size: 13px;
@@ -847,10 +847,10 @@ export default {
 }
 
 .btn-footer-cancel:hover {
-  background: #051414;
-  border-color: #00a8a8;
-  color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background: #082020;
+  border-color: #00dada;
+  color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .btn-footer-use {

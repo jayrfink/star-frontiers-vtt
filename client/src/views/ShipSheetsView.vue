@@ -3418,9 +3418,9 @@ export default {
 .btn-secondary {
   background-color: #000000 !important;
   background: #000000 !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
-  border: 1px solid teal !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
+  border: 1px solid #00a8a8 !important;
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -3429,11 +3429,11 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 .btn-secondary:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 /* Modal */
@@ -3564,9 +3564,9 @@ export default {
 .btn-modal-cancel {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   padding: 6px 14px;
   border-radius: var(--radius, 4px);
   font-size: 13px;
@@ -3576,11 +3576,11 @@ export default {
 }
 
 .btn-modal-cancel:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .btn-modal-create {
@@ -3646,7 +3646,7 @@ export default {
   top: 2px;
   right: 2px;
   background: #000000;
-  border: 1px solid teal;
+  border: 1px solid #00a8a8;
   color: aqua;
   border-radius: 50%;
   width: 18px;
@@ -3669,9 +3669,9 @@ export default {
 .btn-browse-avatar {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   border-radius: var(--radius, 4px);
   padding: 6px 14px;
   font-size: 13px;
@@ -3681,11 +3681,11 @@ export default {
 }
 
 .btn-browse-avatar:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .avatar-file-input {
@@ -3696,9 +3696,9 @@ export default {
 .avatar-file-input::file-selector-button,
 .avatar-file-input::-webkit-file-upload-button {
   background-color: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   border-radius: var(--radius, 4px);
   padding: 6px 14px;
   font-size: 13px;
@@ -3709,11 +3709,11 @@ export default {
 
 .avatar-file-input::file-selector-button:hover,
 .avatar-file-input::-webkit-file-upload-button:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .notes-section {
@@ -3922,16 +3922,16 @@ export default {
 }
 
 .tab-btn:hover {
-  border-color: teal;
+  border-color: #00a8a8;
   color: #cecece;
 }
 
 .tab-btn.active {
-  background-color: #051414;
-  border-color: #00a8a8;
+  background-color: #082020;
+  border-color: #00dada;
   color: #00ffff;
   font-weight: 600;
-  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
+  box-shadow: 0 0 6px rgba(0, 218, 218, 0.4);
 }
 
 .weapon-picker-list {
@@ -4029,7 +4029,7 @@ export default {
 
 .btn-equip-weapon {
   background-color: #000000;
-  border: 1px solid teal;
+  border: 1px solid #00a8a8;
   color: #00ffff;
   font-weight: 600;
   font-size: 0.85rem;
@@ -4041,7 +4041,7 @@ export default {
 }
 
 .btn-equip-weapon:hover {
-  background-color: #051414;
+  background-color: #082020;
   border-color: aqua;
   color: aqua;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);

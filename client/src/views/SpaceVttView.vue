@@ -4511,7 +4511,7 @@ onBeforeUnmount(() => {
 
 .btn-group-sm button {
   background: #000000;
-  border: 1px solid teal;
+  border: 1px solid #00a8a8;
   color: #00ffff;
   padding: 4px 8px;
   font-size: 12px;
@@ -4522,10 +4522,10 @@ onBeforeUnmount(() => {
 }
 
 .btn-group-sm button:hover:not(:disabled) {
-  background: #051414;
-  border-color: #00a8a8;
-  color: #00a8a8;
-  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
+  background: #082020;
+  border-color: #00dada;
+  color: #00dada;
+  box-shadow: 0 0 6px rgba(0, 218, 218, 0.4);
 }
 
 .label-with-hint {
@@ -4721,9 +4721,9 @@ onBeforeUnmount(() => {
 .token-file-input::file-selector-button,
 .map-file-input::file-selector-button {
   background-color: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   border-radius: var(--radius);
   padding: 6px 14px;
   font-size: 13px;
@@ -4735,9 +4735,9 @@ onBeforeUnmount(() => {
 .token-file-input::-webkit-file-upload-button,
 .map-file-input::-webkit-file-upload-button {
   background-color: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   border-radius: var(--radius);
   padding: 6px 14px;
   font-size: 13px;
@@ -4748,28 +4748,28 @@ onBeforeUnmount(() => {
 
 .token-file-input::file-selector-button:hover,
 .map-file-input::file-selector-button:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .token-file-input::-webkit-file-upload-button:hover,
 .map-file-input::-webkit-file-upload-button:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .btn-browse-avatar {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   border-radius: var(--radius);
   padding: 6px 14px;
   font-size: 13px;
@@ -4779,16 +4779,16 @@ onBeforeUnmount(() => {
 }
 
 .btn-browse-avatar:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .btn-clear-avatar {
   background: #000000 !important;
-  border: 1px solid teal !important;
+  border: 1px solid #00a8a8 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
   font-size: 11px;
@@ -4799,16 +4799,16 @@ onBeforeUnmount(() => {
 }
 
 .btn-clear-avatar:hover {
-  background: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 6px rgba(0, 128, 128, 0.4);
+  background: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 6px rgba(0, 218, 218, 0.4);
 }
 
 .uploading-spinner {
   font-size: 12px;
-  color: #00a8a8;
+  color: #00dada;
   font-style: italic;
 }
 
@@ -4856,9 +4856,9 @@ onBeforeUnmount(() => {
 .btn-modal-cancel {
   background-color: #000000 !important;
   background: #000000 !important;
-  border: 1px solid teal !important;
-  color: teal !important;
-  -webkit-text-fill-color: teal;
+  border: 1px solid #00a8a8 !important;
+  color: #00a8a8 !important;
+  -webkit-text-fill-color: #00a8a8;
   padding: 6px 14px;
   border-radius: var(--radius);
   font-size: 13px;
@@ -4868,11 +4868,11 @@ onBeforeUnmount(() => {
 }
 
 .btn-modal-cancel:hover {
-  background-color: #051414 !important;
-  border-color: #00a8a8 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+  background-color: #082020 !important;
+  border-color: #00dada !important;
+  color: #00dada !important;
+  -webkit-text-fill-color: #00dada;
+  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
 .modal-card input[type="text"],
