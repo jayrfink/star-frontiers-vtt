@@ -55,12 +55,44 @@ log_error() {
   echo -e "${C_RED}[ERROR]${C_RESET} $*"
 }
 
+ensure_docker() {
+  if docker info >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Docker daemon is not responding. Check if OrbStack is installed and stopped.
+  if command -v orb >/dev/null 2>&1; then
+    local orb_state
+    orb_state="$(orb status 2>/dev/null || echo "Stopped")"
+    if [ "$orb_state" != "Running" ]; then
+      log_info "OrbStack/Docker daemon is stopped. Starting OrbStack via 'orb start'..."
+      orb start >/dev/null 2>&1 || true
+      local count=0
+      while [ $count -lt 15 ]; do
+        if docker info >/dev/null 2>&1; then
+          log_success "OrbStack is running and Docker daemon is responsive."
+          return 0
+        fi
+        sleep 1
+        count=$((count + 1))
+      done
+    fi
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    log_error "Docker daemon is not running or not responding."
+    log_error "Please start OrbStack or Docker Desktop, then try again."
+    exit 1
+  fi
+}
+
 ensure_container() {
-  if ! docker ps --format '{{.Names}}' | grep -Eq "^${CONTAINER_NAME}\$"; then
+  ensure_docker
+  if ! is_container_running; then
     log_info "Container '${CONTAINER_NAME}' is not running. Starting it via docker compose up -d..."
     (cd "$DIR" && docker compose up -d)
     sleep 1
-    if ! docker ps --format '{{.Names}}' | grep -Eq "^${CONTAINER_NAME}\$"; then
+    if ! is_container_running; then
       log_error "Failed to start Docker container '${CONTAINER_NAME}'."
       exit 1
     fi
@@ -69,7 +101,7 @@ ensure_container() {
 }
 
 is_container_running() {
-  docker ps --format '{{.Names}}' | grep -Eq "^${CONTAINER_NAME}\$"
+  docker ps --format '{{.Names}}' 2>/dev/null | grep -Eq "^${CONTAINER_NAME}\$"
 }
 
 is_backend_running() {
@@ -238,6 +270,15 @@ show_status() {
 
   # 1. Container & Services Status
   echo -e "\n${C_BOLD}[SERVICES]${C_RESET}"
+  if ! docker info >/dev/null 2>&1; then
+    echo -e "  Docker Daemon:               ${C_RED}STOPPED${C_RESET} (Start OrbStack or Docker Desktop)"
+    echo -e "  Container (${CONTAINER_NAME}): ${C_RED}STOPPED${C_RESET}"
+    echo -e "  Backend API (port 3000):     ${C_RED}STOPPED${C_RESET}"
+    echo -e "  Frontend UI (port 3001):     ${C_RED}STOPPED${C_RESET}"
+    echo -e "\n======================================================"
+    return 0
+  fi
+
   if is_container_running; then
     local c_id c_ip c_uptime
     c_id=$(docker ps --filter "name=^${CONTAINER_NAME}\$" --format '{{.ID}}')
