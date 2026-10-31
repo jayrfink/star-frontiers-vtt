@@ -937,7 +937,7 @@ export default {
       if (!this.selectedShip || !this.selectedShip.defenses) return [];
       if (Array.isArray(this.selectedShip.defenses)) return this.selectedShip.defenses;
       if (!this.selectedShip.defenses.items) {
-        this.selectedShip.defenses = this.normalizeDefenses(this.selectedShip.defenses);
+        return this.normalizeDefenses(this.selectedShip.defenses).items || [];
       }
       return this.selectedShip.defenses.items || [];
     },

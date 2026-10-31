@@ -279,7 +279,7 @@
                 <input
                   type="number"
                   v-model.number="selectedChar.current_xp"
-                  @change="updateCharacter"
+                  @change="onXpInputChange"
                   class="input-xp"
                   min="0"
                   placeholder="XP"
@@ -1398,6 +1398,11 @@ export default {
     adjustXP(amount) {
       if (!this.selectedChar) return;
       this.selectedChar.current_xp = Math.max(0, (this.selectedChar.current_xp || 0) + amount);
+      this.updateCharacter();
+    },
+    onXpInputChange() {
+      if (!this.selectedChar) return;
+      this.selectedChar.current_xp = Math.max(0, Math.min(1000000, Number(this.selectedChar.current_xp || 0)));
       this.updateCharacter();
     },
     applyXpSpend() {
