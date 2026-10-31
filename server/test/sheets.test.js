@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
-import { createTestDb } from '../src/db.js';
+import fs from 'fs';
+import path from 'path';
+import { createTestDb, createDb } from '../src/db.js';
 import { createApp } from '../src/index.js';
 
 describe('Sheets API & Socket.io', () => {
@@ -934,6 +936,49 @@ describe('Sheets API & Socket.io', () => {
       expect(listRes.body.map(c => c.id)).toEqual([c3.id, c1.id, c2.id]);
     });
 
+    it('preserves reordered character sheets across server restart / database reinitialization', async () => {
+      const tmpDbPath = path.join('/tmp', `test-char-restart-${Date.now()}.db`);
+      let localDb = createDb(tmpDbPath);
+      let localAppObj = createApp(localDb, ':memory:');
+
+      try {
+        const gmAgent = request.agent(localAppObj.app);
+        await gmAgent.post('/api/auth/register').send({ username: 'gmRestart', password: 'password123' });
+        await gmAgent.post('/api/auth/login').send({ username: 'gmRestart', password: 'password123' });
+
+        const c1 = (await gmAgent.post('/api/characters').send({ name: 'Alpha', race: 'Human' })).body;
+        const c2 = (await gmAgent.post('/api/characters').send({ name: 'Beta', race: 'Vrusk' })).body;
+        const c3 = (await gmAgent.post('/api/characters').send({ name: 'Gamma', race: 'Yazirian' })).body;
+
+        // Reorder to Gamma, Alpha, Beta
+        const reorderRes = await gmAgent.put('/api/characters/reorder').send({
+          order: [c3.id, c1.id, c2.id],
+        });
+        expect(reorderRes.status).toBe(200);
+
+        // Close app and db (server shutdown)
+        if (localAppObj.server && localAppObj.server.close) localAppObj.server.close();
+        localDb.close();
+
+        // Server restarts: re-opens database with createDb and creates new app instance
+        localDb = createDb(tmpDbPath);
+        localAppObj = createApp(localDb, ':memory:');
+
+        const restartAgent = request.agent(localAppObj.app);
+        await restartAgent.post('/api/auth/login').send({ username: 'gmRestart', password: 'password123' });
+
+        const listRes = await restartAgent.get('/api/characters');
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.map(c => c.id)).toEqual([c3.id, c1.id, c2.id]);
+      } finally {
+        if (localAppObj && localAppObj.server && localAppObj.server.close) localAppObj.server.close();
+        if (localDb) localDb.close();
+        if (fs.existsSync(tmpDbPath)) fs.unlinkSync(tmpDbPath);
+        if (fs.existsSync(`${tmpDbPath}-wal`)) fs.unlinkSync(`${tmpDbPath}-wal`);
+        if (fs.existsSync(`${tmpDbPath}-shm`)) fs.unlinkSync(`${tmpDbPath}-shm`);
+      }
+    });
+
     it('rejects unauthenticated requests to reorder character sheets with 401', async () => {
       const res = await request(app).put('/api/characters/reorder').send({ order: [1, 2] });
       expect(res.status).toBe(401);
@@ -1065,6 +1110,49 @@ describe('Sheets API & Socket.io', () => {
       });
       expect(gmSuccessRes.status).toBe(200);
       expect(gmSuccessRes.body.order).toEqual([pShip1.id, gmShip.id, pShip2.id]);
+    });
+
+    it('preserves reordered ship sheets across server restart / database reinitialization', async () => {
+      const tmpDbPath = path.join('/tmp', `test-ship-restart-${Date.now()}.db`);
+      let localDb = createDb(tmpDbPath);
+      let localAppObj = createApp(localDb, ':memory:');
+
+      try {
+        const gmAgent = request.agent(localAppObj.app);
+        await gmAgent.post('/api/auth/register').send({ username: 'gmShipRestart', password: 'password123' });
+        await gmAgent.post('/api/auth/login').send({ username: 'gmShipRestart', password: 'password123' });
+
+        const s1 = (await gmAgent.post('/api/ships').send({ name: 'Ship 1', ship_type: 'Fighter' })).body;
+        const s2 = (await gmAgent.post('/api/ships').send({ name: 'Ship 2', ship_type: 'Scout' })).body;
+        const s3 = (await gmAgent.post('/api/ships').send({ name: 'Ship 3', ship_type: 'Cruiser' })).body;
+
+        // Reorder to Ship 3, Ship 1, Ship 2
+        const reorderRes = await gmAgent.put('/api/ships/reorder').send({
+          order: [s3.id, s1.id, s2.id],
+        });
+        expect(reorderRes.status).toBe(200);
+
+        // Close app and db (server shutdown)
+        if (localAppObj.server && localAppObj.server.close) localAppObj.server.close();
+        localDb.close();
+
+        // Server restarts: re-opens database with createDb and creates new app instance
+        localDb = createDb(tmpDbPath);
+        localAppObj = createApp(localDb, ':memory:');
+
+        const restartAgent = request.agent(localAppObj.app);
+        await restartAgent.post('/api/auth/login').send({ username: 'gmShipRestart', password: 'password123' });
+
+        const listRes = await restartAgent.get('/api/ships');
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.map(s => s.id)).toEqual([s3.id, s1.id, s2.id]);
+      } finally {
+        if (localAppObj && localAppObj.server && localAppObj.server.close) localAppObj.server.close();
+        if (localDb) localDb.close();
+        if (fs.existsSync(tmpDbPath)) fs.unlinkSync(tmpDbPath);
+        if (fs.existsSync(`${tmpDbPath}-wal`)) fs.unlinkSync(`${tmpDbPath}-wal`);
+        if (fs.existsSync(`${tmpDbPath}-shm`)) fs.unlinkSync(`${tmpDbPath}-shm`);
+      }
     });
   });
 });

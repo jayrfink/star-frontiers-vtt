@@ -230,8 +230,8 @@ if (!mapCols.includes('map_type')) {
   }
   if (!charCols.includes('sort_order')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+    db.exec('UPDATE character_sheets SET sort_order = id');
   }
-  db.exec('UPDATE character_sheets SET sort_order = id WHERE sort_order = 0');
 
   const charTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='character_sheets'").get();
   if (charTableInfo && charTableInfo.sql && charTableInfo.sql.includes("CHECK(race IN ('Human', 'Dralasite', 'Vrusk', 'Yazirian'))")) {
@@ -373,12 +373,12 @@ if (!mapCols.includes('map_type')) {
   }
   if (!shipCols.includes('sort_order')) {
     db.exec('ALTER TABLE ship_sheets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+    db.exec('UPDATE ship_sheets SET sort_order = id');
   }
   if (!shipCols.includes('current_dcr')) {
     db.exec('ALTER TABLE ship_sheets ADD COLUMN current_dcr INTEGER DEFAULT NULL');
+    db.exec('UPDATE ship_sheets SET current_dcr = dcr WHERE current_dcr IS NULL');
   }
-  db.exec('UPDATE ship_sheets SET current_dcr = dcr WHERE current_dcr IS NULL');
-  db.exec('UPDATE ship_sheets SET sort_order = id WHERE sort_order = 0');
 
   const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);
   if (!tokenCols.includes('rotation')) {
