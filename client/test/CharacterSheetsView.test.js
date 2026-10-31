@@ -1134,12 +1134,10 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         await spendBtn.trigger('click');
         expect(wrapper.vm.selectedChar.current_xp).toBe(10);
 
-        // Check input field exists and update it manually
-        const xpInput = xpSection.find('.input-xp');
-        expect(xpInput.exists()).toBe(true);
-        await xpInput.setValue(25);
-        await xpInput.trigger('change');
-        expect(wrapper.vm.selectedChar.current_xp).toBe(25);
+        // Verify the up/down widget right next to current XP was removed
+        expect(xpSection.find('.input-xp').exists()).toBe(false);
+        // Verify there is no separate xp-controls row underneath
+        expect(xpSection.find('.xp-controls').exists()).toBe(false);
       } finally {
         global.fetch = origFetch;
       }
@@ -1228,6 +1226,8 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(xpItem.exists()).toBe(true);
         expect(xpItem.find('.tracker-label').text()).toBe('EXPERIENCE POINTS (XP)');
         expect(xpItem.find('.freeform-delta-group').exists()).toBe(true);
+        expect(xpItem.find('.input-xp').exists()).toBe(false);
+        expect(xpItem.find('.xp-controls').exists()).toBe(false);
 
         // Ensure no h4 headers used in the middle section
         expect(middleGrid.findAll('h4').length).toBe(0);

@@ -424,30 +424,19 @@
                 <div class="xp-header-right">
                   <div class="xp-values">
                     <span class="current">{{ selectedChar.current_xp ?? 0 }} XP</span>
+                  </div>
+                  <div class="freeform-delta-group xp-delta-group">
                     <input
                       type="number"
-                      v-model.number="selectedChar.current_xp"
-                      @change="onXpInputChange"
-                      class="input-xp"
-                      min="0"
-                      placeholder="XP"
-                      title="Direct XP edit"
+                      v-model.number="xpDelta"
+                      placeholder="Amt"
+                      min="1"
+                      class="input-delta"
+                      @keydown.enter.prevent="applyXpAward"
                     />
+                    <button class="btn-delta btn-sub" @click="applyXpSpend" title="Spend XP">- Spend</button>
+                    <button class="btn-delta btn-add" @click="applyXpAward" title="Award XP">+ Award</button>
                   </div>
-                </div>
-              </div>
-              <div class="xp-controls">
-                <div class="freeform-delta-group xp-delta-group">
-                  <input
-                    type="number"
-                    v-model.number="xpDelta"
-                    placeholder="Amt"
-                    min="1"
-                    class="input-delta"
-                    @keydown.enter.prevent="applyXpAward"
-                  />
-                  <button class="btn-delta btn-sub" @click="applyXpSpend" title="Spend XP">- Spend</button>
-                  <button class="btn-delta btn-add" @click="applyXpAward" title="Award XP">+ Award</button>
                 </div>
               </div>
             </div>
@@ -2199,8 +2188,7 @@ export default {
 }
 
 .input-max-sta,
-.input-max-seu,
-.input-xp {
+.input-max-seu {
   width: 48px;
   background: #0d1117;
   border: 1px solid #30363d;
