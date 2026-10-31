@@ -1997,7 +1997,7 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
         const dcrSection = trackersCard.find('.dcr-tracker-section');
         expect(dcrSection.exists()).toBe(true);
         expect(dcrSection.find('.tracker-label').text()).toBe('DAMAGE CONTROL RATING (DCR)');
-        expect(dcrSection.find('.btn-action-restore-dcr').text()).toBe('Restore DCR');
+        expect(dcrSection.find('.btn-action-restore-dcr').text()).toBe('Restore');
         expect(dcrSection.find('.current').text()).toBe('30');
         expect(dcrSection.find('.input-max-dcr').element.value).toBe('40');
         expect(dcrSection.find('.dcr-bar-fill').exists()).toBe(true);
@@ -2006,10 +2006,9 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('styles Full Repair and Restore DCR buttons with matching width and padding', () => {
+    it('styles Full Repair and Restore buttons with identical width', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
-      expect(content).toMatch(/\.btn-action-restore-dcr,\s*\.btn-action-repair,\s*\.btn-action-reset\s*\{[^}]*min-width:\s*88px;?[^}]*text-align:\s*center;?[^}]*\}/);
-      expect(content).toMatch(/\.btn-action-repair\s*\{[^}]*padding:\s*2px\s+14px;?[^}]*\}/);
+      expect(content).toMatch(/\.btn-action-restore-dcr,\s*\.btn-action-repair,\s*\.btn-action-reset\s*\{[^}]*width:\s*96px;[^}]*min-width:\s*96px;[^}]*box-sizing:\s*border-box;[^}]*text-align:\s*center;[^}]*\}/);
     });
 
     it('computes DCR percentage and matches the exact color scheme of Hull Points', () => {

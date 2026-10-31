@@ -263,7 +263,7 @@
                     @click="restoreDcr"
                     title="Restore DCR to maximum"
                   >
-                    Restore DCR
+                    Restore
                   </button>
                   <div class="tracker-values">
                     <span class="current">{{ selectedShip.current_dcr ?? selectedShip.dcr ?? 50 }}</span> / 
@@ -2920,12 +2920,10 @@ export default {
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
-  min-width: 88px;
+  width: 96px;
+  min-width: 96px;
+  box-sizing: border-box;
   text-align: center;
-}
-
-.btn-action-repair {
-  padding: 2px 14px;
 }
 .btn-action-restore-dcr:hover,
 .btn-action-repair:hover,
