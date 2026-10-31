@@ -570,7 +570,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       // Compute percentage: 40/50 = 80%
       expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(80);
-      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#0097a7');
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#68c4c3');
 
       // Adjust SEU: -5
       CharacterSheetsView.methods.adjustSeu.call(vm, -5);

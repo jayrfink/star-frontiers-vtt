@@ -818,7 +818,7 @@ export default {
     },
     seuColor() {
       const pct = typeof this.seuPercentage === 'number' ? this.seuPercentage : (this.selectedChar?.max_seu ? (this.selectedChar.current_seu / this.selectedChar.max_seu) * 100 : 0);
-      if (pct > 50) return '#0097a7';
+      if (pct > 50) return '#68c4c3';
       if (pct > 25) return '#ff9800';
       return '#f44336';
     },
