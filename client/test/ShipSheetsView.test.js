@@ -1942,12 +1942,15 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('styles system buttons with custom teal (#0593a3 / #071417) with hover glow and weapons offline red (#f85149 / #000000 / #f8514988) palette', () => {
+    it('styles system buttons with #04bacf text/border, lightened hover glow, uppercase non-bold tracker-label font style, and weapons offline red palette', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
-      expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*color:\s*#0593a3;/);
-      expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*border:\s*1px\s+solid\s+#0593a3;/);
+      expect(content).toMatch(/\.system-btn\s*\{[^}]*font-weight:\s*500/);
+      expect(content).toMatch(/\.system-btn\s*\{[^}]*text-transform:\s*uppercase;/);
+      expect(content).toMatch(/\.system-btn\s*\{[^}]*letter-spacing:\s*0\.75px;/);
+      expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*color:\s*#04bacf;/);
+      expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*border:\s*1px\s+solid\s+#04bacf;/);
       expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*background:\s*#071417;/);
-      expect(content).toMatch(/\.system-btn\.is-ok:hover\s*\{[^}]*box-shadow:/);
+      expect(content).toMatch(/\.system-btn\.is-ok:hover\s*\{[^}]*box-shadow:\s*0\s+0\s+10px\s+rgba\(60,\s*228,\s*247,\s*0\.55\);/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*color:\s*#f85149;/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*border:\s*1px\s+solid\s+#f8514988;/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*background:\s*#000000;/);

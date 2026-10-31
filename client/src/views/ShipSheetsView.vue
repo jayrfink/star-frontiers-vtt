@@ -2733,8 +2733,11 @@ export default {
 .system-btn {
   width: 100%;
   padding: 4px 6px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-family: inherit;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
@@ -2747,18 +2750,18 @@ export default {
   transform: translateY(1px);
 }
 
-/* Operational: text and border #0593a3, background #071417 */
+/* Operational: text and border #04bacf, background #071417 */
 .system-btn.is-ok {
   background: #071417;
-  color: #0593a3;
-  border: 1px solid #0593a3;
+  color: #04bacf;
+  border: 1px solid #04bacf;
 }
 
 .system-btn.is-ok:hover {
-  background: #0b1f24;
-  border-color: #07c4d9;
-  color: #07c4d9;
-  box-shadow: 0 0 8px rgba(7, 196, 217, 0.45);
+  background: #0d262b;
+  border-color: #3ce4f7;
+  color: #3ce4f7;
+  box-shadow: 0 0 10px rgba(60, 228, 247, 0.55);
 }
 
 /* Damaged (selected / clicked): same red colors, background, and border as weapons offline indicator */
