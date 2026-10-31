@@ -92,19 +92,6 @@
                   class="input-name"
                   placeholder="Character Name"
                 />
-                <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
-                  <label>Player:</label>
-                  <select v-model="selectedChar.user_id" @change="updateCharacter" class="select-player">
-                    <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
-                      {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
-                    </option>
-                  </select>
-                </div>
-                <div v-else-if="selectedChar.owner_username" class="player-badge-wrap">
-                  <span class="badge-player" title="Assigned Player">
-                    👤 {{ selectedChar.owner_username }}
-                  </span>
-                </div>
                 <span class="badge-tier">Tier {{ characterTier }}</span>
                 <button
                   class="btn-action-download"
@@ -141,6 +128,19 @@
                     <option value="Technological">Technological</option>
                     <option value="Biosocial">Biosocial</option>
                   </select>
+                </div>
+                <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
+                  <label>Player:</label>
+                  <select v-model="selectedChar.user_id" @change="updateCharacter" class="select-player">
+                    <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                      {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+                    </option>
+                  </select>
+                </div>
+                <div v-else-if="selectedChar.owner_username" class="player-badge-wrap">
+                  <span class="badge-player" title="Assigned Player">
+                    👤 {{ selectedChar.owner_username }}
+                  </span>
                 </div>
               </div>
             </div>

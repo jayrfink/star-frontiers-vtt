@@ -1181,11 +1181,10 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(wrapper.find('.race-ability-banner').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('Species Info:');
 
-        // 2. Verify top row contains input-name, player attribution, tier badge, and download button
+        // 2. Verify top row contains input-name, tier badge, and download button
         const topRow = wrapper.find('.header-top-row');
         expect(topRow.exists()).toBe(true);
         expect(topRow.find('.input-name').exists()).toBe(true);
-        expect(topRow.find('.player-select-wrap').exists()).toBe(true);
         expect(topRow.find('.badge-tier').exists()).toBe(true);
         const downloadBtn = topRow.find('.btn-action-download');
         expect(downloadBtn.exists()).toBe(true);
@@ -1194,11 +1193,12 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(downloadBtn.text()).not.toContain('📥');
         expect(downloadBtn.text()).toContain('Download Sheet (.txt)');
 
-        // 4. Verify sub row contains Species and PSA selectors underneath
+        // 4. Verify sub row contains Species, PSA, and Player selectors to the right of PSA
         const subRow = wrapper.find('.header-sub-row');
         expect(subRow.exists()).toBe(true);
         expect(subRow.find('.race-select-wrap').exists()).toBe(true);
         expect(subRow.find('.psa-select-wrap').exists()).toBe(true);
+        expect(subRow.find('.player-select-wrap').exists()).toBe(true);
       } finally {
         global.fetch = origFetch;
       }
