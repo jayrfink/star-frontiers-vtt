@@ -1,6 +1,6 @@
-# Star Frontiers VTT - Release v0.14.0 Summary
+# Star Frontiers VTT - Release v0.14.1 Summary
 
-**Release Tag:** `v0.14.0`  
+**Release Tag:** `v0.14.1`  
 **Date:** October 31, 2026  
 **Status:** Stable / Production Ready
 
@@ -8,55 +8,49 @@
 
 ## 1. Overview
 
-Release `v0.14.0` delivers extensive UI, ergonomic, and tactical layout upgrades across both Ship Sheets and Character Sheets. Highlights include an overhauled Ship Sheet header and middle section with a 40%/60% split, an ASCII starship export utility, an integrated Damage Control Rating (DCR) meter tracker with backend SQLite persistence, skill and inventory reordering controls, and unified styling across headers, buttons, traits, and notes sections.
+Release `v0.14.1` delivers note panels, reordering capabilities, and visual polish across GM Notes, Character Sheets, and Ship Sheets. Key highlights include modular and reorderable note panels on Character and Ship Sheets mirroring GM Notes (with a 4-panel cap and clean 0-panel default), GM Notes drag-and-drop reordering with persistent database sort order, ergonomic `Current:` and `Max:` weapon ammo indicators, a custom vector SVG weapon edit pencil icon, and dark theme consistency across armament and defense cards.
 
-All automated test suites pass with 100% compliance: **782 client tests across 57 test files** and **267 server tests across 19 test suites**, and the client production bundle compiles cleanly.
+All automated test suites pass with 100% compliance: **803 client tests across 57 test files** and **268 server tests across 19 test suites**, and the client production bundle compiles cleanly.
 
 ---
 
-## 2. Key Enhancements in v0.14.0
+## 2. Key Enhancements in v0.14.1
 
-### Ship Sheets UI & Tactical Ergonomics Redesign
-- **Decluttered Header & ASCII Download ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue), [`shipExport.js`](file:///Users/jrf/star-frontiers-vtt/client/src/utils/shipExport.js)):**
-  - **Top Row:** Reorganized into Ship Name input, Hull Size badge, and an ASCII text file download button (`.btn-action-download`).
-  - **Sub-row:** Class Preset and Player assignment dropdown moved cleanly underneath the name row with `0.9rem` font sizing matching Character Sheets.
-  - **Export Utility:** Exports full starship specifications, tactical flight stats, hull points, DCR, equipped defenses, weapons, ammo counts, and notes to `<ship_name>_sheet.txt`.
-- **40% / 60% Middle Section Grid ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
-  - **Left Half (40% width):** `FLIGHT STATS` vertical stack with ADF and MR inputs using light all-caps lettering (`tracker-label`).
-  - **Right Half (60% width):** Compact trackers card housing:
-    - **Hull Points Applet:** Light all-caps `HULL POINTS (HP)` header, `Full Repair` button, current/max HP inputs, thin 8px meter bar, stepper buttons (`-5`, `-1`, `+1`, `+5`), and freeform delta (`- Dmg`, `+ Heal`).
-    - **Damage Control Rating (DCR) Meter Applet:** Positioned under Hull Points with light all-caps `DAMAGE CONTROL RATING (DCR)` header, `Restore DCR` button, current/max DCR inputs, thin 8px meter bar with color thresholds matching Hull Points (> 50% `#4caf50`, > 25% `#ff9800`, &le; 25% `#f44336`), stepper buttons (`-5`, `-1`, `+1`, `+5`), and freeform delta (`- Red`, `+ Rep`).
-  - **Button Width Symmetry:** Standardized `min-width: 88px` and adjusted padding so the `Full Repair` button matches the exact width of `Restore DCR`.
-- **DCR Backend Persistence & Migration ([`db.js`](file:///Users/jrf/star-frontiers-vtt/server/src/db.js), [`sheets.js`](file:///Users/jrf/star-frontiers-vtt/server/src/sheets.js)):**
-  - Added `current_dcr` integer column to `ship_sheets` table with automatic database migration (`UPDATE ship_sheets SET current_dcr = dcr WHERE current_dcr IS NULL`).
-  - Supported `current_dcr` on `POST /api/ships` and `PUT /api/ships/:id` with clamping between 0 and max DCR.
+### Reorderable Note Panels for Character & Ship Sheets
+- **GM Notes Parity ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue), [`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - Added modular note panels at the bottom of Character Sheets and Ship Sheets using the exact styling and responsive layout grid (`repeat(auto-fill, minmax(420px, 1fr))`) as GM Notes.
+  - Each note panel includes inline title editing, a delete button with confirmation, and smooth up/down reorder buttons (`▲`, `▼`) as well as drag-and-drop reordering with visual grab indicators.
+  - Character and ship export utilities ([`characterExport.js`](file:///Users/jrf/star-frontiers-vtt/client/src/utils/characterExport.js), [`shipExport.js`](file:///Users/jrf/star-frontiers-vtt/client/src/utils/shipExport.js)) serialize all note panels cleanly into downloaded ASCII text sheets.
+- **4-Panel Limit & Zero Default ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue), [`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - Default sheet state starts cleanly with 0 note panels, presenting an empty-state prompt until panels are added.
+  - Enforced a hard maximum cap of 4 note panels per sheet to prevent unbounded DOM growth. The `+ Add Note Panel` button disables with a descriptive tooltip when 4 panels are reached, with guards preventing additions beyond the limit.
 
-### Character Sheets Ergonomics & UI Polish
-- **Special Traits & Abilities Banner ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Styled species abilities as an immutable information banner mirroring the Ship Sheets Flip & Burn banner color scheme and border aesthetic.
-- **Skill & Inventory Reordering ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Added up/down buttons (`▲`, `▼`) and drag-and-drop reordering for both the Skills & Experience list and Inventory & Mass list.
-  - Automatically persists new order to character sheet record upon reordering.
-- **Compact XP Controls ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Streamlined XP tracker row, moving spend and award controls next to the `EXPERIENCE POINTS (XP)` label for a cleaner, more compact profile.
-- **Button Sizing & Icon Polish ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Removed mini icons from `Rest` and `Reload` buttons, matching their widths using `min-width: 58px` and balanced padding.
-  - Scaled sub-row font size (Species, PSA, Player) down 10% to `0.9rem`.
-- **Notes Section Alignment ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Applied the exact styling, cyan `#45acba` heading color, margin, and padding (`padding-bottom: 2%`) from Ship Sheets Notes to Character Sheets Notes.
+### GM Notes Reordering
+- **Drag-and-Drop & Stepper Reordering ([`GmNotesView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/GmNotesView.vue)):**
+  - Enabled reordering of GM Note panels using both up/down controls (`▲`, `▼`) and HTML5 drag-and-drop with drag handles (`⋮⋮`).
+- **Backend Persistence API ([`gmNotes.js`](file:///Users/jrf/star-frontiers-vtt/server/src/gmNotes.js)):**
+  - Implemented `PUT /api/gm-notes/sessions/:id/panels/reorder` endpoint that safely updates `sort_order` within an atomic transaction for authenticated Game Masters.
+
+### Ship Sheets Visual & Ergonomic Polish
+- **Weapon Ammo Indicators ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - Replaced ambiguous `Ammo:` / slash formatting on ship armament records with distinct, small `<label>Current:</label>` and `<label>Max:</label>` labels matching surrounding typography.
+- **Custom Aqua & Cyan Pencil Icon ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - Replaced platform-dependent emoji pencil (`✏️`) with an inline vector SVG pencil icon featuring a custom aqua eraser (`.pencil-eraser`), cyan pencil body (`.pencil-body`), and subtle hover glow.
+- **Armament Background Theme Match ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - Updated weapon card background (`.weapon-card`) from `#000000` to `#0d1117`, establishing visual harmony with Defenses records (`.defense-toggle-row` and `.defense-counter-box`).
 
 ---
 
 ## 3. Verification & Test Metrics
 
-- **Client Test Suite**: 57 test files passed, 782 total tests passed (100% passing).
-- **Server Test Suite**: 19 test files passed, 267 total tests passed (100% passing).
-- **Client Build**: Clean Vite production bundle compilation (`sf-vtt-client@0.14.0`).
+- **Client Test Suite**: 57 test files passed, 803 total tests passed (100% passing).
+- **Server Test Suite**: 19 test files passed, 268 total tests passed (100% passing).
+- **Client Build**: Clean Vite production bundle compilation (`sf-vtt-client@0.14.1`).
 - **Services**: Dev server container `sf-vtt-dev` operational.
 
 ---
 
 ## 4. Git Artifacts & History
 
-- Tag: `v0.14.0`
-- Previous Tag: `v0.13.0`
+- Tag: `v0.14.1`
+- Previous Tag: `v0.14.0`
