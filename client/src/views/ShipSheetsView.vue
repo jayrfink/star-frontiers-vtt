@@ -221,7 +221,8 @@
                       @change="updateShip"
                       class="input-max-hp input-max-val"
                       min="1"
-                    /> Max HP
+                    />
+                    <span class="max-stat-label">Max<br />HP</span>
                   </div>
                 </div>
               </div>
@@ -274,7 +275,8 @@
                       class="input-max-dcr input-max-val"
                       min="1"
                       max="200"
-                    /> Max DCR
+                    />
+                    <span class="max-stat-label">Max<br />DCR</span>
                   </div>
                 </div>
               </div>
@@ -2839,6 +2841,19 @@ export default {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.tracker-values .current {
+  min-width: 24px;
+  text-align: right;
+}
+
+.max-stat-label {
+  display: inline-block;
+  width: 32px;
+  min-width: 32px;
+  line-height: 1.1;
+  text-align: left;
 }
 
 .input-max-val {

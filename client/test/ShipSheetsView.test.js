@@ -2001,6 +2001,14 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
         expect(dcrSection.find('.current').text()).toBe('30');
         expect(dcrSection.find('.input-max-dcr').element.value).toBe('40');
         expect(dcrSection.find('.dcr-bar-fill').exists()).toBe(true);
+
+        // Stacked Max HP and Max DCR labels
+        const hpMaxLabel = hpSection.find('.max-stat-label');
+        const dcrMaxLabel = dcrSection.find('.max-stat-label');
+        expect(hpMaxLabel.exists()).toBe(true);
+        expect(dcrMaxLabel.exists()).toBe(true);
+        expect(hpMaxLabel.html()).toMatch(/Max<br[^>]*>HP/);
+        expect(dcrMaxLabel.html()).toMatch(/Max<br[^>]*>DCR/);
       } finally {
         global.fetch = origFetch;
       }
