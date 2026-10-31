@@ -18,6 +18,16 @@ describe('Sitewide Font Family (D&D Beyond Character Sheet Font - Roboto)', () =
     expect(mainCss).toMatch(/@font-face\s*\{[^}]*font-family:\s*['"]Roboto['"][^}]*src:\s*url\(['"]\/fonts\/Roboto-Bold\.ttf['"]\)/);
   });
 
+  it('defines local @font-face rules for Modesto header font in main.css', () => {
+    expect(mainCss).toMatch(/@font-face\s*\{[^}]*font-family:\s*['"]Modesto['"][^}]*src:\s*url\(['"]\/fonts\/Modesto-Regular\.otf['"]\)/);
+    expect(mainCss).toMatch(/@font-face\s*\{[^}]*font-family:\s*['"]Modesto['"][^}]*src:\s*url\(['"]\/fonts\/Modesto-Bold\.otf['"]\)/);
+  });
+
+  it('sets Modesto as the font-family on headings (h1, h2, h3, h4, h5, h6) in main.css', () => {
+    expect(mainCss).toMatch(/--font-family-header:\s*[^;]*['"]?Modesto['"]?[^;]*;/);
+    expect(mainCss).toMatch(/h1,\s*h2,\s*h3,\s*h4,\s*h5,\s*h6[^{]*\{[^}]*font-family:\s*(?:var\(--font-family-header\)|[^;]*Modesto)/);
+  });
+
   it('sets Roboto as the primary font-family on body in main.css', () => {
     expect(mainCss).toMatch(/font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
     expect(mainCss).toMatch(/body\s*\{[^}]*font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
