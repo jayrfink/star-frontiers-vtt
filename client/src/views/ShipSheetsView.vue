@@ -2747,18 +2747,18 @@ export default {
   transform: translateY(1px);
 }
 
-/* Operational: text and border #48f0cb, background #071417 */
+/* Operational: text and border #0593a3, background #071417 */
 .system-btn.is-ok {
   background: #071417;
-  color: #48f0cb;
-  border: 1px solid #48f0cb;
+  color: #0593a3;
+  border: 1px solid #0593a3;
 }
 
 .system-btn.is-ok:hover {
-  background: #0d2328;
-  border-color: #6cf7d8;
-  color: #6cf7d8;
-  box-shadow: 0 0 6px rgba(72, 240, 203, 0.35);
+  background: #0b1f24;
+  border-color: #07c4d9;
+  color: #07c4d9;
+  box-shadow: 0 0 8px rgba(7, 196, 217, 0.45);
 }
 
 /* Damaged (selected / clicked): same red colors, background, and border as weapons offline indicator */
