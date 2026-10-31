@@ -3012,8 +3012,8 @@ export default {
 }
 
 .portrait-box {
-  width: 52px;
-  height: 52px;
+  width: 57px;
+  height: 57px;
   border: 1px dashed rgba(0, 128, 128, 0.6);
   border-radius: 6px;
   display: flex;
