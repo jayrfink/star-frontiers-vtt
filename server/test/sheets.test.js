@@ -196,6 +196,51 @@ describe('Sheets API & Socket.io', () => {
       expect(clampHigh.body.current_seu).toBe(100);
     });
 
+    it('manages current_xp on create and update, default 0 and clamps to min 0', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'player1', password: 'password123' });
+
+      // Default value when not specified
+      const res1 = await agent.post('/api/characters').send({ name: 'DefaultXP', race: 'Human' });
+      expect(res1.status).toBe(201);
+      expect(res1.body.current_xp).toBe(0);
+
+      // Verify GET returns current_xp
+      const listRes = await agent.get('/api/characters');
+      const found = listRes.body.find(c => c.id === res1.body.id);
+      expect(found.current_xp).toBe(0);
+
+      // Create with explicit current_xp
+      const createRes = await agent.post('/api/characters').send({
+        name: 'Veteran',
+        race: 'Yazirian',
+        current_xp: 25,
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.current_xp).toBe(25);
+      const charId = createRes.body.id;
+
+      // Update current_xp
+      const emitSpy = vi.spyOn(io, 'emit');
+      const updateRes = await agent.put(`/api/characters/${charId}`).send({
+        current_xp: 42,
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.current_xp).toBe(42);
+      expect(emitSpy).toHaveBeenCalledWith('sheet:updated', {
+        type: 'character',
+        sheet: expect.objectContaining({ id: charId, current_xp: 42 }),
+      });
+
+      // Clamp negative current_xp to 0
+      const clampRes = await agent.put(`/api/characters/${charId}`).send({
+        current_xp: -10,
+      });
+      expect(clampRes.status).toBe(200);
+      expect(clampRes.body.current_xp).toBe(0);
+    });
+
     it('deletes character sheet and emits sheet:deleted', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'player1', password: 'password123' });

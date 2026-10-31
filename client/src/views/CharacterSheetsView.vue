@@ -269,6 +269,47 @@
           </div>
         </section>
 
+        <!-- Experience Points (XP) Tracker -->
+        <section class="xp-section card">
+          <div class="xp-header">
+            <h4>Experience Points (XP)</h4>
+            <div class="xp-header-right">
+              <div class="xp-values">
+                <span class="current">{{ selectedChar.current_xp ?? 0 }} XP</span>
+                <input
+                  type="number"
+                  v-model.number="selectedChar.current_xp"
+                  @change="updateCharacter"
+                  class="input-xp"
+                  min="0"
+                  placeholder="XP"
+                  title="Direct XP edit"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="xp-controls">
+            <div class="stepper-group">
+              <button class="btn-xp btn-sub" @click="adjustXP(-5)" title="Deduct 5 XP">-5</button>
+              <button class="btn-xp btn-sub" @click="adjustXP(-1)" title="Deduct 1 XP">-1</button>
+              <button class="btn-xp btn-add" @click="adjustXP(+1)" title="Award 1 XP">+1</button>
+              <button class="btn-xp btn-add" @click="adjustXP(+5)" title="Award 5 XP">+5</button>
+            </div>
+            <div class="freeform-delta-group">
+              <input
+                type="number"
+                v-model.number="xpDelta"
+                placeholder="Amt"
+                min="1"
+                class="input-delta"
+                @keydown.enter.prevent="applyXpAward"
+              />
+              <button class="btn-delta btn-sub" @click="applyXpSpend" title="Spend XP">- Spend</button>
+              <button class="btn-delta btn-add" @click="applyXpAward" title="Award XP">+ Award</button>
+            </div>
+          </div>
+        </section>
+
         <!-- Primary Stats Grid with Point-Shift Controls -->
         <section class="stats-section card">
           <h4>Primary D100 Stats</h4>
@@ -775,9 +816,11 @@ export default {
         per_ldr: 50,
         max_stamina: 50,
         current_stamina: 50,
+        current_xp: 0,
       },
       staminaDelta: null,
       seuDelta: null,
+      xpDelta: null,
     };
   },
   computed: {
@@ -1006,6 +1049,7 @@ export default {
       c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : c.sta);
       c.max_seu = c.max_seu !== undefined ? Number(c.max_seu) : 50;
       c.current_seu = c.current_seu !== undefined ? Number(c.current_seu) : c.max_seu;
+      c.current_xp = Number(c.current_xp || 0);
       c.owner_username = c.owner_username || '';
       c.user_id = c.user_id !== undefined && c.user_id !== null ? Number(c.user_id) : null;
 
@@ -1103,6 +1147,7 @@ export default {
         per_ldr: 50,
         max_stamina: 50,
         current_stamina: 50,
+        current_xp: 0,
       };
       this.showCreateModal = true;
     },
@@ -1169,6 +1214,7 @@ export default {
           current_stamina: finalSta,
           max_seu: 50,
           current_seu: 50,
+          current_xp: Number(this.newCharForm.current_xp || 0),
           skills: [],
           inventory: [],
         };
@@ -1216,6 +1262,7 @@ export default {
           current_sta: this.selectedChar.current_stamina ?? 50,
           max_seu: this.selectedChar.max_seu !== undefined ? this.selectedChar.max_seu : 50,
           current_seu: this.selectedChar.current_seu !== undefined ? this.selectedChar.current_seu : 50,
+          current_xp: this.selectedChar.current_xp !== undefined ? Number(this.selectedChar.current_xp) : 0,
         };
         const res = await fetch(`/api/characters/${this.selectedChar.id}`, {
           method: 'PUT',
@@ -1348,6 +1395,27 @@ export default {
       }
       this.updateCharacter();
     },
+    adjustXP(amount) {
+      if (!this.selectedChar) return;
+      this.selectedChar.current_xp = Math.max(0, (this.selectedChar.current_xp || 0) + amount);
+      this.updateCharacter();
+    },
+    applyXpSpend() {
+      if (!this.selectedChar) return;
+      const delta = Number(this.xpDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      this.selectedChar.current_xp = Math.max(0, (this.selectedChar.current_xp || 0) - delta);
+      this.xpDelta = null;
+      this.updateCharacter();
+    },
+    applyXpAward() {
+      if (!this.selectedChar) return;
+      const delta = Number(this.xpDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      this.selectedChar.current_xp = Math.max(0, (this.selectedChar.current_xp || 0) + delta);
+      this.xpDelta = null;
+      this.updateCharacter();
+    },
     async deleteCharacter(id) {
       if (!confirm('Are you sure you want to delete this character?')) return;
       this.errorMessage = '';
@@ -1381,10 +1449,17 @@ export default {
       this.updateCharacter();
     },
     upgradeSkillLevel(index) {
-      const sk = this.selectedChar.skills[index];
+      const sk = this.selectedChar?.skills?.[index];
       if (sk && sk.level < 6) {
-        sk.level += 1;
-        this.updateCharacter();
+        const cost = this.getXPCost(sk.name, sk.level + 1, sk.psa);
+        const currentXP = Number(this.selectedChar.current_xp || 0);
+        if (currentXP >= cost) {
+          this.selectedChar.current_xp = currentXP - cost;
+          sk.level += 1;
+          this.updateCharacter();
+        } else {
+          this.errorMessage = `Insufficient XP to upgrade ${sk.name} to Level ${sk.level + 1} (requires ${cost} XP, have ${currentXP} XP)`;
+        }
       }
     },
     getXPCost(skillName, targetLevel, skillPSA = null) {
@@ -2030,34 +2105,39 @@ export default {
   font-weight: bold;
 }
 
-/* Stamina & SEU Sections */
+/* Stamina & SEU & XP Sections */
 .stamina-header,
-.seu-header {
+.seu-header,
+.xp-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
 .stamina-header h4,
-.seu-header h4 {
+.seu-header h4,
+.xp-header h4 {
   margin: 0;
   color: #45acba;
 }
 .stamina-header-right,
-.seu-header-right {
+.seu-header-right,
+.xp-header-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 .stamina-values,
-.seu-values {
+.seu-values,
+.xp-values {
   font-size: 1.1rem;
   font-weight: 700;
 }
 
 .input-max-sta,
-.input-max-seu {
+.input-max-seu,
+.input-xp {
   width: 60px;
   background: #0d1117;
   border: 1px solid #30363d;
@@ -2083,7 +2163,8 @@ export default {
 }
 
 .stamina-controls,
-.seu-controls {
+.seu-controls,
+.xp-controls {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
@@ -2183,7 +2264,8 @@ export default {
 }
 
 .btn-sta,
-.btn-seu {
+.btn-seu,
+.btn-xp {
   padding: 6px 14px;
   border: none;
   border-radius: 4px;
@@ -2192,7 +2274,8 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 .btn-sta:active,
-.btn-seu:active {
+.btn-seu:active,
+.btn-xp:active {
   transform: translateY(1px);
 }
 .btn-sub {

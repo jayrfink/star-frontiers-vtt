@@ -26,6 +26,7 @@ function formatCharacterSheet(row) {
     owner_username: row.owner_username || '',
     max_seu: row.max_seu !== undefined && row.max_seu !== null ? Number(row.max_seu) : 50,
     current_seu: row.current_seu !== undefined && row.current_seu !== null ? Number(row.current_seu) : 50,
+    current_xp: row.current_xp !== undefined && row.current_xp !== null ? Number(row.current_xp) : 0,
     psa: row.psa || 'Military',
     racial_abilities: safeJsonParse(row.racial_abilities, {}),
     skills: safeJsonParse(row.skills, []),
@@ -137,6 +138,7 @@ export function createCharacterRouter(db, io) {
         current_sta = sta ?? 50,
         max_seu = 50,
         current_seu = max_seu ?? 50,
+        current_xp = 0,
         dex = 50,
         rs = 50,
         int_stat = 50,
@@ -174,6 +176,7 @@ export function createCharacterRouter(db, io) {
       const curStaVal = clampStat(current_sta, staVal, 0, 200);
       const maxSeuVal = clampStat(max_seu, 50, 0, 100000);
       const curSeuVal = clampStat(current_seu, maxSeuVal, 0, maxSeuVal);
+      const curXpVal = clampStat(current_xp, 0, 0, 1000000);
       const dexVal = clampStat(dex, 50, 1, 200);
       const rsVal = clampStat(rs, 50, 1, 200);
       const intVal = clampStat(int_stat, 50, 1, 200);
@@ -190,18 +193,18 @@ export function createCharacterRouter(db, io) {
       const stmt = db.prepare(`
         INSERT INTO character_sheets (
           user_id, name, race, psa, gender, height, weight,
-          str, sta, current_sta, max_seu, current_seu, dex, rs, int_stat, log_stat, per, ldr,
+          str, sta, current_sta, max_seu, current_seu, current_xp, dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url, sort_order
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         ownerId, characterName, race, characterPsa, gender, height, weight,
-        strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
+        strVal, staVal, curStaVal, maxSeuVal, curSeuVal, curXpVal, dexVal, rsVal, intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
@@ -290,6 +293,8 @@ export function createCharacterRouter(db, io) {
       const maxSeuVal = clampStat(max_seu, existing.max_seu ?? 50, 0, 100000);
       const current_seu = req.body.current_seu !== undefined ? req.body.current_seu : (existing.current_seu ?? maxSeuVal);
       const curSeuVal = clampStat(current_seu, existing.current_seu ?? maxSeuVal, 0, maxSeuVal);
+      const current_xp = req.body.current_xp !== undefined ? req.body.current_xp : (existing.current_xp ?? 0);
+      const curXpVal = clampStat(current_xp, existing.current_xp ?? 0, 0, 1000000);
       const dexVal = clampStat(dex, existing.dex, 1, 200);
       const rsVal = clampStat(rs, existing.rs, 1, 200);
       const intVal = clampStat(int_stat, existing.int_stat, 1, 200);
@@ -304,7 +309,7 @@ export function createCharacterRouter(db, io) {
       const stmt = db.prepare(`
         UPDATE character_sheets SET
           user_id = ?, name = ?, race = ?, psa = ?, gender = ?, height = ?, weight = ?,
-          str = ?, sta = ?, current_sta = ?, max_seu = ?, current_seu = ?, dex = ?, rs = ?,
+          str = ?, sta = ?, current_sta = ?, max_seu = ?, current_seu = ?, current_xp = ?, dex = ?, rs = ?,
           int_stat = ?, log_stat = ?, per = ?, ldr = ?,
           racial_abilities = ?, skills = ?, inventory = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
@@ -315,7 +320,7 @@ export function createCharacterRouter(db, io) {
 
       stmt.run(
         ownerId, name, race, characterPsa, gender, height, weight,
-        strVal, staVal, curStaVal, maxSeuVal, curSeuVal, dexVal, rsVal,
+        strVal, staVal, curStaVal, maxSeuVal, curSeuVal, curXpVal, dexVal, rsVal,
         intVal, logVal, perVal, ldrVal,
         racialAbilitiesStr, skillsStr, inventoryStr, notes, avatarUrl,
         req.params.id

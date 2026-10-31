@@ -31,6 +31,7 @@ function migrate(db) {
       current_sta INTEGER NOT NULL DEFAULT 50,
       max_seu INTEGER NOT NULL DEFAULT 50,
       current_seu INTEGER NOT NULL DEFAULT 50,
+      current_xp INTEGER NOT NULL DEFAULT 0,
       dex INTEGER NOT NULL DEFAULT 50,
       rs INTEGER NOT NULL DEFAULT 50,
       int_stat INTEGER NOT NULL DEFAULT 50,
@@ -223,6 +224,9 @@ if (!mapCols.includes('map_type')) {
   if (!charCols.includes('current_seu')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN current_seu INTEGER NOT NULL DEFAULT 50');
   }
+  if (!charCols.includes('current_xp')) {
+    db.exec('ALTER TABLE character_sheets ADD COLUMN current_xp INTEGER NOT NULL DEFAULT 0');
+  }
   if (!charCols.includes('sort_order')) {
     db.exec('ALTER TABLE character_sheets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
   }
@@ -247,6 +251,7 @@ if (!mapCols.includes('map_type')) {
           current_sta INTEGER NOT NULL DEFAULT 50,
           max_seu INTEGER NOT NULL DEFAULT 50,
           current_seu INTEGER NOT NULL DEFAULT 50,
+          current_xp INTEGER NOT NULL DEFAULT 0,
           dex INTEGER NOT NULL DEFAULT 50,
           rs INTEGER NOT NULL DEFAULT 50,
           int_stat INTEGER NOT NULL DEFAULT 50,
@@ -265,13 +270,13 @@ if (!mapCols.includes('map_type')) {
         );
         INSERT INTO character_sheets_dg_tmp (
           id, user_id, name, race, psa, gender, height, weight,
-          str, sta, current_sta, max_seu, current_seu, dex, rs, int_stat, log_stat, per, ldr,
+          str, sta, current_sta, max_seu, current_seu, current_xp, dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url, sort_order, created_at, updated_at
         )
         SELECT
           id, user_id, name, race, psa, gender, height, weight,
           str, sta, current_sta,
-          COALESCE(max_seu, 50), COALESCE(current_seu, 50),
+          COALESCE(max_seu, 50), COALESCE(current_seu, 50), COALESCE(current_xp, 0),
           dex, rs, int_stat, log_stat, per, ldr,
           racial_abilities, skills, inventory, notes, avatar_url, COALESCE(sort_order, id), created_at, updated_at
         FROM character_sheets;

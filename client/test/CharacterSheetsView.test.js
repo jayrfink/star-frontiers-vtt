@@ -999,6 +999,140 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vm.newCharForm.user_id).toBe(1);
     });
   });
+
+  describe('Experience Points (XP) Tracker & Skill Spend', () => {
+    it('normalizes character data with current_xp default 0', () => {
+      const c1 = CharacterSheetsView.methods.normalizeCharacterData({});
+      expect(c1.current_xp).toBe(0);
+
+      const c2 = CharacterSheetsView.methods.normalizeCharacterData({ current_xp: 15 });
+      expect(c2.current_xp).toBe(15);
+
+      const c3 = CharacterSheetsView.methods.normalizeCharacterData({ current_xp: '20' });
+      expect(c3.current_xp).toBe(20);
+    });
+
+    it('adjusts XP with adjustXP and clamps to minimum 0', () => {
+      const vm = {
+        selectedChar: { current_xp: 10 },
+        updateCharacter: vi.fn(),
+      };
+
+      CharacterSheetsView.methods.adjustXP.call(vm, 5);
+      expect(vm.selectedChar.current_xp).toBe(15);
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+
+      CharacterSheetsView.methods.adjustXP.call(vm, -20);
+      expect(vm.selectedChar.current_xp).toBe(0);
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(2);
+    });
+
+    it('upgrades skill level and deducts XP when current_xp is sufficient', () => {
+      const vm = {
+        selectedChar: {
+          psa: 'Military',
+          current_xp: 10,
+          skills: [
+            { name: 'Beam Weapons', level: 1, psa: 'Military' },
+          ],
+        },
+        getXPCost: CharacterSheetsView.methods.getXPCost,
+        updateCharacter: vi.fn(),
+      };
+
+      // Cost for Beam Weapons level 2 (Military in PSA) = 2 * 3 = 6 XP
+      CharacterSheetsView.methods.upgradeSkillLevel.call(vm, 0);
+
+      expect(vm.selectedChar.skills[0].level).toBe(2);
+      expect(vm.selectedChar.current_xp).toBe(4);
+      expect(vm.updateCharacter).toHaveBeenCalled();
+    });
+
+    it('does not upgrade skill level or deduct XP when current_xp is insufficient', () => {
+      const vm = {
+        selectedChar: {
+          psa: 'Military',
+          current_xp: 3,
+          skills: [
+            { name: 'Beam Weapons', level: 1, psa: 'Military' },
+          ],
+        },
+        errorMessage: '',
+        getXPCost: CharacterSheetsView.methods.getXPCost,
+        updateCharacter: vi.fn(),
+      };
+
+      // Cost is 6 XP, have 3 XP
+      CharacterSheetsView.methods.upgradeSkillLevel.call(vm, 0);
+
+      expect(vm.selectedChar.skills[0].level).toBe(1);
+      expect(vm.selectedChar.current_xp).toBe(3);
+      expect(vm.updateCharacter).not.toHaveBeenCalled();
+      expect(vm.errorMessage).toMatch(/insufficient xp/i);
+    });
+
+    it('renders XP tracker card with steppers, input, and updates current_xp', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'testuser', role: 'Player' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Wilks',
+              race: 'Vrusk',
+              psa: 'Military',
+              current_stamina: 50,
+              max_stamina: 50,
+              current_seu: 50,
+              max_seu: 50,
+              current_xp: 12,
+              skills: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        // Check XP tracker section exists
+        const xpSection = wrapper.find('.xp-section');
+        expect(xpSection.exists()).toBe(true);
+        expect(xpSection.text()).toContain('Experience Points (XP)');
+        expect(xpSection.text()).toContain('12');
+
+        // Check steppers exist: -5, -1, +1, +5
+        const steppers = xpSection.findAll('.btn-xp');
+        expect(steppers.length).toBe(4);
+
+        // Click +1 stepper
+        await steppers[2].trigger('click');
+        expect(wrapper.vm.selectedChar.current_xp).toBe(13);
+
+        // Check input field exists and update it manually
+        const xpInput = xpSection.find('.input-xp');
+        expect(xpInput.exists()).toBe(true);
+        await xpInput.setValue(25);
+        await xpInput.trigger('change');
+        expect(wrapper.vm.selectedChar.current_xp).toBe(25);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
 });
 
 
