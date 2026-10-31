@@ -131,9 +131,9 @@
           </div>
         </header>
 
-        <!-- Middle Section: Flight Stats (Left) and Compact Trackers (Right) -->
+        <!-- Middle Section: Flight Stats (Left - 25%), Ship Systems (Middle), and Compact Trackers (Right) -->
         <div class="middle-section-grid">
-          <!-- Left Column: Flight Stats (ADF & MR Stacked) -->
+          <!-- Left Column: Flight Stats (ADF & MR Stacked - 25% width) -->
           <section class="card stats-section">
             <div class="panel-header-simple">
               <span class="tracker-label">FLIGHT STATS</span>
@@ -141,7 +141,6 @@
             <div class="flight-stats-stack">
               <div class="stat-box">
                 <div class="stat-label">ADF</div>
-                <div class="stat-sublabel">Acceleration Decision Factor</div>
                 <input
                   type="number"
                   v-model.number="selectedShip.adf"
@@ -153,7 +152,6 @@
               </div>
               <div class="stat-box">
                 <div class="stat-label">MR</div>
-                <div class="stat-sublabel">Maneuver Rating</div>
                 <input
                   type="number"
                   v-model.number="selectedShip.mr"
@@ -163,6 +161,26 @@
                   max="10"
                 />
               </div>
+            </div>
+          </section>
+
+          <!-- Middle Column: Ship Systems Damage Tracker -->
+          <section class="card systems-status-section">
+            <div class="panel-header-simple">
+              <span class="tracker-label">SYSTEM STATUS</span>
+            </div>
+            <div class="systems-status-stack">
+              <button
+                v-for="sys in shipSystemList"
+                :key="sys"
+                type="button"
+                class="system-btn btn-delta"
+                :class="isSystemDamaged(sys) ? 'btn-sub is-damaged' : 'btn-add is-ok'"
+                @click="toggleSystemDamage(sys)"
+                :title="isSystemDamaged(sys) ? `${sys} is Damaged (click to repair)` : `${sys} is Operational (click to mark damaged)`"
+              >
+                {{ sys }}
+              </button>
             </div>
           </section>
 
@@ -1063,7 +1081,18 @@ export default {
         current_hull_points: 15,
         weapons: [],
         defenses: {},
+        damaged_systems: [],
       },
+      shipSystemList: [
+        'Bridge',
+        'Drives (ADF)',
+        'Steering (MR)',
+        'Power Grid',
+        'Combat Control',
+        'Navigation',
+        'Damage Control',
+        'Life Support',
+      ],
     };
   },
   computed: {
@@ -1260,6 +1289,18 @@ export default {
       copy.dcr = copy.max_dcr;
       copy.defenses = this.normalizeDefenses(copy.defenses);
       copy.weapons = this.normalizeWeapons(copy.weapons);
+      if (Array.isArray(copy.damaged_systems)) {
+        copy.damaged_systems = [...copy.damaged_systems];
+      } else if (typeof copy.damaged_systems === 'string' && copy.damaged_systems.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(copy.damaged_systems);
+          copy.damaged_systems = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          copy.damaged_systems = [];
+        }
+      } else {
+        copy.damaged_systems = [];
+      }
       copy.notes = copy.notes || '';
       if (Array.isArray(copy.note_panels)) {
         copy.note_panels = parseShipNotePanels(copy.note_panels);
@@ -1480,6 +1521,7 @@ export default {
           current_dcr: this.selectedShip.current_dcr ?? this.selectedShip.dcr ?? 50,
           hull_points: this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 50,
           current_hp: this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0,
+          damaged_systems: this.selectedShip.damaged_systems || [],
           notes: this.selectedShip.notes || '',
         };
         const res = await fetch(`/api/ships/${this.selectedShip.id}`, {
@@ -1664,6 +1706,9 @@ export default {
           });
         }
 
+        // Reset damaged systems
+        this.selectedShip.damaged_systems = [];
+
         this.updateShip();
       };
 
@@ -1705,6 +1750,23 @@ export default {
       } else {
         doDelete();
       }
+    },
+    isSystemDamaged(sys) {
+      if (!this.selectedShip || !Array.isArray(this.selectedShip.damaged_systems)) return false;
+      return this.selectedShip.damaged_systems.includes(sys);
+    },
+    toggleSystemDamage(sys) {
+      if (!this.selectedShip) return;
+      if (!Array.isArray(this.selectedShip.damaged_systems)) {
+        this.selectedShip.damaged_systems = [];
+      }
+      const idx = this.selectedShip.damaged_systems.indexOf(sys);
+      if (idx === -1) {
+        this.selectedShip.damaged_systems.push(sys);
+      } else {
+        this.selectedShip.damaged_systems.splice(idx, 1);
+      }
+      this.updateShip();
     },
     getDefenseVal(key) {
       if (!this.selectedShip || !this.selectedShip.defenses) return false;
@@ -2607,18 +2669,46 @@ export default {
   font-weight: 600;
 }
 
-/* Middle Section: Flight Stats (Left - 30%) and Trackers (Right - the rest of space) */
+/* Middle Section: Flight Stats (Left - 25%), Ship Systems (Middle), and Trackers (Right - the rest of space) */
 .middle-section-grid {
   display: grid;
-  grid-template-columns: 30% 1fr;
+  grid-template-columns: 25% max-content 1fr;
   gap: 16px;
   align-items: stretch;
 }
 
-@media (max-width: 820px) {
+@media (max-width: 900px) {
   .middle-section-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.systems-status-section {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  min-width: 170px;
+}
+
+.systems-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.system-btn {
+  width: 100%;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: all 0.15s ease-in-out;
 }
 
 .panel-header-simple {

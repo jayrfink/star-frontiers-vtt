@@ -43,6 +43,7 @@ function formatShipSheet(row) {
     avatar_url: row.avatar_url || '',
     weapons: safeJsonParse(row.weapons, []),
     defenses: safeJsonParse(row.defenses, []),
+    damaged_systems: safeJsonParse(row.damaged_systems, []),
   };
 }
 
@@ -491,6 +492,7 @@ export function createShipRouter(db, io) {
         current_dcr,
         weapons = [],
         defenses = [],
+        damaged_systems = [],
         notes = '',
         avatar_url = '',
       } = req.body;
@@ -522,22 +524,23 @@ export function createShipRouter(db, io) {
 
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
+      const damagedSystemsStr = typeof damaged_systems === 'string' ? damaged_systems : JSON.stringify(damaged_systems);
 
       const nextSortOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM ship_sheets').get()?.next_order) || 1;
 
       const stmt = db.prepare(`
         INSERT INTO ship_sheets (
           user_id, name, ship_type, hull_points, current_hp, adf, mr, dcr, current_dcr,
-          weapons, defenses, notes, avatar_url, sort_order
+          weapons, defenses, damaged_systems, notes, avatar_url, sort_order
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
         ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr, clampedCurrentDcr,
-        weaponsStr, defensesStr, notes, req.body.avatar_url || '', nextSortOrder
+        weaponsStr, defensesStr, damagedSystemsStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
       const created = db.prepare(`
@@ -592,6 +595,7 @@ export function createShipRouter(db, io) {
         current_dcr,
         weapons = safeJsonParse(existing.weapons, []),
         defenses = safeJsonParse(existing.defenses, []),
+        damaged_systems = safeJsonParse(existing.damaged_systems, []),
         notes = existing.notes,
       } = req.body;
 
@@ -610,18 +614,19 @@ export function createShipRouter(db, io) {
 
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
+      const damagedSystemsStr = typeof damaged_systems === 'string' ? damaged_systems : JSON.stringify(damaged_systems);
 
       const stmt = db.prepare(`
         UPDATE ship_sheets SET
           user_id = ?, name = ?, ship_type = ?, hull_points = ?, current_hp = ?,
-          adf = ?, mr = ?, dcr = ?, current_dcr = ?, weapons = ?, defenses = ?, notes = ?, avatar_url = ?,
+          adf = ?, mr = ?, dcr = ?, current_dcr = ?, weapons = ?, defenses = ?, damaged_systems = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp,
-        clampedAdf, clampedMr, clampedDcr, clampedCurrentDcr, weaponsStr, defensesStr, notes, avatarUrl,
+        clampedAdf, clampedMr, clampedDcr, clampedCurrentDcr, weaponsStr, defensesStr, damagedSystemsStr, notes, avatarUrl,
         req.params.id
       );
 

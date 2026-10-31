@@ -1819,9 +1819,117 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('configures middle-section-grid to 30% width for Flight Stats and the rest of space for Trackers', () => {
+    it('configures middle-section-grid to 25% width for Flight Stats and the rest of space for Trackers', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
-      expect(content).toMatch(/\.middle-section-grid\s*\{[^}]*grid-template-columns:\s*30%\s+1fr;/);
+      expect(content).toMatch(/\.middle-section-grid\s*\{[^}]*grid-template-columns:\s*25%\s+max-content\s+1fr;/);
+    });
+
+    it('renders Flight Stats with just ADF and MR without written-out explanations', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          adf: 5,
+          mr: 4,
+          hull_points: 20,
+          current_hp: 20,
+          dcr: 40,
+          current_dcr: 40,
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const statsSection = wrapper.find('.stats-section');
+        expect(statsSection.exists()).toBe(true);
+        expect(statsSection.text()).toContain('ADF');
+        expect(statsSection.text()).toContain('MR');
+        expect(statsSection.text()).not.toContain('Acceleration Decision Factor');
+        expect(statsSection.text()).not.toContain('Maneuver Rating');
+        expect(statsSection.find('.stat-sublabel').exists()).toBe(false);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('renders ship systems damage tracker box with 8 toggleable system buttons', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          adf: 5,
+          mr: 4,
+          hull_points: 20,
+          current_hp: 20,
+          dcr: 40,
+          current_dcr: 40,
+          damaged_systems: ['Bridge'],
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const systemsSection = wrapper.find('.systems-status-section');
+        expect(systemsSection.exists()).toBe(true);
+
+        const expectedSystems = [
+          'Bridge',
+          'Drives (ADF)',
+          'Steering (MR)',
+          'Power Grid',
+          'Combat Control',
+          'Navigation',
+          'Damage Control',
+          'Life Support',
+        ];
+
+        const buttons = systemsSection.findAll('.system-btn');
+        expect(buttons.length).toBe(8);
+
+        expectedSystems.forEach((sys, idx) => {
+          expect(buttons[idx].text()).toBe(sys);
+        });
+
+        // Bridge is damaged initially
+        expect(buttons[0].classes()).toContain('is-damaged');
+        expect(buttons[0].classes()).toContain('btn-sub');
+
+        // Drives (ADF) is okay initially
+        expect(buttons[1].classes()).toContain('is-ok');
+        expect(buttons[1].classes()).toContain('btn-add');
+
+        // Toggle Drives (ADF) to damaged
+        await buttons[1].trigger('click');
+        expect(buttons[1].classes()).toContain('is-damaged');
+
+        // Toggle Bridge back to okay
+        await buttons[0].trigger('click');
+        expect(buttons[0].classes()).toContain('is-ok');
+      } finally {
+        global.fetch = origFetch;
+      }
     });
 
     it('renders the compact Hull Points and DCR meter applets in the right column', async () => {

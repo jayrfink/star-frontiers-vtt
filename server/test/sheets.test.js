@@ -513,6 +513,41 @@ describe('Sheets API & Socket.io', () => {
       });
     });
 
+    it('persists and returns damaged_systems on POST and PUT /api/ships', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });
+      await agent.post('/api/auth/login').send({ username: 'gm', password: 'password123' });
+
+      // Create with damaged_systems
+      const createRes = await agent.post('/api/ships').send({
+        name: 'Battle Cruiser',
+        ship_type: 'Cruiser',
+        damaged_systems: ['Bridge', 'Drives (ADF)'],
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.damaged_systems).toEqual(['Bridge', 'Drives (ADF)']);
+      const shipId = createRes.body.id;
+
+      // Fetch by ID
+      const getRes = await agent.get(`/api/ships/${shipId}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.damaged_systems).toEqual(['Bridge', 'Drives (ADF)']);
+
+      // Update damaged_systems
+      const updateRes = await agent.put(`/api/ships/${shipId}`).send({
+        damaged_systems: ['Bridge', 'Steering (MR)', 'Power Grid'],
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.damaged_systems).toEqual(['Bridge', 'Steering (MR)', 'Power Grid']);
+
+      // Clear damaged_systems
+      const clearRes = await agent.put(`/api/ships/${shipId}`).send({
+        damaged_systems: [],
+      });
+      expect(clearRes.status).toBe(200);
+      expect(clearRes.body.damaged_systems).toEqual([]);
+    });
+
     it('deletes ship sheet and emits sheet:deleted', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/register').send({ username: 'gm', password: 'password123' });

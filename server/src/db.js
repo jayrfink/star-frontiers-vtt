@@ -62,6 +62,7 @@ function migrate(db) {
       current_dcr INTEGER NOT NULL DEFAULT 50,
       weapons TEXT DEFAULT '[]',
       defenses TEXT DEFAULT '[]',
+      damaged_systems TEXT DEFAULT '[]',
       notes TEXT DEFAULT '',
       avatar_url TEXT DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
@@ -378,6 +379,9 @@ if (!mapCols.includes('map_type')) {
   if (!shipCols.includes('current_dcr')) {
     db.exec('ALTER TABLE ship_sheets ADD COLUMN current_dcr INTEGER DEFAULT NULL');
     db.exec('UPDATE ship_sheets SET current_dcr = dcr WHERE current_dcr IS NULL');
+  }
+  if (!shipCols.includes('damaged_systems')) {
+    db.exec("ALTER TABLE ship_sheets ADD COLUMN damaged_systems TEXT DEFAULT '[]'");
   }
 
   const tokenCols = db.prepare("PRAGMA table_info(tokens)").all().map(c => c.name);
