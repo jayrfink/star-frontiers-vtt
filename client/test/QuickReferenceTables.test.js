@@ -67,6 +67,47 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toContain('Forward Firing');
       expect(html).toContain('Range Diffusion');
     });
+
+    it('renders Damaged Systems & Tactical Effects and Selective Targeting & Reflective Hull at the bottom of Ship-to-Ship tab', async () => {
+      const html = await renderComponent({ initialCategory: 'ship' });
+
+      // Damaged Systems section
+      expect(html).toContain('Damaged Systems &amp; Tactical Effects');
+      expect(html).toContain('Drives (ADF)');
+      expect(html).toContain('Steering (MR)');
+      expect(html).toContain('Power Short Circuit');
+      expect(html).toContain('Electrical Fire');
+      expect(html).toContain('Combat Control');
+      expect(html).toContain('Navigation');
+      expect(html).toContain('Damage Control');
+      expect(html).toContain('Disastrous Fire');
+
+      // Selective Targeting & Reflective Hull section
+      expect(html).toContain('Selective Targeting &amp; Reflective Hull');
+      expect(html).toContain('Same Hex Only');
+      expect(html).toContain('-30% Penalty');
+      expect(html).toContain('Targeted Hull Hit');
+      expect(html).toContain('50% Double Damage');
+      expect(html).toContain('Reflective Hull Durability');
+      expect(html).toMatch(/cannot be broken|passive/i);
+    });
+
+    it('filters Damaged Systems and Selective Targeting when searching', async () => {
+      const wrapper = mount(QuickReferenceTables, {
+        props: { initialCategory: 'ship', initialSearch: 'short circuit' }
+      });
+      const html = wrapper.html();
+      expect(html).toContain('Power Short Circuit');
+      expect(html).not.toContain('Electrical Fire');
+      expect(html).not.toContain('Reflective Hull Durability');
+
+      const wrapper2 = mount(QuickReferenceTables, {
+        props: { initialCategory: 'ship', initialSearch: 'double damage' }
+      });
+      const html2 = wrapper2.html();
+      expect(html2).toContain('50% Double Damage');
+      expect(html2).not.toContain('Power Short Circuit');
+    });
   });
 
   describe('Ranged Combat Tab', () => {

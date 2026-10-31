@@ -233,8 +233,113 @@ export const SHIP_COMBAT_REF = {
       location: 'Cargo / Hull Breach',
       effect: 'Catastrophic hull rupture: Additional 1d10 damage applied directly to hull.'
     }
+  ],
+
+  damagedSystems: [
+    {
+      system: 'Hull',
+      category: 'Structural',
+      effect: 'Reduces Hull Points (HP). Ship is destroyed when HP reaches 0.',
+      repair: 'Cannot be repaired during combat'
+    },
+    {
+      system: 'Drives (ADF)',
+      category: 'Mobility',
+      effect: '-1 ADF, lose 1/2 ADF (round up), or lose all ADF. If ADF is 0, ship cannot accelerate/decelerate and maintains current speed.',
+      repair: 'DCR roll restores 1 ADF per success'
+    },
+    {
+      system: 'Steering (MR)',
+      category: 'Mobility',
+      effect: '-1 MR or lose all MR. If MR is 0, ship cannot turn. If both ADF and MR reach 0, ship drifts indefinitely in a straight line.',
+      repair: 'DCR roll restores 1 MR per success'
+    },
+    {
+      system: 'Weapons',
+      category: 'Tactical',
+      effect: 'Destroys weapons in fixed priority: LC > LB > PB > EB > DC > T > AR > RB. Limited ammo (LTD) launcher/tube is destroyed if hit.',
+      repair: 'DCR roll can restore knocked-out weapon'
+    },
+    {
+      system: 'Defenses',
+      category: 'Tactical',
+      effect: 'Destroys defenses in fixed priority: PS > ES > SS > MS > ICM.',
+      repair: 'DCR roll can repair defense system'
+    },
+    {
+      system: 'Power Short Circuit',
+      category: 'Electrical',
+      effect: 'All active screens (PS, ES, SS) immediately collapse; ICMs offline; no new MS generated.',
+      repair: 'DCR roll repairs short; screens must be reactivated'
+    },
+    {
+      system: 'Electrical Fire',
+      category: 'Hazard',
+      effect: 'Ship on fire. Roll on Damage Table (+20 modifier) at start of each turn until extinguished. Hull hits inflict 1d10 HP damage.',
+      repair: 'DCR roll extinguishes fire'
+    },
+    {
+      system: 'Combat Control',
+      category: 'Avionics',
+      effect: '-10% to-hit penalty on all ship weapon attacks. Non-cumulative with multiple hits.',
+      repair: 'DCR roll restores targeting computer'
+    },
+    {
+      system: 'Navigation',
+      category: 'Avionics',
+      effect: 'Erratic helm. Roll 1d10 each turn: 1–5 = forced left turn 1 hex every hex moved; 6–10 = forced right turn 1 hex every hex moved, until MR is spent.',
+      repair: 'DCR roll restores helm control'
+    },
+    {
+      system: 'Damage Control',
+      category: 'Operations',
+      effect: 'Ship\'s DCR (Damage Control Rating) is cut in half (round up).',
+      repair: 'Cannot be repaired during combat'
+    },
+    {
+      system: 'Disastrous Fire',
+      category: 'Catastrophic',
+      effect: 'DCR halved (round up), lose all ADF and MR, -10% on all weapon attacks, and roll on Damage Table (+20 modifier) each turn.',
+      repair: 'DCR roll (at halved rating) extinguishes fire'
+    }
+  ],
+
+  selectiveTargeting: [
+    {
+      topic: 'Requirement',
+      rule: 'Same Hex Only',
+      detail: 'Attacking ship and target must occupy the exact same hex on the tactical combat map.'
+    },
+    {
+      topic: 'Attack Modifier',
+      rule: '-30% Penalty',
+      detail: 'Subtracted from the final to-hit chance. Multiple gunners or combat computers cannot negate this penalty.'
+    },
+    {
+      topic: 'Component Targeting',
+      rule: 'Damage Table Bypass',
+      detail: 'Attacker designates a specific external system (Drives, specific Weapon, Steering, or Hull) before firing. Hits bypass the random Damage Table.'
+    },
+    {
+      topic: 'Targeted Hull Hit',
+      rule: 'Guaranteed HP Damage',
+      detail: 'Bypasses internal systems; 100% of weapon damage applies directly to Hull Points (HP).'
+    },
+    {
+      topic: 'Targeted Hull Critical',
+      rule: '50% Double Damage',
+      detail: 'Roll 1d10 upon hit: 1–5 normal damage; 6–10 deals DOUBLE damage directly to Hull Points.'
+    },
+    {
+      topic: 'Reflective Hull Durability',
+      rule: 'Indestructible Coating',
+      detail: 'Reflective Hull is a passive surface paint/coating, not an active electronic screen. It cannot be broken, stripped, or disabled by targeted shots, power shorts, or component damage, and permanently halves Laser Cannon and Laser Battery beam damage.'
+    }
   ]
 };
+
+export const SHIP_DAMAGED_SYSTEMS = SHIP_COMBAT_REF.damagedSystems;
+export const SELECTIVE_TARGETING_REF = SHIP_COMBAT_REF.selectiveTargeting;
 
 export const RANGED_COMBAT_REF = {
   sequenceOfPlay: [

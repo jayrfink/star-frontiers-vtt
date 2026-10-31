@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   SHIP_COMBAT_REF,
+  SHIP_DAMAGED_SYSTEMS,
+  SELECTIVE_TARGETING_REF,
   RANGED_COMBAT_REF,
   MELEE_COMBAT_REF,
   WEAPON_RESTRICTIONS_LEGEND
@@ -104,6 +106,68 @@ describe('combatReference', () => {
       expect(critLocations).toContain('Bridge');
       expect(critLocations).toContain('Drive');
       expect(critLocations).toContain('Weapons');
+    });
+
+    it('contains damaged systems catalog with accurate Knight Hawks rules schema', () => {
+      expect(SHIP_COMBAT_REF.damagedSystems).toBeDefined();
+      expect(Array.isArray(SHIP_COMBAT_REF.damagedSystems)).toBe(true);
+      expect(SHIP_COMBAT_REF.damagedSystems.length).toBe(11);
+      expect(SHIP_DAMAGED_SYSTEMS).toBe(SHIP_COMBAT_REF.damagedSystems);
+
+      const systemNames = SHIP_COMBAT_REF.damagedSystems.map((s) => s.system);
+      expect(systemNames).toContain('Hull');
+      expect(systemNames).toContain('Drives (ADF)');
+      expect(systemNames).toContain('Steering (MR)');
+      expect(systemNames).toContain('Weapons');
+      expect(systemNames).toContain('Defenses');
+      expect(systemNames).toContain('Power Short Circuit');
+      expect(systemNames).toContain('Electrical Fire');
+      expect(systemNames).toContain('Combat Control');
+      expect(systemNames).toContain('Navigation');
+      expect(systemNames).toContain('Damage Control');
+      expect(systemNames).toContain('Disastrous Fire');
+
+      SHIP_COMBAT_REF.damagedSystems.forEach((s) => {
+        expect(s).toHaveProperty('system');
+        expect(s).toHaveProperty('category');
+        expect(s).toHaveProperty('effect');
+        expect(s).toHaveProperty('repair');
+        expect(typeof s.system).toBe('string');
+        expect(typeof s.category).toBe('string');
+        expect(typeof s.effect).toBe('string');
+        expect(typeof s.repair).toBe('string');
+      });
+    });
+
+    it('contains selective targeting & reflective hull rules with accurate Knight Hawks expansion rules', () => {
+      expect(SHIP_COMBAT_REF.selectiveTargeting).toBeDefined();
+      expect(Array.isArray(SHIP_COMBAT_REF.selectiveTargeting)).toBe(true);
+      expect(SHIP_COMBAT_REF.selectiveTargeting.length).toBeGreaterThanOrEqual(5);
+      expect(SELECTIVE_TARGETING_REF).toBe(SHIP_COMBAT_REF.selectiveTargeting);
+
+      const topics = SHIP_COMBAT_REF.selectiveTargeting.map((t) => t.topic);
+      expect(topics).toContain('Requirement');
+      expect(topics).toContain('Attack Modifier');
+      expect(topics).toContain('Component Targeting');
+      expect(topics).toContain('Targeted Hull Hit');
+      expect(topics).toContain('Targeted Hull Critical');
+      expect(topics).toContain('Reflective Hull Durability');
+
+      const modifierRule = SHIP_COMBAT_REF.selectiveTargeting.find((t) => t.topic === 'Attack Modifier');
+      expect(modifierRule.rule).toContain('-30%');
+
+      const hullCritRule = SHIP_COMBAT_REF.selectiveTargeting.find((t) => t.topic === 'Targeted Hull Critical');
+      expect(hullCritRule.rule).toContain('50% Double Damage');
+
+      const reflectiveHullRule = SHIP_COMBAT_REF.selectiveTargeting.find((t) => t.topic === 'Reflective Hull Durability');
+      expect(reflectiveHullRule.detail).toContain('passive');
+      expect(reflectiveHullRule.detail.toLowerCase()).toContain('cannot be broken');
+
+      SHIP_COMBAT_REF.selectiveTargeting.forEach((t) => {
+        expect(t).toHaveProperty('topic');
+        expect(t).toHaveProperty('rule');
+        expect(t).toHaveProperty('detail');
+      });
     });
   });
 

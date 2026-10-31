@@ -183,6 +183,64 @@
             </table>
           </div>
         </section>
+
+        <!-- Damaged Systems Table -->
+        <section v-if="filteredShipDamagedSystems.length > 0" class="ref-section">
+          <h2 class="section-title">
+            <span class="title-badge warning">System Damage</span>
+            Damaged Systems &amp; Tactical Effects
+          </h2>
+          <div class="table-responsive">
+            <table class="ref-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">System</th>
+                  <th style="width: 120px;">Category</th>
+                  <th>Damage Effect</th>
+                  <th style="width: 260px;">Repair / Tactical Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in filteredShipDamagedSystems" :key="s.system">
+                  <td class="col-name font-bold">{{ s.system }}</td>
+                  <td><span class="type-tag">{{ s.category }}</span></td>
+                  <td class="col-effect">{{ s.effect }}</td>
+                  <td class="col-notes text-muted">{{ s.repair }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Selective Targeting & Reflective Hull -->
+        <section v-if="filteredSelectiveTargeting.length > 0" class="ref-section">
+          <h2 class="section-title">
+            <span class="title-badge info">Special Tactics</span>
+            Selective Targeting &amp; Reflective Hull
+          </h2>
+          <div class="table-responsive">
+            <table class="ref-table">
+              <thead>
+                <tr>
+                  <th style="width: 210px;">Topic</th>
+                  <th style="width: 220px;">Rule / Modifier</th>
+                  <th>Tactical Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="t in filteredSelectiveTargeting" :key="t.topic">
+                  <td class="col-name font-bold">{{ t.topic }}</td>
+                  <td>
+                    <span class="modifier-pill" :class="modifierClass(t.rule)">
+                      {{ t.rule }}
+                    </span>
+                  </td>
+                  <td class="col-effect">{{ t.detail }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       <!-- ================= RANGED COMBAT ================= -->
@@ -486,6 +544,12 @@ const filteredShipDefenses = computed(() =>
 const filteredShipCriticalHits = computed(() =>
   SHIP_COMBAT_REF.criticalHits.filter((item) => matchesQuery(item, searchQuery.value))
 );
+const filteredShipDamagedSystems = computed(() =>
+  (SHIP_COMBAT_REF.damagedSystems || []).filter((item) => matchesQuery(item, searchQuery.value))
+);
+const filteredSelectiveTargeting = computed(() =>
+  (SHIP_COMBAT_REF.selectiveTargeting || []).filter((item) => matchesQuery(item, searchQuery.value))
+);
 
 // Filtered Ranged Combat items
 const filteredRangedSequence = computed(() =>
@@ -528,7 +592,9 @@ const noResults = computed(() => {
       filteredShipSequence.value.length === 0 &&
       filteredShipWeapons.value.length === 0 &&
       filteredShipDefenses.value.length === 0 &&
-      filteredShipCriticalHits.value.length === 0
+      filteredShipCriticalHits.value.length === 0 &&
+      filteredShipDamagedSystems.value.length === 0 &&
+      filteredSelectiveTargeting.value.length === 0
     );
   }
   if (activeCategory.value === 'ranged') {
@@ -713,6 +779,18 @@ const noResults = computed(() => {
   background: rgba(248, 81, 73, 0.15);
   color: var(--danger);
   border-color: rgba(248, 81, 73, 0.3);
+}
+
+.title-badge.warning {
+  background: rgba(210, 153, 34, 0.15);
+  color: #e3b341;
+  border-color: rgba(210, 153, 34, 0.3);
+}
+
+.title-badge.info {
+  background: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.3);
 }
 
 /* Sequence Grid & Cards */
