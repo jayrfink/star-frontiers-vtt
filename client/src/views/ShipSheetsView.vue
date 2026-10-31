@@ -484,8 +484,9 @@
             <button
               type="button"
               class="btn-secondary btn-add-note-panel"
+              :disabled="selectedShip.note_panels && selectedShip.note_panels.length >= 4"
               @click="addNotePanel"
-              title="Add Note Panel"
+              :title="selectedShip.note_panels && selectedShip.note_panels.length >= 4 ? 'Maximum of 4 note panels reached' : 'Add Note Panel'"
             >
               + Add Note Panel
             </button>
@@ -961,7 +962,7 @@ import { downloadShipAscii } from '../utils/shipExport.js';
 
 export function parseShipNotePanels(notes) {
   if (Array.isArray(notes)) {
-    return notes.map((p, idx) => ({
+    return notes.slice(0, 4).map((p, idx) => ({
       id: p.id || `p_${Date.now()}_${idx}`,
       title: p.title !== undefined ? String(p.title) : 'Note',
       content: p.content !== undefined ? String(p.content) : '',
@@ -971,7 +972,7 @@ export function parseShipNotePanels(notes) {
     try {
       const parsed = JSON.parse(notes);
       if (Array.isArray(parsed)) {
-        return parsed.map((p, idx) => ({
+        return parsed.slice(0, 4).map((p, idx) => ({
           id: p.id || `p_${Date.now()}_${idx}`,
           title: p.title !== undefined ? String(p.title) : 'Note',
           content: p.content !== undefined ? String(p.content) : '',
@@ -2053,6 +2054,7 @@ export default {
       if (!Array.isArray(this.selectedShip.note_panels)) {
         this.selectedShip.note_panels = this.parseNotePanels(this.selectedShip.notes);
       }
+      if (this.selectedShip.note_panels.length >= 4) return;
       const nextNum = this.selectedShip.note_panels.length + 1;
       const title = typeof defaultTitle === 'string' && defaultTitle !== 'New Note'
         ? defaultTitle
@@ -3707,6 +3709,12 @@ export default {
 .btn-add-note-panel {
   font-size: 0.85rem;
   padding: 6px 12px;
+}
+
+.btn-add-note-panel:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #30363d;
 }
 
 .note-panels-grid {

@@ -240,6 +240,46 @@ describe('ShipSheetsView - Ship Notes Section', () => {
     expect(vm.dragOverNotePanelIndex).toBeNull();
     expect(updatedShipCalled).toBe(true);
   });
+
+  it('limits ship note panels to a maximum of 4 panels', () => {
+    const vm = {
+      selectedShip: {
+        id: 1,
+        name: 'UPF Strike',
+        notes: '',
+        note_panels: [
+          { id: 'p1', title: 'History', content: '' },
+          { id: 'p2', title: 'Notes', content: '' },
+        ],
+      },
+      updateShip: vi.fn(),
+      parseNotePanels: ShipSheetsView.methods.parseNotePanels,
+      updateNotePanels: ShipSheetsView.methods.updateNotePanels,
+      addNotePanel: ShipSheetsView.methods.addNotePanel,
+    };
+
+    vm.addNotePanel('Panel 3');
+    expect(vm.selectedShip.note_panels.length).toBe(3);
+
+    vm.addNotePanel('Panel 4');
+    expect(vm.selectedShip.note_panels.length).toBe(4);
+
+    // Attempting to add a 5th panel must be rejected
+    vm.addNotePanel('Panel 5');
+    expect(vm.selectedShip.note_panels.length).toBe(4);
+
+    // Verify parseNotePanels clamps arrays with > 4 panels to exactly 4
+    const overflownPanels = [
+      { id: '1', title: 'P1' },
+      { id: '2', title: 'P2' },
+      { id: '3', title: 'P3' },
+      { id: '4', title: 'P4' },
+      { id: '5', title: 'P5' },
+      { id: '6', title: 'P6' },
+    ];
+    const parsed = vm.parseNotePanels(overflownPanels);
+    expect(parsed.length).toBe(4);
+  });
 });
 
 describe('ShipSheetsView - Weapon Selection & Renaming', () => {

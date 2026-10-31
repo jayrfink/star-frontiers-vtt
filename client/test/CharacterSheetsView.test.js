@@ -381,6 +381,46 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vm.dragOverNotePanelIndex).toBeNull();
       expect(updatedCharCalled).toBe(true);
     });
+
+    it('limits character note panels to a maximum of 4 panels', () => {
+      const vm = {
+        selectedChar: {
+          id: 1,
+          name: 'Wilf',
+          notes: '',
+          note_panels: [
+            { id: 'p1', title: 'Background', content: '' },
+            { id: 'p2', title: 'Notes', content: '' },
+          ],
+        },
+        updateCharacter: vi.fn(),
+        parseNotePanels: CharacterSheetsView.methods.parseNotePanels,
+        updateNotePanels: CharacterSheetsView.methods.updateNotePanels,
+        addNotePanel: CharacterSheetsView.methods.addNotePanel,
+      };
+
+      vm.addNotePanel('Panel 3');
+      expect(vm.selectedChar.note_panels.length).toBe(3);
+
+      vm.addNotePanel('Panel 4');
+      expect(vm.selectedChar.note_panels.length).toBe(4);
+
+      // Attempting to add a 5th panel must be rejected
+      vm.addNotePanel('Panel 5');
+      expect(vm.selectedChar.note_panels.length).toBe(4);
+
+      // Verify parseNotePanels clamps arrays with > 4 panels to exactly 4
+      const overflownPanels = [
+        { id: '1', title: 'P1' },
+        { id: '2', title: 'P2' },
+        { id: '3', title: 'P3' },
+        { id: '4', title: 'P4' },
+        { id: '5', title: 'P5' },
+        { id: '6', title: 'P6' },
+      ];
+      const parsed = vm.parseNotePanels(overflownPanels);
+      expect(parsed.length).toBe(4);
+    });
   });
 
   describe('Equipment Catalog Category Filtering & Tabs', () => {
