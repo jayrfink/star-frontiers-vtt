@@ -1853,13 +1853,15 @@ export default {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
+  background-image: none !important;
 }
 
 .select-race,
 .select-psa {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
-  padding: 8px 12px;
+  padding: 8px 28px 8px 12px !important;
+  padding-right: 28px !important;
   font-size: 1rem;
 }
 
@@ -2307,13 +2309,15 @@ export default {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
+  background-image: none !important;
 }
 
 .select-official-skill {
   flex: 1;
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
-  padding: 6px 8px;
+  padding: 6px 24px 6px 8px !important;
+  padding-right: 24px !important;
   font-size: 0.85rem;
 }
 

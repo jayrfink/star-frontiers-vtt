@@ -77,4 +77,12 @@ describe('View-specific Stat Inputs Theming', () => {
     expect(spaceContent).not.toMatch(/\.slingshot-select\s*\{[^}]*background:\s*#/);
     expect(spaceContent).toMatch(/\.slingshot-select\s*\{[^}]*background-color:\s*#/);
   });
+
+  it('enforces clean single chevrons on .input-type-select and .preset-select in ShipSheetsView.vue', () => {
+    const content = fs.readFileSync(shipSheetsPath, 'utf-8');
+    expect(content).toMatch(/\.input-type-select\s+option\s*\{[^}]*background-image:\s*none\s*!important;/);
+    expect(content).toMatch(/\.preset-select\s+option\s*\{[^}]*background-image:\s*none\s*!important;/);
+    expect(content).toMatch(/\.input-type-select\s*\{[^}]*padding-right:\s*28px/);
+    expect(content).toMatch(/\.preset-select\s*\{[^}]*padding-right:\s*28px/);
+  });
 });
