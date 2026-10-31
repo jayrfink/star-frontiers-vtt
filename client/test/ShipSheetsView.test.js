@@ -396,6 +396,17 @@ describe('ShipSheetsView - Weapon Selection & Renaming', () => {
     expect(vueFile).toMatch(/\.pencil-body\s*\{[^}]*fill:\s*cyan;?[^}]*\}/);
   });
 
+  it('matches weapon-card background color to defenses records background color (#0d1117)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+
+    // Verify weapon-card background matches defense records (#0d1117)
+    expect(vueFile).toMatch(/\.weapon-card\s*\{[^}]*background:\s*#0d1117;?[^}]*\}/);
+    expect(vueFile).toMatch(/\.defense-toggle-row\s*\{[^}]*background:\s*#0d1117;?[^}]*\}/);
+    expect(vueFile).toMatch(/\.defense-counter-box\s*\{[^}]*background:\s*#0d1117;?[^}]*\}/);
+  });
+
   it('determines weapon category and limitation explanation accurately', () => {
     const vm = {
       getWeaponCategory: ShipSheetsView.methods.getWeaponCategory,

@@ -3092,7 +3092,7 @@ export default {
 }
 
 .weapon-card {
-  background: #000000;
+  background: #0d1117;
   border: 1px solid rgba(0, 128, 128, 0.6);
   border-radius: 6px;
   padding: 8px 10px;
