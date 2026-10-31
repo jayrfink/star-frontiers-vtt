@@ -4,6 +4,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import fs from 'fs';
+import path from 'path';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
 import { useAuthStore } from '../src/stores/auth.js';
 import * as characterExport from '../src/utils/characterExport.js';
@@ -263,6 +265,17 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       } finally {
         global.fetch = origFetch;
       }
+    });
+
+    it('uses the same section-header padding and h4 style/color as Ship Sheets Notes', () => {
+      const charContent = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      const shipContent = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+
+      expect(charContent).toMatch(/\.notes-section\s+\.section-header\s*\{[^}]*padding-bottom:\s*2%;?[^}]*\}/);
+      expect(shipContent).toMatch(/\.notes-section\s+\.section-header\s*\{[^}]*padding-bottom:\s*2%;?[^}]*\}/);
+
+      expect(charContent).toMatch(/\.notes-section\s+h4\s*\{[^}]*margin:\s*0;?[^}]*color:\s*#45acba;?[^}]*\}/);
+      expect(shipContent).toMatch(/\.notes-section\s+h4\s*\{[^}]*margin:\s*0;?[^}]*color:\s*#45acba;?[^}]*\}/);
     });
   });
 
