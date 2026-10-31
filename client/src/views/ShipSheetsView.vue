@@ -2761,18 +2761,18 @@ export default {
   box-shadow: 0 0 6px rgba(72, 240, 203, 0.35);
 }
 
-/* Damaged (selected / clicked): text and border #a10d3c, background #17020a */
+/* Damaged (selected / clicked): same red colors, background, and border as weapons offline indicator */
 .system-btn.is-damaged {
-  background: #17020a;
-  color: #a10d3c;
-  border: 1px solid #a10d3c;
+  background: #000000;
+  color: #f85149;
+  border: 1px solid #f8514988;
 }
 
 .system-btn.is-damaged:hover {
-  background: #270412;
-  border-color: #c7164e;
-  color: #c7164e;
-  box-shadow: 0 0 6px rgba(161, 13, 60, 0.35);
+  background: #0d1117;
+  border-color: #f85149;
+  color: #ff7b72;
+  box-shadow: 0 0 6px rgba(248, 81, 73, 0.35);
 }
 
 .panel-header-simple {
