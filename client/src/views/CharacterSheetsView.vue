@@ -1621,7 +1621,7 @@ export default {
 .sidebar-header h3 {
   margin: 0;
   font-size: 1.21rem;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .sidebar-loading,
@@ -1893,7 +1893,7 @@ export default {
 
 .race-ability-banner {
   background: #1f6feb15;
-  border-left: 3px solid #3a859c;
+  border-left: 3px solid #45acba;
   padding: 8px 12px;
   font-size: 0.85rem;
   color: #8b949e;
@@ -1928,7 +1928,7 @@ export default {
 .tactical-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .encumbrance-stat {
@@ -1970,7 +1970,7 @@ export default {
 .stamina-header h4,
 .seu-header h4 {
   margin: 0;
-  color: #3a859c;
+  color: #45acba;
 }
 .stamina-header-right,
 .seu-header-right {
@@ -2146,7 +2146,7 @@ export default {
 /* Primary Stats Grid */
 .stats-section h4 {
   margin: 0 0 12px 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .stats-grid {
@@ -2199,7 +2199,7 @@ export default {
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
-  color: #3a859c;
+  color: #45acba;
   border-radius: 4px;
   padding: 4px 2px;
   color-scheme: dark;
@@ -2248,7 +2248,7 @@ export default {
 /* Species Traits Panel */
 .racial-panel h4 {
   margin: 0 0 10px 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .racial-details p {
@@ -2272,7 +2272,7 @@ export default {
 }
 .list-header h4 {
   margin: 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .empty-list {
@@ -2519,7 +2519,7 @@ export default {
 
 .modal-card h3 {
   margin-top: 0;
-  color: #3a859c;
+  color: #45acba;
   margin-bottom: 16px;
 }
 
@@ -2676,7 +2676,7 @@ export default {
 
 .equipment-modal-header h3 {
   margin: 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .btn-close-modal {
@@ -2776,7 +2776,7 @@ export default {
 }
 
 .equipment-card:hover {
-  border-color: rgba(58, 133, 156, 0.5);
+  border-color: rgba(69, 172, 186, 0.5);
 }
 
 .eq-header {
@@ -2789,7 +2789,7 @@ export default {
 .eq-name {
   font-weight: 700;
   font-size: 15px;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .eq-add-btn {
@@ -2815,8 +2815,8 @@ export default {
 }
 
 .eq-tag {
-  background: rgba(58, 133, 156, 0.18);
-  color: #3a859c;
+  background: rgba(69, 172, 186, 0.18);
+  color: #45acba;
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;

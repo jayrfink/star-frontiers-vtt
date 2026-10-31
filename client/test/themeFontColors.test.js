@@ -34,3 +34,20 @@ describe('View-specific Font Color Theming', () => {
     });
   });
 });
+
+describe('Muted Steel-Cyan Theme Migration (#3a859c -> #45acba)', () => {
+  const files = [
+    path.resolve(__dirname, '../src/main.css'),
+    path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'),
+    path.resolve(__dirname, '../src/views/ShipSheetsView.vue'),
+    path.resolve(__dirname, '../src/views/AdminView.vue'),
+  ];
+
+  it('ensures no #3a859c declarations remain and #45acba is present', () => {
+    files.forEach(f => {
+      const content = fs.readFileSync(f, 'utf-8');
+      expect(content).not.toMatch(/#3a859c/i);
+      expect(content).toMatch(/#45acba/i);
+    });
+  });
+});

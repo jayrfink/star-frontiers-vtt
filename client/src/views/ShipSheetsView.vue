@@ -1628,7 +1628,7 @@ export default {
 .sidebar-header h3 {
   margin: 0;
   font-size: 1.21rem;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .sidebar-loading,
@@ -1840,7 +1840,7 @@ export default {
 }
 
 .portrait-box:hover {
-  border-color: var(--accent, #3a859c);
+  border-color: var(--accent, #45acba);
 }
 
 .portrait-placeholder {
@@ -1912,7 +1912,7 @@ export default {
 }
 .hull-header h4 {
   margin: 0;
-  color: #3a859c;
+  color: #45acba;
 }
 .hull-header-right {
   display: flex;
@@ -2050,7 +2050,7 @@ export default {
 /* Primary Stats Grid */
 .stats-section h4 {
   margin: 0 0 12px 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .stats-grid {
@@ -2089,7 +2089,7 @@ export default {
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
-  color: #3a859c;
+  color: #45acba;
   border-radius: 4px;
   padding: 4px;
   margin-top: 4px;
@@ -2187,7 +2187,7 @@ export default {
 }
 .list-header h4 {
   margin: 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .defenses-list {
@@ -2635,7 +2635,7 @@ export default {
 
 .modal-card h3 {
   margin-top: 0;
-  color: #3a859c;
+  color: #45acba;
   margin-bottom: 16px;
 }
 
@@ -2877,7 +2877,7 @@ export default {
 
 .notes-section h4 {
   margin: 0;
-  color: #3a859c;
+  color: #45acba;
 }
 
 .notes-textarea {

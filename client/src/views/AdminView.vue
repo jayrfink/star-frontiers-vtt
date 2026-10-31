@@ -1195,7 +1195,7 @@ defineExpose({
 .users-table th,
 .assets-table th,
 .tokens-table th {
-  color: #3a859c;
+  color: #45acba;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
