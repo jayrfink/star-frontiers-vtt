@@ -1942,13 +1942,13 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('styles system buttons with custom teal (#48f0cb / #071417) and crimson (#ba1655 / #17020a) palette', () => {
+    it('styles system buttons with custom teal (#48f0cb / #071417) and crimson (#a10d3c / #17020a) palette', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*color:\s*#48f0cb;/);
       expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*border:\s*1px\s+solid\s+#48f0cb;/);
       expect(content).toMatch(/\.system-btn\.is-ok\s*\{[^}]*background:\s*#071417;/);
-      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*color:\s*#ba1655;/);
-      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*border:\s*1px\s+solid\s+#ba1655;/);
+      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*color:\s*#a10d3c;/);
+      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*border:\s*1px\s+solid\s+#a10d3c;/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*background:\s*#17020a;/);
     });
 

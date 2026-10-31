@@ -2761,18 +2761,18 @@ export default {
   box-shadow: 0 0 6px rgba(72, 240, 203, 0.35);
 }
 
-/* Damaged (selected / clicked): text and border #ba1655, background #17020a */
+/* Damaged (selected / clicked): text and border #a10d3c, background #17020a */
 .system-btn.is-damaged {
   background: #17020a;
-  color: #ba1655;
-  border: 1px solid #ba1655;
+  color: #a10d3c;
+  border: 1px solid #a10d3c;
 }
 
 .system-btn.is-damaged:hover {
   background: #270412;
-  border-color: #dc1d66;
-  color: #dc1d66;
-  box-shadow: 0 0 6px rgba(186, 22, 85, 0.35);
+  border-color: #c7164e;
+  color: #c7164e;
+  box-shadow: 0 0 6px rgba(161, 13, 60, 0.35);
 }
 
 .panel-header-simple {
