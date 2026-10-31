@@ -131,21 +131,17 @@ describe('ShipSheetsView - Ship Notes Section', () => {
     }
   });
 
-  it('initializes ship note panels with History and Notes in 1 row', () => {
+  it('defaults ship note panels to empty array when no notes exist', () => {
     const vm = {
       normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
       normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
     };
     const ship = ShipSheetsView.methods.normalizeShip.call(vm, { name: 'UPF Strike' });
     expect(ship.note_panels).toBeDefined();
-    expect(ship.note_panels.length).toBe(2);
-    expect(ship.note_panels[0].title).toBe('History');
-    expect(ship.note_panels[0].content).toBe('');
-    expect(ship.note_panels[1].title).toBe('Notes');
-    expect(ship.note_panels[1].content).toBe('');
+    expect(ship.note_panels.length).toBe(0);
   });
 
-  it('loads legacy plain text notes into the Notes panel with History empty', () => {
+  it('loads legacy plain text notes into a single Notes panel', () => {
     const vm = {
       normalizeDefenses: ShipSheetsView.methods.normalizeDefenses,
       normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
@@ -154,11 +150,9 @@ describe('ShipSheetsView - Ship Notes Section', () => {
       name: 'UPF Strike',
       notes: 'Commissioned in Year 58 of Second Sathar War.',
     });
-    expect(ship.note_panels.length).toBe(2);
-    expect(ship.note_panels[0].title).toBe('History');
-    expect(ship.note_panels[0].content).toBe('');
-    expect(ship.note_panels[1].title).toBe('Notes');
-    expect(ship.note_panels[1].content).toBe('Commissioned in Year 58 of Second Sathar War.');
+    expect(ship.note_panels.length).toBe(1);
+    expect(ship.note_panels[0].title).toBe('Notes');
+    expect(ship.note_panels[0].content).toBe('Commissioned in Year 58 of Second Sathar War.');
   });
 
   it('adds, deletes, and reorders note panels updating serialized notes', () => {

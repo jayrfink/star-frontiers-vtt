@@ -281,25 +281,19 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(shipContent).toMatch(/\.notes-textarea\s*\{[^}]*background:\s*#0d1117;?[^}]*border:\s*1px solid #30363d;?[^}]*\}/);
     });
 
-    it('initializes character note panels with Background and Notes in 1 row', () => {
+    it('defaults character note panels to empty array when no notes exist', () => {
       const normalize = CharacterSheetsView.methods.normalizeCharacterData;
       const char = normalize({ name: 'Wilf' });
       expect(char.note_panels).toBeDefined();
-      expect(char.note_panels.length).toBe(2);
-      expect(char.note_panels[0].title).toBe('Background');
-      expect(char.note_panels[0].content).toBe('');
-      expect(char.note_panels[1].title).toBe('Notes');
-      expect(char.note_panels[1].content).toBe('');
+      expect(char.note_panels.length).toBe(0);
     });
 
-    it('loads legacy plain text notes into the Notes panel with Background empty', () => {
+    it('loads legacy plain text notes into a single Notes panel', () => {
       const normalize = CharacterSheetsView.methods.normalizeCharacterData;
       const char = normalize({ name: 'Wilf', notes: 'Native of Gran Quivera.' });
-      expect(char.note_panels.length).toBe(2);
-      expect(char.note_panels[0].title).toBe('Background');
-      expect(char.note_panels[0].content).toBe('');
-      expect(char.note_panels[1].title).toBe('Notes');
-      expect(char.note_panels[1].content).toBe('Native of Gran Quivera.');
+      expect(char.note_panels.length).toBe(1);
+      expect(char.note_panels[0].title).toBe('Notes');
+      expect(char.note_panels[0].content).toBe('Native of Gran Quivera.');
     });
 
     it('adds, deletes, and reorders note panels updating serialized notes', () => {

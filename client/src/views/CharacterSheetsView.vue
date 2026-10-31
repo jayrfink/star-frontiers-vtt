@@ -916,10 +916,12 @@ export function parseCharacterNotePanels(notes) {
       // Fallback to legacy plain string
     }
   }
-  return [
-    { id: 'p_bg', title: 'Background', content: '' },
-    { id: 'p_notes', title: 'Notes', content: (typeof notes === 'string' && !notes.trim().startsWith('[') ? notes : '') },
-  ];
+  if (typeof notes === 'string' && notes.trim()) {
+    return [
+      { id: 'p_notes', title: 'Notes', content: notes.trim() },
+    ];
+  }
+  return [];
 }
 
 export default {

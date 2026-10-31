@@ -982,10 +982,12 @@ export function parseShipNotePanels(notes) {
       // Fallback to legacy plain string
     }
   }
-  return [
-    { id: 'p_hist', title: 'History', content: '' },
-    { id: 'p_notes', title: 'Notes', content: (typeof notes === 'string' && !notes.trim().startsWith('[') ? notes : '') },
-  ];
+  if (typeof notes === 'string' && notes.trim()) {
+    return [
+      { id: 'p_notes', title: 'Notes', content: notes.trim() },
+    ];
+  }
+  return [];
 }
 
 export default {
