@@ -177,280 +177,282 @@
           </div>
         </section>
 
-        <!-- Quick Stamina Tracker -->
-        <section class="stamina-section card">
-          <div class="stamina-header">
-            <h4>Stamina Tracker</h4>
-            <div class="stamina-header-right">
-              <button class="btn-action-reset" @click="resetCharacterStats" title="Full Rest: Restore STA and SEU to maximum">
-                🔄 Full Rest
-              </button>
-              <div class="stamina-values">
-                <span class="current">{{ selectedChar.current_stamina }}</span> / 
-                <input
-                  type="number"
-                  v-model.number="selectedChar.max_stamina"
-                  @change="onMaxStaminaChange"
-                  class="input-max-sta"
-                  min="1"
-                /> Max STA
-              </div>
+        <!-- Middle Section: Primary Attributes (Left) and Compact Trackers (Right) -->
+        <div class="middle-section-grid">
+          <!-- Left Column: Primary D100 Stats (2x2 Grid) -->
+          <section class="card stats-section">
+            <div class="panel-header-simple">
+              <span class="tracker-label">PRIMARY ATTRIBUTES</span>
             </div>
-          </div>
-          <div class="stamina-bar-bg">
-            <div
-              class="stamina-bar-fill"
-              :style="{ width: staminaPercentage + '%', backgroundColor: staminaColor }"
-            ></div>
-          </div>
-          <div class="stamina-controls">
-            <div class="stepper-group">
-              <button class="btn-sta btn-sub" @click="adjustStamina(-5)">-5</button>
-              <button class="btn-sta btn-sub" @click="adjustStamina(-1)">-1</button>
-              <button class="btn-sta btn-add" @click="adjustStamina(+1)">+1</button>
-              <button class="btn-sta btn-add" @click="adjustStamina(+5)">+5</button>
-            </div>
-            <div class="freeform-delta-group">
-              <input
-                type="number"
-                v-model.number="staminaDelta"
-                placeholder="Amt"
-                min="1"
-                class="input-delta"
-                @keydown.enter.prevent="applyStaminaDamage"
-              />
-              <button class="btn-delta btn-sub" @click="applyStaminaDamage" title="Subtract damage from Stamina">- Dmg</button>
-              <button class="btn-delta btn-add" @click="applyStaminaHeal" title="Add healing to Stamina">+ Heal</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- SEU Energy Pool Tracker -->
-        <section class="seu-section card">
-          <div class="seu-header">
-            <h4>SEU Energy Pool</h4>
-            <div class="seu-header-right">
-              <button class="btn-action-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">
-                ⚡ Reload
-              </button>
-              <div class="seu-values">
-                <span class="current">{{ selectedChar.current_seu ?? 50 }}</span> /
-                <input
-                  type="number"
-                  v-model.number="selectedChar.max_seu"
-                  @change="onMaxSeuChange"
-                  class="input-max-seu"
-                  min="0"
-                /> Max SEU
-              </div>
-            </div>
-          </div>
-          <div class="seu-bar-bg">
-            <div
-              class="seu-bar-fill"
-              :style="{ width: seuPercentage + '%', backgroundColor: seuColor }"
-            ></div>
-          </div>
-          <div class="seu-controls">
-            <div class="stepper-group">
-              <button class="btn-seu btn-sub" @click="adjustSeu(-5)" title="Heavy Laser / Screen Turn (-5 SEU)">-5</button>
-              <button class="btn-seu btn-sub" @click="adjustSeu(-1)" title="Fire Laser Pistol / Stunner (-1 SEU)">-1</button>
-              <button class="btn-seu btn-add" @click="adjustSeu(+1)" title="Recharge / Add 1 SEU (+1 SEU)">+1</button>
-              <button class="btn-seu btn-add" @click="adjustSeu(+5)" title="Recharge / Add 5 SEU (+5 SEU)">+5</button>
-            </div>
-            <div class="freeform-delta-group">
-              <input
-                type="number"
-                v-model.number="seuDelta"
-                placeholder="Amt"
-                min="1"
-                class="input-delta"
-                @keydown.enter.prevent="applySeuBurn"
-              />
-              <button class="btn-delta btn-sub" @click="applySeuBurn" title="Burn / Spend SEU">- Spend</button>
-              <button class="btn-delta btn-add" @click="applySeuRecharge" title="Recharge / Add SEU">+ Charge</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Experience Points (XP) Tracker -->
-        <section class="xp-section card">
-          <div class="xp-header">
-            <h4>Experience Points (XP)</h4>
-            <div class="xp-header-right">
-              <div class="xp-values">
-                <span class="current">{{ selectedChar.current_xp ?? 0 }} XP</span>
-                <input
-                  type="number"
-                  v-model.number="selectedChar.current_xp"
-                  @change="onXpInputChange"
-                  class="input-xp"
-                  min="0"
-                  placeholder="XP"
-                  title="Direct XP edit"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="xp-controls">
-            <div class="stepper-group">
-              <button class="btn-xp btn-sub" @click="adjustXP(-5)" title="Deduct 5 XP">-5</button>
-              <button class="btn-xp btn-sub" @click="adjustXP(-1)" title="Deduct 1 XP">-1</button>
-              <button class="btn-xp btn-add" @click="adjustXP(+1)" title="Award 1 XP">+1</button>
-              <button class="btn-xp btn-add" @click="adjustXP(+5)" title="Award 5 XP">+5</button>
-            </div>
-            <div class="freeform-delta-group">
-              <input
-                type="number"
-                v-model.number="xpDelta"
-                placeholder="Amt"
-                min="1"
-                class="input-delta"
-                @keydown.enter.prevent="applyXpAward"
-              />
-              <button class="btn-delta btn-sub" @click="applyXpSpend" title="Spend XP">- Spend</button>
-              <button class="btn-delta btn-add" @click="applyXpAward" title="Award XP">+ Award</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Primary Stats Grid with Point-Shift Controls -->
-        <section class="stats-section card">
-          <h4>Primary D100 Stats</h4>
-          <div class="stats-grid">
-            <!-- STR / STA -->
-            <div class="stat-pair-box">
-              <div class="stat-pair-header">STR / STA</div>
-              <div class="stat-inputs-row">
-                <div class="sub-stat">
-                  <label>STR</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedChar.str"
-                    @change="onStatChange('str')"
-                    class="stat-input"
-                    min="1"
-                    max="100"
-                  />
+            <div class="stats-grid">
+              <!-- STR / STA -->
+              <div class="stat-pair-box">
+                <div class="stat-pair-header">STR / STA</div>
+                <div class="stat-inputs-row">
+                  <div class="sub-stat">
+                    <label>STR</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.str"
+                      @change="onStatChange('str')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                  <div class="shift-controls">
+                    <button class="btn-shift" title="Shift point to STR" @click="shiftStat('str', 'sta', 1)">◄</button>
+                    <button class="btn-shift" title="Shift point to STA" @click="shiftStat('str', 'sta', -1)">►</button>
+                  </div>
+                  <div class="sub-stat">
+                    <label>STA</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.sta"
+                      @change="onStatChange('sta')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
                 </div>
-                <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to STR" @click="shiftStat('str', 'sta', 1)">◄</button>
-                  <button class="btn-shift" title="Shift point to STA" @click="shiftStat('str', 'sta', -1)">►</button>
+              </div>
+
+              <!-- DEX / RS -->
+              <div class="stat-pair-box">
+                <div class="stat-pair-header">DEX / RS</div>
+                <div class="stat-inputs-row">
+                  <div class="sub-stat">
+                    <label>DEX</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.dex"
+                      @change="onStatChange('dex')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                  <div class="shift-controls">
+                    <button class="btn-shift" title="Shift point to DEX" @click="shiftStat('dex', 'rs', 1)">◄</button>
+                    <button class="btn-shift" title="Shift point to RS" @click="shiftStat('dex', 'rs', -1)">►</button>
+                  </div>
+                  <div class="sub-stat">
+                    <label>RS</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.rs"
+                      @change="onStatChange('rs')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
                 </div>
-                <div class="sub-stat">
-                  <label>STA</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedChar.sta"
-                    @change="onStatChange('sta')"
-                    class="stat-input"
-                    min="1"
-                    max="100"
-                  />
+              </div>
+
+              <!-- INT / LOG -->
+              <div class="stat-pair-box">
+                <div class="stat-pair-header">INT / LOG</div>
+                <div class="stat-inputs-row">
+                  <div class="sub-stat">
+                    <label>INT</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.int"
+                      @change="onStatChange('int')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                  <div class="shift-controls">
+                    <button class="btn-shift" title="Shift point to INT" @click="shiftStat('int', 'log', 1)">◄</button>
+                    <button class="btn-shift" title="Shift point to LOG" @click="shiftStat('int', 'log', -1)">►</button>
+                  </div>
+                  <div class="sub-stat">
+                    <label>LOG</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.log"
+                      @change="onStatChange('log')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- PER / LDR -->
+              <div class="stat-pair-box">
+                <div class="stat-pair-header">PER / LDR</div>
+                <div class="stat-inputs-row">
+                  <div class="sub-stat">
+                    <label>PER</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.per"
+                      @change="onStatChange('per')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                  <div class="shift-controls">
+                    <button class="btn-shift" title="Shift point to PER" @click="shiftStat('per', 'ldr', 1)">◄</button>
+                    <button class="btn-shift" title="Shift point to LDR" @click="shiftStat('per', 'ldr', -1)">►</button>
+                  </div>
+                  <div class="sub-stat">
+                    <label>LDR</label>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.ldr"
+                      @change="onStatChange('ldr')"
+                      class="stat-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
+          </section>
 
-            <!-- DEX / RS -->
-            <div class="stat-pair-box">
-              <div class="stat-pair-header">DEX / RS</div>
-              <div class="stat-inputs-row">
-                <div class="sub-stat">
-                  <label>DEX</label>
+          <!-- Right Column: Compact Trackers (STA, SEU, XP) -->
+          <section class="card trackers-section">
+            <!-- Stamina Tracker -->
+            <div class="tracker-item stamina-section">
+              <div class="stamina-header">
+                <span class="tracker-label">STAMINA (STA)</span>
+                <div class="stamina-header-right">
+                  <button class="btn-action-reset" @click="resetCharacterStats" title="Full Rest: Restore STA and SEU to maximum">
+                    🔄 Rest
+                  </button>
+                  <div class="stamina-values">
+                    <span class="current">{{ selectedChar.current_stamina }}</span> /
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.max_stamina"
+                      @change="onMaxStaminaChange"
+                      class="input-max-sta"
+                      min="1"
+                    /> Max
+                  </div>
+                </div>
+              </div>
+              <div class="stamina-bar-bg">
+                <div
+                  class="stamina-bar-fill"
+                  :style="{ width: staminaPercentage + '%', backgroundColor: staminaColor }"
+                ></div>
+              </div>
+              <div class="stamina-controls">
+                <div class="stepper-group">
+                  <button class="btn-sta btn-sub" @click="adjustStamina(-5)">-5</button>
+                  <button class="btn-sta btn-sub" @click="adjustStamina(-1)">-1</button>
+                  <button class="btn-sta btn-add" @click="adjustStamina(+1)">+1</button>
+                  <button class="btn-sta btn-add" @click="adjustStamina(+5)">+5</button>
+                </div>
+                <div class="freeform-delta-group">
                   <input
                     type="number"
-                    v-model.number="selectedChar.dex"
-                    @change="onStatChange('dex')"
-                    class="stat-input"
+                    v-model.number="staminaDelta"
+                    placeholder="Amt"
                     min="1"
-                    max="100"
+                    class="input-delta"
+                    @keydown.enter.prevent="applyStaminaDamage"
                   />
-                </div>
-                <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to DEX" @click="shiftStat('dex', 'rs', 1)">◄</button>
-                  <button class="btn-shift" title="Shift point to RS" @click="shiftStat('dex', 'rs', -1)">►</button>
-                </div>
-                <div class="sub-stat">
-                  <label>RS</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedChar.rs"
-                    @change="onStatChange('rs')"
-                    class="stat-input"
-                    min="1"
-                    max="100"
-                  />
+                  <button class="btn-delta btn-sub" @click="applyStaminaDamage" title="Subtract damage from Stamina">- Dmg</button>
+                  <button class="btn-delta btn-add" @click="applyStaminaHeal" title="Add healing to Stamina">+ Heal</button>
                 </div>
               </div>
             </div>
 
-            <!-- INT / LOG -->
-            <div class="stat-pair-box">
-              <div class="stat-pair-header">INT / LOG</div>
-              <div class="stat-inputs-row">
-                <div class="sub-stat">
-                  <label>INT</label>
+            <!-- SEU Energy Pool Tracker -->
+            <div class="tracker-item seu-section">
+              <div class="seu-header">
+                <span class="tracker-label">SEU ENERGY POOL</span>
+                <div class="seu-header-right">
+                  <button class="btn-action-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">
+                    ⚡ Reload
+                  </button>
+                  <div class="seu-values">
+                    <span class="current">{{ selectedChar.current_seu ?? 50 }}</span> /
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.max_seu"
+                      @change="onMaxSeuChange"
+                      class="input-max-seu"
+                      min="0"
+                    /> Max
+                  </div>
+                </div>
+              </div>
+              <div class="seu-bar-bg">
+                <div
+                  class="seu-bar-fill"
+                  :style="{ width: seuPercentage + '%', backgroundColor: seuColor }"
+                ></div>
+              </div>
+              <div class="seu-controls">
+                <div class="stepper-group">
+                  <button class="btn-seu btn-sub" @click="adjustSeu(-5)" title="Heavy Laser / Screen Turn (-5 SEU)">-5</button>
+                  <button class="btn-seu btn-sub" @click="adjustSeu(-1)" title="Fire Laser Pistol / Stunner (-1 SEU)">-1</button>
+                  <button class="btn-seu btn-add" @click="adjustSeu(+1)" title="Recharge / Add 1 SEU (+1 SEU)">+1</button>
+                  <button class="btn-seu btn-add" @click="adjustSeu(+5)" title="Recharge / Add 5 SEU (+5 SEU)">+5</button>
+                </div>
+                <div class="freeform-delta-group">
                   <input
                     type="number"
-                    v-model.number="selectedChar.int"
-                    @change="onStatChange('int')"
-                    class="stat-input"
+                    v-model.number="seuDelta"
+                    placeholder="Amt"
                     min="1"
-                    max="100"
+                    class="input-delta"
+                    @keydown.enter.prevent="applySeuBurn"
                   />
-                </div>
-                <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to INT" @click="shiftStat('int', 'log', 1)">◄</button>
-                  <button class="btn-shift" title="Shift point to LOG" @click="shiftStat('int', 'log', -1)">►</button>
-                </div>
-                <div class="sub-stat">
-                  <label>LOG</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedChar.log"
-                    @change="onStatChange('log')"
-                    class="stat-input"
-                    min="1"
-                    max="100"
-                  />
+                  <button class="btn-delta btn-sub" @click="applySeuBurn" title="Burn / Spend SEU">- Spend</button>
+                  <button class="btn-delta btn-add" @click="applySeuRecharge" title="Recharge / Add SEU">+ Charge</button>
                 </div>
               </div>
             </div>
 
-            <!-- PER / LDR -->
-            <div class="stat-pair-box">
-              <div class="stat-pair-header">PER / LDR</div>
-              <div class="stat-inputs-row">
-                <div class="sub-stat">
-                  <label>PER</label>
+            <!-- Experience Points (XP) Tracker -->
+            <div class="tracker-item xp-section">
+              <div class="xp-header">
+                <span class="tracker-label">EXPERIENCE POINTS (XP)</span>
+                <div class="xp-header-right">
+                  <div class="xp-values">
+                    <span class="current">{{ selectedChar.current_xp ?? 0 }} XP</span>
+                    <input
+                      type="number"
+                      v-model.number="selectedChar.current_xp"
+                      @change="onXpInputChange"
+                      class="input-xp"
+                      min="0"
+                      placeholder="XP"
+                      title="Direct XP edit"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="xp-controls">
+                <div class="freeform-delta-group xp-delta-group">
                   <input
                     type="number"
-                    v-model.number="selectedChar.per"
-                    @change="onStatChange('per')"
-                    class="stat-input"
+                    v-model.number="xpDelta"
+                    placeholder="Amt"
                     min="1"
-                    max="100"
+                    class="input-delta"
+                    @keydown.enter.prevent="applyXpAward"
                   />
-                </div>
-                <div class="shift-controls">
-                  <button class="btn-shift" title="Shift point to PER" @click="shiftStat('per', 'ldr', 1)">◄</button>
-                  <button class="btn-shift" title="Shift point to LDR" @click="shiftStat('per', 'ldr', -1)">►</button>
-                </div>
-                <div class="sub-stat">
-                  <label>LDR</label>
-                  <input
-                    type="number"
-                    v-model.number="selectedChar.ldr"
-                    @change="onStatChange('ldr')"
-                    class="stat-input"
-                    min="1"
-                    max="100"
-                  />
+                  <button class="btn-delta btn-sub" @click="applyXpSpend" title="Spend XP">- Spend</button>
+                  <button class="btn-delta btn-add" @click="applyXpAward" title="Award XP">+ Award</button>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         <!-- Detailed Species Abilities Panel -->
         <section class="card racial-panel">
@@ -2122,55 +2124,100 @@ export default {
   font-weight: bold;
 }
 
-/* Stamina & SEU & XP Sections */
+/* Middle Section: Attributes (Left) & Compact Trackers (Right) */
+.middle-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 820px) {
+  .middle-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel-header-simple {
+  margin-bottom: 8px;
+}
+
+.tracker-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+  user-select: none;
+}
+
+.trackers-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tracker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tracker-item:not(:last-child) {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #21262d;
+}
+
+/* Stamina & SEU & XP Headers */
 .stamina-header,
 .seu-header,
 .xp-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
-.stamina-header h4,
-.seu-header h4,
-.xp-header h4 {
-  margin: 0;
-  color: #45acba;
-}
+
 .stamina-header-right,
 .seu-header-right,
 .xp-header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .stamina-values,
 .seu-values,
 .xp-values {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .input-max-sta,
 .input-max-seu,
 .input-xp {
-  width: 60px;
+  width: 48px;
   background: #0d1117;
   border: 1px solid #30363d;
   color: #cecece;
   text-align: center;
   padding: 2px 4px;
   border-radius: 4px;
+  font-size: 0.85rem;
 }
 
 .stamina-bar-bg,
 .seu-bar-bg {
-  height: 14px;
+  height: 8px;
   background: #21262d;
-  border-radius: 7px;
+  border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin: 4px 0;
 }
 
 .stamina-bar-fill,
@@ -2183,7 +2230,7 @@ export default {
 .seu-controls,
 .xp-controls {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
@@ -2191,7 +2238,7 @@ export default {
 
 .stepper-group {
   display: flex;
-  gap: 6px;
+  gap: 3px;
   align-items: center;
 }
 
@@ -2202,20 +2249,20 @@ export default {
 }
 
 .input-delta {
-  width: 54px;
+  width: 46px;
   background: #0d1117;
   border: 1px solid #30363d;
   color: #cecece;
   text-align: center;
-  padding: 5px 6px;
+  padding: 3px 4px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
 .btn-delta {
-  padding: 5px 10px;
-  font-size: 0.82rem;
+  padding: 3px 8px;
+  font-size: 0.78rem;
   font-weight: 700;
   border-radius: 4px;
   cursor: pointer;
@@ -2228,9 +2275,9 @@ export default {
   background: rgba(56, 189, 248, 0.15);
   border: 1px solid rgba(56, 189, 248, 0.4);
   color: #38bdf8;
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2283,7 +2330,8 @@ export default {
 .btn-sta,
 .btn-seu,
 .btn-xp {
-  padding: 6px 14px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
   border: none;
   border-radius: 4px;
   font-weight: 700;
@@ -2314,7 +2362,7 @@ export default {
   box-shadow: var(--sci-glow-green);
 }
 
-/* Primary Stats Grid */
+/* Primary Stats Grid (2x2) */
 .stats-section h4 {
   margin: 0 0 12px 0;
   color: #45acba;
@@ -2322,25 +2370,26 @@ export default {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
 
 .stat-pair-box {
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 6px;
-  padding: 10px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .stat-pair-header {
-  font-weight: 700;
-  font-size: 0.85rem;
+  font-weight: 600;
+  font-size: 0.78rem;
   color: #8b949e;
   text-align: center;
+  letter-spacing: 0.5px;
 }
 
 .stat-inputs-row {
@@ -2358,21 +2407,21 @@ export default {
 }
 
 .sub-stat label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: bold;
   color: #cecece;
 }
 
 .stat-input {
   width: 48px;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
   color: #45acba;
   border-radius: 4px;
-  padding: 4px 2px;
+  padding: 3px 2px;
   color-scheme: dark;
 }
 

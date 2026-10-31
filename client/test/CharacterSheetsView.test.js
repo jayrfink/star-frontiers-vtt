@@ -872,8 +872,8 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       const path = require('path');
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
       expect(content).toMatch(/<div class="sidebar-header">\s*<h3>Characters<\/h3>/);
-      expect(content).toMatch(/<div class="seu-header">\s*<h4>SEU Energy Pool<\/h4>/);
-      expect(content).not.toMatch(/<h4>⚡ SEU Energy Pool<\/h4>/);
+      expect(content).toMatch(/<div class="seu-header">[\s\S]*?<span class="tracker-label">SEU ENERGY POOL<\/span>/);
+      expect(content).not.toMatch(/<span class="tracker-label">⚡/);
     });
   });
 
@@ -1071,7 +1071,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vm.errorMessage).toMatch(/insufficient xp/i);
     });
 
-    it('renders XP tracker card with steppers, input, and updates current_xp', async () => {
+    it('renders XP tracker card with delta input, - Spend, + Award, and updates current_xp without steppers', async () => {
       setActivePinia(createPinia());
       const auth = useAuthStore();
       auth.user = { id: 1, username: 'testuser', role: 'Player' };
@@ -1111,16 +1111,28 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         // Check XP tracker section exists
         const xpSection = wrapper.find('.xp-section');
         expect(xpSection.exists()).toBe(true);
-        expect(xpSection.text()).toContain('Experience Points (XP)');
+        expect(xpSection.text().toUpperCase()).toContain('EXPERIENCE POINTS (XP)');
         expect(xpSection.text()).toContain('12');
 
-        // Check steppers exist: -5, -1, +1, +5
+        // Check steppers do NOT exist (removed per requirement: no increment -5,-1,+1,+5 buttons)
         const steppers = xpSection.findAll('.btn-xp');
-        expect(steppers.length).toBe(4);
+        expect(steppers.length).toBe(0);
 
-        // Click +1 stepper
-        await steppers[2].trigger('click');
-        expect(wrapper.vm.selectedChar.current_xp).toBe(13);
+        // Test delta input with + Award
+        const deltaInput = xpSection.find('.input-delta');
+        expect(deltaInput.exists()).toBe(true);
+        await deltaInput.setValue(3);
+        const awardBtn = xpSection.find('.btn-delta.btn-add');
+        expect(awardBtn.exists()).toBe(true);
+        await awardBtn.trigger('click');
+        expect(wrapper.vm.selectedChar.current_xp).toBe(15);
+
+        // Test delta input with - Spend
+        await deltaInput.setValue(5);
+        const spendBtn = xpSection.find('.btn-delta.btn-sub');
+        expect(spendBtn.exists()).toBe(true);
+        await spendBtn.trigger('click');
+        expect(wrapper.vm.selectedChar.current_xp).toBe(10);
 
         // Check input field exists and update it manually
         const xpInput = xpSection.find('.input-xp');
@@ -1128,6 +1140,97 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         await xpInput.setValue(25);
         await xpInput.trigger('change');
         expect(wrapper.vm.selectedChar.current_xp).toBe(25);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('renders middle section with 2x2 primary attributes left and compact STA/SEU/XP trackers right', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'testuser', role: 'Player' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Wilks',
+              race: 'Vrusk',
+              psa: 'Military',
+              str: 50,
+              sta: 50,
+              dex: 55,
+              rs: 55,
+              int: 45,
+              log: 45,
+              per: 40,
+              ldr: 40,
+              current_stamina: 50,
+              max_stamina: 50,
+              current_seu: 50,
+              max_seu: 50,
+              current_xp: 12,
+              skills: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        // Verify middle-section-grid exists
+        const middleGrid = wrapper.find('.middle-section-grid');
+        expect(middleGrid.exists()).toBe(true);
+
+        // Left box: stats-section with 4 stat pairs in 2x2
+        const statsSection = middleGrid.find('.stats-section');
+        expect(statsSection.exists()).toBe(true);
+        expect(statsSection.find('.tracker-label').text()).toBe('PRIMARY ATTRIBUTES');
+        const statBoxes = statsSection.findAll('.stat-pair-box');
+        expect(statBoxes.length).toBe(4);
+        expect(statBoxes[0].find('.stat-pair-header').text()).toBe('STR / STA');
+        expect(statBoxes[1].find('.stat-pair-header').text()).toBe('DEX / RS');
+        expect(statBoxes[2].find('.stat-pair-header').text()).toBe('INT / LOG');
+        expect(statBoxes[3].find('.stat-pair-header').text()).toBe('PER / LDR');
+
+        // Right box: trackers-section with STA, SEU, XP
+        const trackersSection = middleGrid.find('.trackers-section');
+        expect(trackersSection.exists()).toBe(true);
+
+        // Stamina tracker
+        const staItem = trackersSection.find('.stamina-section');
+        expect(staItem.exists()).toBe(true);
+        expect(staItem.find('.tracker-label').text()).toBe('STAMINA (STA)');
+        expect(staItem.find('.stamina-bar-bg').exists()).toBe(true);
+        expect(staItem.find('.btn-action-reset').exists()).toBe(true);
+
+        // SEU tracker
+        const seuItem = trackersSection.find('.seu-section');
+        expect(seuItem.exists()).toBe(true);
+        expect(seuItem.find('.tracker-label').text()).toBe('SEU ENERGY POOL');
+        expect(seuItem.find('.seu-bar-bg').exists()).toBe(true);
+        expect(seuItem.find('.btn-action-reload').exists()).toBe(true);
+
+        // XP tracker
+        const xpItem = trackersSection.find('.xp-section');
+        expect(xpItem.exists()).toBe(true);
+        expect(xpItem.find('.tracker-label').text()).toBe('EXPERIENCE POINTS (XP)');
+        expect(xpItem.find('.freeform-delta-group').exists()).toBe(true);
+
+        // Ensure no h4 headers used in the middle section
+        expect(middleGrid.findAll('h4').length).toBe(0);
       } finally {
         global.fetch = origFetch;
       }
