@@ -1212,14 +1212,20 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(staItem.exists()).toBe(true);
         expect(staItem.find('.tracker-label').text()).toBe('STAMINA (STA)');
         expect(staItem.find('.stamina-bar-bg').exists()).toBe(true);
-        expect(staItem.find('.btn-action-reset').exists()).toBe(true);
+        const resetBtn = staItem.find('.btn-action-reset');
+        expect(resetBtn.exists()).toBe(true);
+        expect(resetBtn.text()).toBe('Rest');
+        expect(resetBtn.text()).not.toContain('🔄');
 
         // SEU tracker
         const seuItem = trackersSection.find('.seu-section');
         expect(seuItem.exists()).toBe(true);
         expect(seuItem.find('.tracker-label').text()).toBe('SEU ENERGY POOL');
         expect(seuItem.find('.seu-bar-bg').exists()).toBe(true);
-        expect(seuItem.find('.btn-action-reload').exists()).toBe(true);
+        const reloadBtn = seuItem.find('.btn-action-reload');
+        expect(reloadBtn.exists()).toBe(true);
+        expect(reloadBtn.text()).toBe('Reload');
+        expect(reloadBtn.text()).not.toContain('⚡');
 
         // XP tracker
         const xpItem = trackersSection.find('.xp-section');
@@ -1302,6 +1308,12 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(subRow.find('.race-select-wrap').exists()).toBe(true);
         expect(subRow.find('.psa-select-wrap').exists()).toBe(true);
         expect(subRow.find('.player-select-wrap').exists()).toBe(true);
+
+        // 5. Verify sub-row CSS font size is 0.9rem (10% smaller)
+        const fs = require('fs');
+        const path = require('path');
+        const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+        expect(vueFile).toMatch(/\.header-sub-row\s*\{[^}]*font-size:\s*0\.9rem/);
       } finally {
         global.fetch = origFetch;
       }

@@ -327,7 +327,7 @@
                 <span class="tracker-label">STAMINA (STA)</span>
                 <div class="stamina-header-right">
                   <button class="btn-action-reset" @click="resetCharacterStats" title="Full Rest: Restore STA and SEU to maximum">
-                    🔄 Rest
+                    Rest
                   </button>
                   <div class="stamina-values">
                     <span class="current">{{ selectedChar.current_stamina }}</span> /
@@ -375,7 +375,7 @@
                 <span class="tracker-label">SEU ENERGY POOL</span>
                 <div class="seu-header-right">
                   <button class="btn-action-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">
-                    ⚡ Reload
+                    Reload
                   </button>
                   <div class="seu-values">
                     <span class="current">{{ selectedChar.current_seu ?? 50 }}</span> /
@@ -1967,6 +1967,11 @@ export default {
   gap: 20px;
   align-items: center;
   flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.header-sub-row label {
+  font-size: 0.9rem;
 }
 
 .input-name {
@@ -1988,6 +1993,7 @@ export default {
   align-items: center;
   gap: 8px;
   font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .select-race,
@@ -2007,9 +2013,9 @@ export default {
 .select-player {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
-  padding: 8px 28px 8px 12px !important;
+  padding: 6px 28px 6px 10px !important;
   padding-right: 28px !important;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .select-race:focus,
@@ -2030,8 +2036,8 @@ export default {
   color: #45acba;
   background: rgba(69, 172, 186, 0.12);
   border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
+  padding: 3px 7px;
+  font-size: 0.77rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -2042,9 +2048,9 @@ export default {
   background: var(--bg-surface-2, #1f293d);
   color: #cecece;
   border: 1px solid var(--border-color, #2b3954);
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 4px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   margin-left: 6px;
   min-width: 140px;
   box-sizing: border-box;
@@ -2269,6 +2275,12 @@ export default {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-width: 58px;
+  text-align: center;
+}
+
+.btn-action-reset {
+  padding: 2px 14px;
 }
 .btn-action-reset:hover,
 .btn-action-reload:hover {
