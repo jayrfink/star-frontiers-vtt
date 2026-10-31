@@ -348,12 +348,15 @@
                 <div v-if="defense.type !== 'counter'" class="defense-toggle-row">
                   <span class="defense-label">{{ defense.name }}</span>
                   <div class="defense-controls-row">
-                    <button
-                      :class="['toggle-btn', defense.online ? 'active' : 'offline']"
-                      @click="toggleDefense(defense)"
+                    <select
+                      v-model="defense.status"
+                      @change="onDefenseStatusChange(defense)"
+                      :class="['status-select', 'defense-status-select', (defense.status || (defense.online === false ? 'Offline' : 'Online')).toLowerCase()]"
                     >
-                      {{ defense.online ? 'ONLINE' : 'OFFLINE' }}
-                    </button>
+                      <option value="Online">Online</option>
+                      <option value="Damaged">Damaged</option>
+                      <option value="Offline">Offline</option>
+                    </select>
                     <button class="btn-remove" title="Remove Defense" @click="removeDefense(index)">✕</button>
                   </div>
                 </div>
@@ -365,11 +368,20 @@
                     <div class="defense-controls-row">
                       <button
                         class="btn-action"
-                        :disabled="defense.current <= 0"
+                        :disabled="defense.current <= 0 || (defense.status && defense.status !== 'Online')"
                         @click="useDefenseCounter(defense)"
                       >
                         {{ getDefenseActionLabel(defense) }}
                       </button>
+                      <select
+                        v-model="defense.status"
+                        @change="onDefenseStatusChange(defense)"
+                        :class="['status-select', 'defense-status-select', (defense.status || 'Online').toLowerCase()]"
+                      >
+                        <option value="Online">Online</option>
+                        <option value="Damaged">Damaged</option>
+                        <option value="Offline">Offline</option>
+                      </select>
                       <button class="btn-remove" title="Remove Defense" @click="removeDefense(index)">✕</button>
                     </div>
                   </div>
@@ -1724,15 +1736,27 @@ export default {
           this.selectedShip.current_dcr = maxDcr;
         }
 
-        // Reset all weapon ammo to ammo_max
+        // Reset all weapon ammo to ammo_max and status to Online
         if (Array.isArray(this.selectedShip.weapons)) {
           this.selectedShip.weapons.forEach(w => {
+            w.status = 'Online';
             if (w.ammo_max !== undefined && w.ammo_max > 0) {
               w.ammo_current = w.ammo_max;
             } else if (this.isLimitedAmmoWeapon && this.isLimitedAmmoWeapon(w)) {
               w.ammo_current = w.ammo_max || 0;
             }
           });
+        }
+
+        // Reset defense status to Online
+        if (this.selectedShip.defenses && Array.isArray(this.selectedShip.defenses.items)) {
+          this.selectedShip.defenses.items.forEach(d => {
+            d.status = 'Online';
+            if (d.type !== 'counter') {
+              d.online = true;
+            }
+          });
+          syncLegacyDefenses(this.selectedShip.defenses);
         }
 
         // Reset damaged systems
@@ -1921,6 +1945,18 @@ export default {
     toggleDefense(defense) {
       if (!defense) return;
       defense.online = !defense.online;
+      defense.status = defense.online ? 'Online' : 'Offline';
+      if (this.selectedShip && this.selectedShip.defenses) {
+        syncLegacyDefenses(this.selectedShip.defenses);
+      }
+      this.updateShip();
+    },
+    onDefenseStatusChange(defense) {
+      if (!defense) return;
+      if (!defense.status) defense.status = 'Online';
+      if (defense.type !== 'counter') {
+        defense.online = defense.status === 'Online';
+      }
       if (this.selectedShip && this.selectedShip.defenses) {
         syncLegacyDefenses(this.selectedShip.defenses);
       }

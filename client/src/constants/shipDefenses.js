@@ -84,15 +84,16 @@ export function createDefenseInstance(template = {}, overrides = {}) {
 export function syncLegacyDefenses(defensesObj) {
   if (!defensesObj) return defensesObj;
   const items = Array.isArray(defensesObj.items) ? defensesObj.items : [];
+  const isOnline = (d) => Boolean(d && d.online !== false && (!d.status || d.status === 'Online'));
 
   const rh = items.find((d) => d.id === 'reflective_hull' || d.defense_id === 'reflective_hull' || d.name?.toLowerCase().includes('reflective'));
-  defensesObj.reflective_hull = rh ? (rh.online !== false) : false;
+  defensesObj.reflective_hull = isOnline(rh);
 
   const stasis = items.find((d) => d.id === 'stasis_screen' || d.defense_id === 'stasis_screen' || d.name?.toLowerCase().includes('stasis'));
-  defensesObj.stasis_screen = stasis ? (stasis.online !== false) : false;
+  defensesObj.stasis_screen = isOnline(stasis);
 
   const stealth = items.find((d) => d.id === 'stealth_screen' || d.defense_id === 'stealth_screen' || d.name?.toLowerCase().includes('stealth'));
-  defensesObj.stealth_screen = stealth ? (stealth.online !== false) : false;
+  defensesObj.stealth_screen = isOnline(stealth);
 
   const masking = items.find((d) => d.id === 'masking_screens' || d.defense_id === 'masking_screens' || d.name?.toLowerCase().includes('masking'));
   defensesObj.masking_screens_max = masking ? Number(masking.max || 0) : 0;

@@ -1634,6 +1634,61 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(icmItem.max).toBe(6);
       expect(icmItem.current).toBe(5);
     });
+
+    it('renders Online/Damaged/Offline status select for both toggle and counter defenses and syncs status changes', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'UPF Defender',
+          hull_size: 8,
+          defenses: {
+            reflective_hull: true,
+            masking_screens_max: 2,
+            masking_screens_current: 2,
+            icm_max: 6,
+            icm_current: 5,
+          },
+          weapons: [],
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView);
+        await wrapper.vm.$nextTick();
+        await new Promise((r) => setTimeout(r, 20));
+        await wrapper.vm.$nextTick();
+
+        const defenseSelects = wrapper.findAll('.defense-status-select');
+        expect(defenseSelects.length).toBe(3);
+
+        // Verify each select has Online, Damaged, and Offline options
+        for (const select of defenseSelects) {
+          const optionValues = select.findAll('option').map((o) => o.element.value);
+          expect(optionValues).toEqual(['Online', 'Damaged', 'Offline']);
+          expect(select.classes()).toContain('status-select');
+          expect(select.classes()).toContain('online');
+        }
+
+        // Changing toggle defense (Reflective Hull) status to Damaged updates status, online flag, and legacy key
+        await defenseSelects[0].setValue('Damaged');
+        expect(wrapper.vm.selectedShip.defenses.items[0].status).toBe('Damaged');
+        expect(wrapper.vm.selectedShip.defenses.items[0].online).toBe(false);
+        expect(wrapper.vm.selectedShip.defenses.reflective_hull).toBe(false);
+        expect(defenseSelects[0].classes()).toContain('damaged');
+
+        // Changing counter defense (Masking Screens) status to Offline disables its action button
+        const actionBtns = wrapper.findAll('.defense-counter-box .btn-action');
+        expect(actionBtns[0].attributes('disabled')).toBeUndefined();
+        await defenseSelects[1].setValue('Offline');
+        expect(wrapper.vm.selectedShip.defenses.items[1].status).toBe('Offline');
+        expect(defenseSelects[1].classes()).toContain('offline');
+        expect(actionBtns[0].attributes('disabled')).toBeDefined();
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
   });
 
   describe('ShipSheetsView - Header Reorganization, Download Button, and DCR Meter Tracker', () => {
