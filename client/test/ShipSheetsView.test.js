@@ -1636,6 +1636,11 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
+    it('configures middle-section-grid to 40% width for Flight Stats and 60% width for Trackers', () => {
+      const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(content).toMatch(/\.middle-section-grid\s*\{[^}]*grid-template-columns:\s*4fr\s+6fr;/);
+    });
+
     it('renders the compact Hull Points and DCR meter applets in the right column', async () => {
       const origFetch = global.fetch;
       global.fetch = vi.fn().mockResolvedValue({
