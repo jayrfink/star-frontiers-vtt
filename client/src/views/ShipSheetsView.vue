@@ -2578,6 +2578,12 @@ export default {
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  min-width: 88px;
+  text-align: center;
+}
+
+.btn-action-repair {
+  padding: 2px 14px;
 }
 .btn-action-restore-dcr:hover,
 .btn-action-repair:hover,

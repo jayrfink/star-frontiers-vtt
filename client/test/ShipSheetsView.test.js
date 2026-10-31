@@ -1691,6 +1691,12 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
+    it('styles Full Repair and Restore DCR buttons with matching width and padding', () => {
+      const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(content).toMatch(/\.btn-action-restore-dcr,\s*\.btn-action-repair,\s*\.btn-action-reset\s*\{[^}]*min-width:\s*88px;?[^}]*text-align:\s*center;?[^}]*\}/);
+      expect(content).toMatch(/\.btn-action-repair\s*\{[^}]*padding:\s*2px\s+14px;?[^}]*\}/);
+    });
+
     it('computes DCR percentage and matches the exact color scheme of Hull Points', () => {
       const vm = {
         selectedShip: {
