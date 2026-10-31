@@ -1133,6 +1133,77 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       }
     });
   });
+
+  describe('Character Sheet Header Layout & Organization', () => {
+    it('renders clean header with top row and sub row, without Species Info banner, and without download icon', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'gmUser', role: 'GameMaster' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              user_id: 1,
+              owner_username: 'gmUser',
+              name: 'Commander John',
+              race: 'Human',
+              psa: 'Military',
+              current_stamina: 50,
+              max_stamina: 50,
+              current_xp: 10,
+            }]),
+          });
+        }
+        if (url === '/api/auth/users') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{ id: 1, username: 'gmUser', role: 'GameMaster' }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        // 1. Verify Species Info banner is completely removed
+        expect(wrapper.find('.race-ability-banner').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Species Info:');
+
+        // 2. Verify top row contains input-name, player attribution, tier badge, and download button
+        const topRow = wrapper.find('.header-top-row');
+        expect(topRow.exists()).toBe(true);
+        expect(topRow.find('.input-name').exists()).toBe(true);
+        expect(topRow.find('.player-select-wrap').exists()).toBe(true);
+        expect(topRow.find('.badge-tier').exists()).toBe(true);
+        const downloadBtn = topRow.find('.btn-action-download');
+        expect(downloadBtn.exists()).toBe(true);
+
+        // 3. Verify download button does not contain the mini-icon 📥
+        expect(downloadBtn.text()).not.toContain('📥');
+        expect(downloadBtn.text()).toContain('Download Sheet (.txt)');
+
+        // 4. Verify sub row contains Species and PSA selectors underneath
+        const subRow = wrapper.find('.header-sub-row');
+        expect(subRow.exists()).toBe(true);
+        expect(subRow.find('.race-select-wrap').exists()).toBe(true);
+        expect(subRow.find('.psa-select-wrap').exists()).toBe(true);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
 });
 
 

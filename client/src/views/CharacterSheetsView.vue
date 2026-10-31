@@ -83,63 +83,67 @@
               <img v-if="selectedChar.avatar_url" :src="selectedChar.avatar_url" class="portrait-img" alt="Character Portrait" />
               <div v-else class="portrait-placeholder">Click to select<br/>Token Image</div>
             </div>
-            <input
-              type="text"
-              v-model="selectedChar.name"
-              @change="updateCharacter"
-              class="input-name"
-              placeholder="Character Name"
-            />
-            <div class="race-select-wrap">
-              <label>Species:</label>
-              <select v-model="selectedRaceCategory" class="select-race">
-                <option value="Human">Human</option>
-                <option value="Dralasite">Dralasite</option>
-                <option value="Vrusk">Vrusk</option>
-                <option value="Yazirian">Yazirian</option>
-                <option value="Custom">Custom</option>
-              </select>
-              <input
-                v-if="selectedRaceCategory === 'Custom'"
-                type="text"
-                v-model="selectedChar.race"
-                @change="onCustomRaceChange"
-                class="input-custom-race"
-                placeholder="Custom Species Name"
-              />
+            <div class="header-content">
+              <div class="header-top-row">
+                <input
+                  type="text"
+                  v-model="selectedChar.name"
+                  @change="updateCharacter"
+                  class="input-name"
+                  placeholder="Character Name"
+                />
+                <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
+                  <label>Player:</label>
+                  <select v-model="selectedChar.user_id" @change="updateCharacter" class="select-player">
+                    <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                      {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+                    </option>
+                  </select>
+                </div>
+                <div v-else-if="selectedChar.owner_username" class="player-badge-wrap">
+                  <span class="badge-player" title="Assigned Player">
+                    👤 {{ selectedChar.owner_username }}
+                  </span>
+                </div>
+                <span class="badge-tier">Tier {{ characterTier }}</span>
+                <button
+                  class="btn-action-download"
+                  @click="downloadAsciiSheet"
+                  title="Download ASCII Character Record (.txt)"
+                >
+                  Download Sheet (.txt)
+                </button>
+              </div>
+
+              <div class="header-sub-row">
+                <div class="race-select-wrap">
+                  <label>Species:</label>
+                  <select v-model="selectedRaceCategory" class="select-race">
+                    <option value="Human">Human</option>
+                    <option value="Dralasite">Dralasite</option>
+                    <option value="Vrusk">Vrusk</option>
+                    <option value="Yazirian">Yazirian</option>
+                    <option value="Custom">Custom</option>
+                  </select>
+                  <input
+                    v-if="selectedRaceCategory === 'Custom'"
+                    type="text"
+                    v-model="selectedChar.race"
+                    @change="onCustomRaceChange"
+                    class="input-custom-race"
+                    placeholder="Custom Species Name"
+                  />
+                </div>
+                <div class="psa-select-wrap">
+                  <label>PSA:</label>
+                  <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
+                    <option value="Military">Military</option>
+                    <option value="Technological">Technological</option>
+                    <option value="Biosocial">Biosocial</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div class="psa-select-wrap">
-              <label>PSA:</label>
-              <select v-model="selectedChar.psa" @change="updateCharacter" class="select-psa">
-                <option value="Military">Military</option>
-                <option value="Technological">Technological</option>
-                <option value="Biosocial">Biosocial</option>
-              </select>
-            </div>
-            <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
-              <label>Player:</label>
-              <select v-model="selectedChar.user_id" @change="updateCharacter" class="select-player">
-                <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
-                  {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
-                </option>
-              </select>
-            </div>
-            <div v-else-if="selectedChar.owner_username" class="player-badge-wrap">
-              <span class="badge-player" title="Assigned Player">
-                👤 {{ selectedChar.owner_username }}
-              </span>
-            </div>
-            <span class="badge-tier">Tier {{ characterTier }}</span>
-            <button
-              class="btn-action-download"
-              @click="downloadAsciiSheet"
-              title="Download ASCII Character Record (.txt)"
-            >
-              📥 Download Sheet (.txt)
-            </button>
-          </div>
-          <div class="race-ability-banner">
-            <strong>Species Info:</strong> {{ racesData[selectedChar.race]?.abilitiesDescription || 'Custom species without default species abilities.' }}
           </div>
         </header>
 
@@ -1944,9 +1948,6 @@ export default {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .header-main {
@@ -1955,8 +1956,31 @@ export default {
   align-items: center;
 }
 
+.header-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.header-top-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.header-sub-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .input-name {
   flex: 1;
+  min-width: 180px;
   background: #0d1117;
   border: 1px solid #30363d;
   color: #cecece;
@@ -2040,18 +2064,6 @@ export default {
 }
 .custom-race-input-group {
   margin-top: 8px;
-}
-
-.race-ability-banner {
-  background: #1f6feb15;
-  border-left: 3px solid #45acba;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  color: #8b949e;
-}
-
-.race-ability-banner strong {
-  color: #cecece;
 }
 
 /* Derived Tactical Sub-Stats Bar */
