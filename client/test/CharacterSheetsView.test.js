@@ -3,7 +3,9 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
+import { useAuthStore } from '../src/stores/auth.js';
 import * as characterExport from '../src/utils/characterExport.js';
 
 describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
@@ -872,6 +874,129 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(content).toMatch(/<div class="sidebar-header">\s*<h3>Characters<\/h3>/);
       expect(content).toMatch(/<div class="seu-header">\s*<h4>SEU Energy Pool<\/h4>/);
       expect(content).not.toMatch(/<h4>⚡ SEU Energy Pool<\/h4>/);
+    });
+  });
+
+  describe('Character Sheets - Player Assignment (GM only)', () => {
+    it('fetches registered users on mount when user is GameMaster and renders player assignment dropdown', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'gmUser', role: 'GameMaster' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 10,
+              user_id: 2,
+              owner_username: 'playerAlice',
+              name: 'Alice Hero',
+              race: 'Human',
+              psa: 'Military',
+              current_stamina: 50,
+              max_stamina: 50,
+            }]),
+          });
+        }
+        if (url === '/api/auth/users') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([
+              { id: 1, username: 'gmUser', role: 'GameMaster' },
+              { id: 2, username: 'playerAlice', role: 'Player' },
+            ]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        expect(global.fetch).toHaveBeenCalledWith('/api/auth/users', expect.any(Object));
+        const playerSelect = wrapper.find('.select-player');
+        expect(playerSelect.exists()).toBe(true);
+        expect(wrapper.find('.player-select-wrap').exists()).toBe(true);
+
+        // Selecting a new player updates user_id
+        await playerSelect.setValue('1');
+        expect(Number(wrapper.vm.selectedChar.user_id)).toBe(1);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('renders read-only badge-player for non-GM players', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 2, username: 'playerAlice', role: 'Player' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 10,
+              user_id: 2,
+              owner_username: 'playerAlice',
+              name: 'Alice Hero',
+              race: 'Human',
+              psa: 'Military',
+              current_stamina: 50,
+              max_stamina: 50,
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        expect(wrapper.find('.select-player').exists()).toBe(false);
+        const badge = wrapper.find('.badge-player');
+        expect(badge.exists()).toBe(true);
+        expect(badge.text()).toContain('playerAlice');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('includes Assigned Player select in Create Character modal when isGm is true', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'gmUser', role: 'GameMaster' };
+
+      const vm = {
+        isGm: true,
+        registeredUsers: [
+          { id: 1, username: 'gmUser', role: 'GameMaster' },
+          { id: 2, username: 'playerAlice', role: 'Player' },
+        ],
+        newCharForm: {},
+        showCreateModal: false,
+      };
+
+      CharacterSheetsView.methods.openCreateModal.call(vm);
+      expect(vm.showCreateModal).toBe(true);
+      expect(vm.newCharForm.user_id).toBe(1);
     });
   });
 });

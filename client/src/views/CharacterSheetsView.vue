@@ -116,6 +116,19 @@
                 <option value="Biosocial">Biosocial</option>
               </select>
             </div>
+            <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
+              <label>Player:</label>
+              <select v-model="selectedChar.user_id" @change="updateCharacter" class="select-player">
+                <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                  {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+                </option>
+              </select>
+            </div>
+            <div v-else-if="selectedChar.owner_username" class="player-badge-wrap">
+              <span class="badge-player" title="Assigned Player">
+                👤 {{ selectedChar.owner_username }}
+              </span>
+            </div>
             <span class="badge-tier">Tier {{ characterTier }}</span>
             <button
               class="btn-action-download"
@@ -599,6 +612,14 @@
               <option value="Biosocial">Biosocial</option>
             </select>
           </div>
+          <div v-if="isGm && registeredUsers.length > 0" class="form-group">
+            <label>Assigned Player</label>
+            <select v-model="newCharForm.user_id" class="char-create-select">
+              <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+              </option>
+            </select>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>STR / STA</label>
@@ -740,12 +761,14 @@ export default {
       equipmentSearchQuery: '',
       searchInventoryQuery: '',
       recentlyAddedMap: {},
+      registeredUsers: [],
       newCharForm: {
         name: '',
         race: 'Human',
         customRaceName: '',
         psa: 'Military',
         avatar_url: '',
+        user_id: null,
         str_sta: 50,
         dex_rs: 50,
         int_log: 50,
@@ -898,6 +921,9 @@ export default {
     },
   },
   mounted() {
+    if (this.isGm) {
+      this.fetchUsers();
+    }
     this.fetchCharacters();
     this.fetchEquipment();
     this.setupSocketListeners();
@@ -980,6 +1006,8 @@ export default {
       c.current_stamina = c.current_sta !== undefined ? c.current_sta : (c.current_stamina !== undefined ? c.current_stamina : c.sta);
       c.max_seu = c.max_seu !== undefined ? Number(c.max_seu) : 50;
       c.current_seu = c.current_seu !== undefined ? Number(c.current_seu) : c.max_seu;
+      c.owner_username = c.owner_username || '';
+      c.user_id = c.user_id !== undefined && c.user_id !== null ? Number(c.user_id) : null;
 
       if (c.dex === undefined) c.dex = c.dex_rs || 50;
       if (c.rs === undefined) c.rs = c.dex_rs || 50;
@@ -1023,6 +1051,18 @@ export default {
         this.loading = false;
       }
     },
+    async fetchUsers() {
+      try {
+        const res = await fetch('/api/auth/users', { credentials: 'include' });
+        if (res.ok) {
+          this.registeredUsers = await res.json();
+        } else {
+          this.registeredUsers = [];
+        }
+      } catch {
+        this.registeredUsers = [];
+      }
+    },
     isCustomRace(race) {
       return !['Human', 'Dralasite', 'Vrusk', 'Yazirian'].includes(race);
     },
@@ -1043,12 +1083,20 @@ export default {
       }
     },
     openCreateModal() {
+      let defaultUserId = null;
+      try {
+        const authStore = useAuthStore();
+        defaultUserId = authStore?.user?.id ?? (this.registeredUsers?.[0]?.id ?? null);
+      } catch {
+        defaultUserId = this.registeredUsers?.[0]?.id ?? null;
+      }
       this.newCharForm = {
         name: '',
         race: 'Human',
         customRaceName: '',
         psa: 'Military',
         avatar_url: '',
+        user_id: defaultUserId,
         str_sta: 50,
         dex_rs: 50,
         int_log: 50,
@@ -1839,7 +1887,8 @@ export default {
 }
 
 .race-select-wrap,
-.psa-select-wrap {
+.psa-select-wrap,
+.player-select-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1848,8 +1897,10 @@ export default {
 
 .select-race,
 .select-psa,
+.select-player,
 .select-race option,
-.select-psa option {
+.select-psa option,
+.select-player option {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
@@ -1857,7 +1908,8 @@ export default {
 }
 
 .select-race,
-.select-psa {
+.select-psa,
+.select-player {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
   padding: 8px 28px 8px 12px !important;
@@ -1866,10 +1918,29 @@ export default {
 }
 
 .select-race:focus,
-.select-psa:focus {
+.select-psa:focus,
+.select-player:focus {
   outline: none;
   border-color: aqua !important;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.player-badge-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.badge-player {
+  border: 1px solid rgba(69, 172, 186, 0.4);
+  color: #45acba;
+  background: rgba(69, 172, 186, 0.12);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .input-custom-race {
