@@ -6299,7 +6299,7 @@ onBeforeUnmount(() => {
 
 .slingshot-select {
   width: 100%;
-  background: #1e293b;
+  background-color: #1e293b;
   border: 1px solid #334155;
   color: #cecece;
   border-radius: 4px;

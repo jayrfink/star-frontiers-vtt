@@ -2649,7 +2649,7 @@ export default {
 
 .form-group input,
 .form-group select {
-  background: #000000;
+  background-color: #000000;
   border: 1px solid rgba(0, 128, 128, 0.6);
   color: #00ffff;
   padding: 8px;

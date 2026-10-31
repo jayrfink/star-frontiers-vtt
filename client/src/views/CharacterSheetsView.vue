@@ -2533,7 +2533,7 @@ export default {
 
 .form-group input,
 .form-group select {
-  background: #000000;
+  background-color: #000000;
   border: 1px solid rgba(0, 128, 128, 0.6);
   color: #00ffff;
   padding: 8px;
@@ -2545,12 +2545,14 @@ export default {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
+  background-image: none !important;
 }
 
 .char-create-select {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: var(--radius, 4px);
   padding: 8px 12px;
+  padding-right: 28px !important;
   font-size: 14px;
   width: 100%;
 }

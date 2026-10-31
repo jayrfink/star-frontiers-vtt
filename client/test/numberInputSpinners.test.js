@@ -29,6 +29,13 @@ describe('Global Form Control & Number Spinner Theme (main.css)', () => {
     expect(cssContent).toMatch(/select\s*\{[^}]*color-scheme:\s*dark;/);
     expect(cssContent).toMatch(/background-image:\s*url\("data:image\/svg\+xml/);
   });
+
+  it('prevents select dropdown arrows from tiling/repeating and ensures options have no background image', () => {
+    expect(cssContent).toMatch(/select\s*\{[^}]*background-repeat:\s*no-repeat\s*!important;/);
+    expect(cssContent).toMatch(/select\s*\{[^}]*background-position:\s*right\s+10px\s+center\s*!important;/);
+    expect(cssContent).toMatch(/select:hover:not\(:disabled\)\s*\{[^}]*background-repeat:\s*no-repeat\s*!important;/);
+    expect(cssContent).toMatch(/select\s+option\s*\{[^}]*background-image:\s*none\s*!important;/);
+  });
 });
 
 describe('View-specific Stat Inputs Theming', () => {
@@ -55,5 +62,19 @@ describe('View-specific Stat Inputs Theming', () => {
 
     expect(rpgContent).toMatch(/\.modal-card input\[type="number"\]\s*\{[^}]*color-scheme:\s*dark;/);
     expect(spaceContent).toMatch(/\.modal-card input\[type="number"\]\s*\{[^}]*color-scheme:\s*dark;/);
+  });
+
+  it('uses background-color instead of background shorthand on selects in CharacterSheetsView, ShipSheetsView, and SpaceVttView to prevent repeating arrows', () => {
+    const charContent = fs.readFileSync(charSheetsPath, 'utf-8');
+    const shipContent = fs.readFileSync(shipSheetsPath, 'utf-8');
+    const spacePath = path.resolve(__dirname, '../src/views/SpaceVttView.vue');
+    const spaceContent = fs.readFileSync(spacePath, 'utf-8');
+
+    expect(charContent).not.toMatch(/\.form-group\s+select\s*\{[^}]*background:\s*#/);
+    expect(charContent).toMatch(/\.form-group\s+select\s*\{[^}]*background-color:\s*#/);
+    expect(shipContent).not.toMatch(/\.form-group\s+select\s*\{[^}]*background:\s*#/);
+    expect(shipContent).toMatch(/\.form-group\s+select\s*\{[^}]*background-color:\s*#/);
+    expect(spaceContent).not.toMatch(/\.slingshot-select\s*\{[^}]*background:\s*#/);
+    expect(spaceContent).toMatch(/\.slingshot-select\s*\{[^}]*background-color:\s*#/);
   });
 });
