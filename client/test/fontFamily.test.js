@@ -13,6 +13,11 @@ describe('Sitewide Font Family (D&D Beyond Character Sheet Font - Roboto)', () =
     expect(indexHtml).toMatch(/rel=["']preconnect["']\s+href=["']https:\/\/fonts\.googleapis\.com["']/);
   });
 
+  it('defines local @font-face rules for offline and local serving in main.css', () => {
+    expect(mainCss).toMatch(/@font-face\s*\{[^}]*font-family:\s*['"]Roboto['"][^}]*src:\s*url\(['"]\/fonts\/Roboto-Regular\.ttf['"]\)/);
+    expect(mainCss).toMatch(/@font-face\s*\{[^}]*font-family:\s*['"]Roboto['"][^}]*src:\s*url\(['"]\/fonts\/Roboto-Bold\.ttf['"]\)/);
+  });
+
   it('sets Roboto as the primary font-family on body in main.css', () => {
     expect(mainCss).toMatch(/font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
     expect(mainCss).toMatch(/body\s*\{[^}]*font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
