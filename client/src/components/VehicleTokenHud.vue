@@ -362,7 +362,7 @@ export default {
   display: flex;
   flex-direction: column;
   z-index: 150;
-  color: #e6edf3;
+  color: #cecece;
   overflow: hidden;
   font-family: inherit;
 }
@@ -408,7 +408,7 @@ export default {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .hud-type-badge {
@@ -522,7 +522,7 @@ export default {
   background-color: #0d1117;
   border: 1px solid #30363d;
   border-radius: 4px;
-  color: #e6edf3;
+  color: #cecece;
   padding: 3px 6px;
   font-size: 0.85rem;
   width: 55px;
@@ -613,7 +613,7 @@ export default {
   flex: 1;
   background-color: #161b22;
   border: 1px solid #30363d;
-  color: #e6edf3;
+  color: #cecece;
   border-radius: 4px;
   padding: 4px 0;
   font-size: 0.75rem;
@@ -665,7 +665,7 @@ export default {
 
 .cond-pill:hover {
   border-color: #58a6ff;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .cond-pill.active {
@@ -736,7 +736,7 @@ export default {
   background-color: #0d1117;
   border: 1px solid #30363d;
   border-radius: 4px;
-  color: #e6edf3;
+  color: #cecece;
   padding: 5px 8px;
   font-size: 0.8rem;
   transition: border-color 0.15s ease;
@@ -785,7 +785,7 @@ export default {
 .item-value {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .ref-desc {

@@ -273,7 +273,7 @@ export default {
   background: #050b14;
   border: 1px solid #1e293b;
   border-radius: 4px;
-  color: #f1f5f9;
+  color: #cecece;
   font-size: 14px;
   padding: 8px 12px;
   outline: none;
@@ -329,7 +329,7 @@ export default {
 
 .btn-cancel:hover:not(:disabled) {
   border-color: #64748b;
-  color: #f1f5f9;
+  color: #cecece;
 }
 
 .btn-submit {

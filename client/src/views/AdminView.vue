@@ -1097,7 +1097,7 @@ defineExpose({
 
 .breadcrumb-btn.active {
   font-weight: 700;
-  color: #ffffff;
+  color: #cecece;
   cursor: default;
   text-decoration: none;
 }
@@ -1434,7 +1434,7 @@ defineExpose({
 }
 
 .modal-close:hover {
-  color: #fff;
+  color: #cecece;
 }
 
 .modal-body {

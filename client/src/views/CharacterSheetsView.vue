@@ -1597,7 +1597,7 @@ export default {
   display: flex;
   height: 100%;
   background: var(--bg-dark, #0d1117);
-  color: var(--text-primary, #c9d1d9);
+  color: var(--text-primary, #cecece);
   overflow: hidden;
 }
 
@@ -1752,7 +1752,7 @@ export default {
 
 .char-name {
   font-weight: 600;
-  color: #e0e0e0;
+  color: #cecece;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1760,7 +1760,7 @@ export default {
 
 .char-sub {
   font-size: 0.8rem;
-  color: #e0e0e0;
+  color: #cecece;
 }
 
 .btn-delete-small {
@@ -1831,7 +1831,7 @@ export default {
   flex: 1;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   font-size: 1.4rem;
   font-weight: 700;
   padding: 8px 12px;
@@ -1872,7 +1872,7 @@ export default {
 
 .input-custom-race {
   background: var(--bg-surface-2, #1f293d);
-  color: #fff;
+  color: #cecece;
   border: 1px solid var(--border-color, #2b3954);
   padding: 6px 10px;
   border-radius: 4px;
@@ -1898,7 +1898,7 @@ export default {
 }
 
 .race-ability-banner strong {
-  color: #f0f6fc;
+  color: #cecece;
 }
 
 /* Derived Tactical Sub-Stats Bar */
@@ -1988,7 +1988,7 @@ export default {
   width: 60px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   text-align: center;
   padding: 2px 4px;
   border-radius: 4px;
@@ -2034,7 +2034,7 @@ export default {
   width: 54px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   text-align: center;
   padding: 5px 6px;
   border-radius: 4px;
@@ -2187,7 +2187,7 @@ export default {
 .sub-stat label {
   font-size: 0.75rem;
   font-weight: bold;
-  color: #f0f6fc;
+  color: #cecece;
 }
 
 .stat-input {
@@ -2252,7 +2252,7 @@ export default {
 .racial-details p {
   margin: 4px 0;
   font-size: 0.9rem;
-  color: #c9d1d9;
+  color: #cecece;
 }
 
 /* Lists */
@@ -2363,7 +2363,7 @@ export default {
   flex: 1;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   padding: 6px 8px;
   border-radius: 4px;
 }
@@ -2381,7 +2381,7 @@ export default {
   width: 48px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   text-align: center;
   padding: 6px 4px;
   border-radius: 4px;
@@ -2391,7 +2391,7 @@ export default {
   width: 42px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   text-align: center;
   padding: 6px 4px;
   border-radius: 4px;
@@ -2717,7 +2717,7 @@ export default {
 .cat-tab:hover {
   background: rgba(0, 229, 255, 0.1);
   border-color: #00e5ff;
-  color: #ffffff;
+  color: #cecece;
 }
 
 .cat-tab.active {
@@ -2820,7 +2820,7 @@ export default {
 }
 
 .eq-cost {
-  color: #e6edf3;
+  color: #cecece;
   font-weight: 500;
 }
 
@@ -2948,7 +2948,7 @@ export default {
   background-color: #121212;
   border: 1px solid #333;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: #cecece;
   padding: 0.75rem;
   font-family: inherit;
   font-size: 0.9rem;
@@ -2985,6 +2985,6 @@ export default {
 }
 
 .btn-dismiss-error:hover {
-  color: #fff;
+  color: #cecece;
 }
 </style>

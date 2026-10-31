@@ -684,7 +684,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .modal-header {
@@ -747,7 +747,7 @@ export default {
 }
 
 .tab-btn:hover {
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .tab-btn.active {
@@ -815,7 +815,7 @@ textarea {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 8px 10px;
-  color: #e6edf3;
+  color: #cecece;
   font-size: 0.9rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -892,7 +892,7 @@ textarea:focus {
 }
 
 .spec-value {
-  color: #e6edf3;
+  color: #cecece;
   font-weight: 500;
 }
 
@@ -942,7 +942,7 @@ textarea:focus {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 6px 10px;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .custom-vehicle-row.selected {
@@ -1014,7 +1014,7 @@ textarea:focus {
 
 .btn-create-custom {
   background-color: #238636;
-  color: #ffffff;
+  color: #cecece;
   border: 1px solid #3fb950;
   border-radius: 6px;
   padding: 8px 14px;
@@ -1059,7 +1059,7 @@ textarea:focus {
   margin-bottom: 10px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .active-veh-tag {
@@ -1097,14 +1097,14 @@ textarea:focus {
 }
 
 .btn-cancel:hover {
-  color: #e6edf3;
+  color: #cecece;
   border-color: #8b949e;
 }
 
 .btn-deploy {
   background-color: #238636;
   border: 1px solid #3fb950;
-  color: #ffffff;
+  color: #cecece;
   border-radius: 6px;
   padding: 8px 20px;
   font-size: 0.95rem;

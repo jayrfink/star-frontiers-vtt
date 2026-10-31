@@ -849,7 +849,7 @@ const noResults = computed(() => {
 }
 
 .col-name {
-  color: #fff;
+  color: #cecece;
   white-space: nowrap;
 }
 

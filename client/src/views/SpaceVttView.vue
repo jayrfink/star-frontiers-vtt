@@ -4460,7 +4460,7 @@ onBeforeUnmount(() => {
 .token-list-rotation {
   font-size: 11px;
   background: #374151;
-  color: #e5e7eb;
+  color: #cecece;
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -4902,7 +4902,7 @@ onBeforeUnmount(() => {
 
 .danger {
   background: var(--danger);
-  color: #fff;
+  color: #cecece;
   border-color: var(--danger);
 }
 
@@ -4965,7 +4965,7 @@ onBeforeUnmount(() => {
 
 .no-map-card h3 {
   font-size: 20px;
-  color: var(--text-primary, #f0f6fc);
+  color: var(--text-primary, #cecece);
   margin-bottom: 8px;
 }
 
@@ -5318,7 +5318,7 @@ onBeforeUnmount(() => {
 .type-btn:hover {
   background: var(--bg-secondary, #111827);
   border-color: #00ffff;
-  color: #f0f6fc;
+  color: #cecece;
 }
 
 .type-btn.active {
@@ -5484,7 +5484,7 @@ onBeforeUnmount(() => {
 .btn-flip-burn:hover:not(:disabled) {
   background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
-  color: #ffffff;
+  color: #cecece;
 }
 
 .btn-flip-burn:disabled {
@@ -5566,7 +5566,7 @@ onBeforeUnmount(() => {
 .btn-snap-flip:hover {
   background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-  color: #ffffff;
+  color: #cecece;
 }
 
 .flip-burn-hint.warning {
@@ -5616,7 +5616,7 @@ onBeforeUnmount(() => {
   width: 44px;
   background: #0f172a;
   border: 1px solid #334155;
-  color: #f8fafc;
+  color: #cecece;
   border-radius: 4px;
   padding: 2px 4px;
   font-size: 12px;
@@ -5651,7 +5651,7 @@ onBeforeUnmount(() => {
 
 .btn-braking-burn {
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  color: #e2e8f0;
+  color: #cecece;
   border: 1px solid #475569;
   border-radius: 4px;
   padding: 6px 8px;
@@ -5663,7 +5663,7 @@ onBeforeUnmount(() => {
 
 .btn-braking-burn:hover {
   background: linear-gradient(135deg, #334155 0%, #475569 100%);
-  color: #ffffff;
+  color: #cecece;
   box-shadow: 0 0 8px rgba(148, 163, 184, 0.3);
 }
 
@@ -5676,7 +5676,7 @@ onBeforeUnmount(() => {
 .btn-braking-burn.high-g:hover {
   background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
-  color: #ffffff;
+  color: #cecece;
 }
 
 .btn-crew-gcheck-trigger {
@@ -5695,7 +5695,7 @@ onBeforeUnmount(() => {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
-  color: #ffffff;
+  color: #cecece;
 }
 
 /* Crew G-Load Check Dialog */
@@ -5738,7 +5738,7 @@ onBeforeUnmount(() => {
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.85rem;
-  color: #cbd5e1;
+  color: #cecece;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -5759,7 +5759,7 @@ onBeforeUnmount(() => {
   width: 100%;
   background: #1e293b;
   border: 1px solid #334155;
-  color: #f8fafc;
+  color: #cecece;
   border-radius: 4px;
   padding: 6px 10px;
   font-size: 0.9rem;
@@ -5780,7 +5780,7 @@ onBeforeUnmount(() => {
   width: 80px;
   background: #1e293b;
   border: 1px solid #334155;
-  color: #f8fafc;
+  color: #cecece;
   border-radius: 4px;
   padding: 6px 10px;
   font-size: 0.95rem;
@@ -5839,7 +5839,7 @@ onBeforeUnmount(() => {
 
 .option-title {
   font-size: 0.85rem;
-  color: #e2e8f0;
+  color: #cecece;
 }
 
 .option-mod {
@@ -5892,13 +5892,13 @@ onBeforeUnmount(() => {
 
 .formula-breakdown {
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: #cecece;
   font-family: monospace;
 }
 
 .sta-target-badge {
   background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
-  color: #ffffff;
+  color: #cecece;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.95rem;
@@ -5913,7 +5913,7 @@ onBeforeUnmount(() => {
 
 .btn-roll-gcheck {
   background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  color: #ffffff;
+  color: #cecece;
   border: 1px solid #34d399;
   border-radius: 4px;
   padding: 8px 16px;
@@ -5972,13 +5972,13 @@ onBeforeUnmount(() => {
 .result-headline {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: #cecece;
 }
 
 .result-condition {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #cbd5e1;
+  color: #cecece;
 }
 
 .margin-pill {
@@ -5994,7 +5994,7 @@ onBeforeUnmount(() => {
 .result-summary-text {
   font-size: 0.85rem;
   line-height: 1.4;
-  color: #e2e8f0;
+  color: #cecece;
 }
 
 .result-effects-grid {
@@ -6117,7 +6117,7 @@ onBeforeUnmount(() => {
   align-items: center;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #c9d1d9;
+  color: #cecece;
 }
 
 .token-wpn-stats {
@@ -6194,7 +6194,7 @@ onBeforeUnmount(() => {
   background: rgba(168, 85, 247, 0.25);
   border-color: #c084fc;
   box-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
-  color: #ffffff;
+  color: #cecece;
 }
 
 .slingshot-box {
@@ -6235,7 +6235,7 @@ onBeforeUnmount(() => {
 
 .btn-execute-slingshot {
   background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
-  color: #ffffff;
+  color: #cecece;
   border: 1px solid #a855f7;
   border-radius: 4px;
   padding: 7px 10px;
@@ -6301,7 +6301,7 @@ onBeforeUnmount(() => {
   width: 100%;
   background: #1e293b;
   border: 1px solid #334155;
-  color: #f8fafc;
+  color: #cecece;
   border-radius: 4px;
   padding: 6px 10px;
   font-size: 0.9rem;
@@ -6332,7 +6332,7 @@ onBeforeUnmount(() => {
 .zone-name-badge {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: #cecece;
 }
 
 .g-load-pill {
@@ -6385,7 +6385,7 @@ onBeforeUnmount(() => {
 .metric-value {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: #cecece;
 }
 
 .metric-value.highlight {
@@ -6423,7 +6423,7 @@ onBeforeUnmount(() => {
 
 .btn-execute-slingshot-roll {
   background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
-  color: #ffffff;
+  color: #cecece;
   border: 1px solid #a855f7;
   border-radius: 4px;
   padding: 8px 16px;

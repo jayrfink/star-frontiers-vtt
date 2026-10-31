@@ -1604,7 +1604,7 @@ export default {
   display: flex;
   height: 100%;
   background: var(--bg-dark, #0d1117);
-  color: var(--text-primary, #c9d1d9);
+  color: var(--text-primary, #cecece);
   overflow: hidden;
 }
 
@@ -1759,7 +1759,7 @@ export default {
 
 .ship-name {
   font-weight: 600;
-  color: #e0e0e0;
+  color: #cecece;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1767,7 +1767,7 @@ export default {
 
 .ship-sub {
   font-size: 0.8rem;
-  color: #e0e0e0;
+  color: #cecece;
 }
 
 .btn-delete-small {
@@ -1867,7 +1867,7 @@ export default {
   flex: 1;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   font-size: 1.4rem;
   font-weight: 700;
   padding: 8px 12px;
@@ -1927,7 +1927,7 @@ export default {
   width: 65px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   text-align: center;
   padding: 2px 4px;
   border-radius: 4px;
@@ -1970,7 +1970,7 @@ export default {
   width: 54px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   text-align: center;
   padding: 5px 6px;
   border-radius: 4px;
@@ -2070,8 +2070,8 @@ export default {
 
 .stat-label {
   font-weight: 700;
-  color: #d0d0d0 !important;
-  -webkit-text-fill-color: #d0d0d0;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece;
 }
 
 .stat-sublabel {
@@ -2167,7 +2167,7 @@ export default {
 }
 
 .fb-rule-text strong {
-  color: #c9d1d9;
+  color: #cecece;
 }
 
 /* Defenses & Armament Grid */
@@ -2207,8 +2207,8 @@ export default {
 .defense-label {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #d0d0d0 !important;
-  -webkit-text-fill-color: #d0d0d0;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece;
 }
 
 .toggle-btn {
@@ -2239,7 +2239,7 @@ export default {
 }
 .toggle-btn.offline:hover {
   background: #282e37;
-  color: #c9d1d9;
+  color: #cecece;
 }
 
 .defense-counter-box {
@@ -2334,8 +2334,8 @@ export default {
 .weapon-title-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #d0d0d0 !important;
-  -webkit-text-fill-color: #d0d0d0 !important;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece !important;
   letter-spacing: 0.4px;
   cursor: pointer;
   white-space: nowrap;
@@ -2880,7 +2880,7 @@ export default {
   background-color: #121212;
   border: 1px solid #333;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: #cecece;
   padding: 0.75rem;
   font-family: inherit;
   font-size: 0.9rem;
@@ -2898,8 +2898,8 @@ export default {
   flex: 1;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #d0d0d0 !important;
-  -webkit-text-fill-color: #d0d0d0 !important;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece !important;
   background: rgba(0, 20, 20, 0.6);
   border: 1px dashed rgba(0, 255, 255, 0.6);
   border-radius: 4px;
@@ -2988,7 +2988,7 @@ export default {
 
 .tab-btn:hover {
   border-color: teal;
-  color: #e0e0e0;
+  color: #cecece;
 }
 
 .tab-btn.active {
@@ -3067,7 +3067,7 @@ export default {
   border: 1px solid #30363d;
   border-radius: 4px;
   padding: 2px 8px;
-  color: #c9d1d9;
+  color: #cecece;
 }
 
 .stat-pill.dmg {
@@ -3197,7 +3197,7 @@ export default {
 
 .btn-tag-chip:hover {
   border-color: #8b949e;
-  color: #f0f6fc;
+  color: #cecece;
 }
 
 .btn-tag-chip.active {
@@ -3242,7 +3242,7 @@ export default {
   border-radius: 4px;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #cecece;
   font-size: 0.85rem;
   box-sizing: border-box;
 }
@@ -3270,7 +3270,7 @@ export default {
 }
 
 .btn-dismiss-error:hover {
-  color: #fff;
+  color: #cecece;
 }
 
 .modal-confirm {
@@ -3279,7 +3279,7 @@ export default {
 
 .btn-modal-confirm {
   background-color: #dc3545;
-  color: white;
+  color: #cecece;
   border: none;
   padding: 8px 16px;
   border-radius: 4px;

@@ -318,7 +318,7 @@ export default {
   display: flex;
   flex-direction: column;
   z-index: 150;
-  color: #e6edf3;
+  color: #cecece;
   overflow: hidden;
   font-family: inherit;
 }
@@ -360,7 +360,7 @@ export default {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .hud-tier-badge {
@@ -369,7 +369,7 @@ export default {
   font-weight: bold;
   padding: 1px 6px;
   border-radius: 4px;
-  color: #ffffff;
+  color: #cecece;
   margin-top: 2px;
 }
 
@@ -439,7 +439,7 @@ export default {
   background-color: #0d1117;
   border: 1px solid #30363d;
   border-radius: 4px;
-  color: #e6edf3;
+  color: #cecece;
   font-weight: bold;
   font-size: 1rem;
   padding: 4px 6px;
@@ -515,7 +515,7 @@ export default {
 
 .cond-pill:hover {
   border-color: #58a6ff;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .cond-pill.active {
@@ -559,7 +559,7 @@ export default {
 .item-value {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .section-title {
@@ -592,7 +592,7 @@ export default {
 .action-name {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .action-pct-badge {
@@ -645,7 +645,7 @@ export default {
 .btn-action-roll.hit {
   background-color: #238636;
   border-color: #3fb950;
-  color: #ffffff;
+  color: #cecece;
 }
 
 .btn-action-roll.hit:hover {
@@ -655,7 +655,7 @@ export default {
 .btn-action-roll.dmg {
   background-color: #d97706;
   border-color: #f59e0b;
-  color: #ffffff;
+  color: #cecece;
 }
 
 .btn-action-roll.dmg:hover {
@@ -674,6 +674,6 @@ export default {
   padding: 8px 10px;
   border-radius: 4px;
   font-size: 0.78rem;
-  color: #e6edf3;
+  color: #cecece;
 }
 </style>

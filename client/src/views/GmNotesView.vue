@@ -326,7 +326,7 @@ onMounted(() => {
   display: flex;
   height: calc(100vh - 48px);
   background: var(--bg-primary, #0d1117);
-  color: var(--text-primary, #f0f6fc);
+  color: var(--text-primary, #cecece);
   overflow: hidden;
 }
 
@@ -355,7 +355,7 @@ onMounted(() => {
 
 .btn-new-session {
   background: #0284c7;
-  color: #ffffff;
+  color: #cecece;
   border: 1px solid #38bdf8;
   padding: 6px 10px;
   border-radius: 6px;
@@ -469,7 +469,7 @@ onMounted(() => {
   flex: 1;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #f8fafc;
+  color: #cecece;
   font-size: 1.2rem;
   font-weight: 700;
   padding: 8px 12px;
@@ -487,7 +487,7 @@ onMounted(() => {
 .btn-add-panel {
   background: #0284c7;
   border: 1px solid #38bdf8;
-  color: #ffffff;
+  color: #cecece;
   font-weight: 600;
   padding: 8px 14px;
   border-radius: 6px;
@@ -515,7 +515,7 @@ onMounted(() => {
 .btn-preset-chip {
   background: #1e293b;
   border: 1px solid #334155;
-  color: #cbd5e1;
+  color: #cecece;
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
@@ -582,7 +582,7 @@ onMounted(() => {
   box-sizing: border-box;
   background: #0d1117;
   border: 1px solid #30363d;
-  color: #e2e8f0;
+  color: #cecece;
   border-radius: 6px;
   padding: 10px 12px;
   font-family: inherit;

@@ -557,7 +557,7 @@ export default {
 }
 
 .crumb-link.active {
-  color: #e0e0e0;
+  color: #cecece;
   font-weight: 600;
   cursor: default;
   text-decoration: none;
@@ -741,7 +741,7 @@ export default {
   background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(0, 128, 128, 0.6);
   border-radius: 3px;
-  color: #fff;
+  color: #cecece;
   font-size: 11px;
   line-height: 1;
   padding: 3px 5px;
@@ -786,7 +786,7 @@ export default {
 .image-name {
   margin-top: 6px;
   font-size: 11px;
-  color: #e0e0e0;
+  color: #cecece;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;

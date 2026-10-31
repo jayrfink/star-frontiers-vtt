@@ -132,7 +132,7 @@ async function handleLogout() {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 1.5px;
-  color: #ffffff;
+  color: #cecece;
   text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
   white-space: nowrap;
   flex-shrink: 0;

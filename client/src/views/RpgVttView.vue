@@ -3622,7 +3622,7 @@ onBeforeUnmount(() => {
 
 .danger {
   background: var(--danger);
-  color: #fff;
+  color: #cecece;
   border-color: var(--danger);
 }
 
@@ -3707,7 +3707,7 @@ onBeforeUnmount(() => {
 
 .no-map-card h3 {
   font-size: 20px;
-  color: var(--text-primary, #f0f6fc);
+  color: var(--text-primary, #cecece);
   margin-bottom: 8px;
 }
 

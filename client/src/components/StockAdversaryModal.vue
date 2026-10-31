@@ -837,7 +837,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .modal-header {
@@ -900,7 +900,7 @@ export default {
 }
 
 .tab-btn:hover {
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .tab-btn.active {
@@ -938,7 +938,7 @@ export default {
 .form-group select {
   background-color: #0d1117;
   border: 1px solid #30363d;
-  color: #e6edf3;
+  color: #cecece;
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -981,7 +981,7 @@ export default {
 }
 .pill-btn:hover {
   border-color: #58a6ff;
-  color: #e6edf3;
+  color: #cecece;
 }
 .pill-btn.active {
   background-color: #082d33;
@@ -1001,7 +1001,7 @@ export default {
   border: 1px solid #30363d;
   border-radius: 6px;
   background-color: #21262d;
-  color: #e6edf3;
+  color: #cecece;
   font-size: 0.8rem;
   cursor: pointer;
   display: flex;
@@ -1083,7 +1083,7 @@ export default {
 }
 .btn-generate-ai-art:hover:not(:disabled) {
   background: linear-gradient(135deg, #0d3b44, #059669);
-  color: #ffffff;
+  color: #cecece;
   border-color: #34d399;
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
@@ -1117,13 +1117,13 @@ export default {
 }
 .btn-clear-art:hover {
   background-color: #da3633;
-  color: #ffffff;
+  color: #cecece;
 }
 
 .art-url-input {
   background-color: #0d1117;
   border: 1px solid #30363d;
-  color: #e6edf3;
+  color: #cecece;
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -1160,7 +1160,7 @@ export default {
 
 .btn-delete-template:hover:not(:disabled) {
   background-color: #da3633;
-  color: #ffffff;
+  color: #cecece;
 }
 
 .btn-delete-template:disabled {
@@ -1245,7 +1245,7 @@ export default {
 .preview-meta h4 {
   margin: 0 0 3px 0;
   font-size: 1rem;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .tier-badge {
@@ -1253,7 +1253,7 @@ export default {
   font-weight: bold;
   padding: 2px 6px;
   border-radius: 4px;
-  color: #ffffff;
+  color: #cecece;
 }
 
 .preview-stats-grid {
@@ -1278,7 +1278,7 @@ export default {
 .p-val {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: #cecece;
 }
 
 .preview-actions {
@@ -1303,7 +1303,7 @@ export default {
 .act-name {
   font-weight: 600;
   flex: 1;
-  color: #e6edf3;
+  color: #cecece;
 }
 .act-pct {
   color: #00ffff;
@@ -1349,7 +1349,7 @@ export default {
   text-align: center;
   background-color: #161b22;
   border: 1px solid #30363d;
-  color: #e6edf3;
+  color: #cecece;
   height: 32px;
   border-radius: 4px;
   font-weight: bold;
@@ -1394,14 +1394,14 @@ export default {
   transition: all 0.15s ease;
 }
 .btn-cancel:hover {
-  color: #e6edf3;
+  color: #cecece;
   border-color: #8b949e;
 }
 
 .btn-spawn-submit {
   background-color: #238636;
   border: 1px solid #3fb950;
-  color: #ffffff;
+  color: #cecece;
   padding: 8px 20px;
   border-radius: 6px;
   font-weight: 600;
