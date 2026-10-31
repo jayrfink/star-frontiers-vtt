@@ -2747,30 +2747,32 @@ export default {
   transform: translateY(1px);
 }
 
-/* Operational: ~30% paler green text and border, with 30% darker background */
+/* Operational: text and border #48f0cb, background #071417 */
 .system-btn.is-ok {
-  background: rgba(32, 112, 47, 0.12);
-  color: #7ee787;
-  border: 1px solid rgba(126, 231, 135, 0.45);
+  background: #071417;
+  color: #48f0cb;
+  border: 1px solid #48f0cb;
 }
 
 .system-btn.is-ok:hover {
-  background: rgba(32, 112, 47, 0.22);
-  border-color: rgba(126, 231, 135, 0.7);
-  color: #9bf0a3;
+  background: #0d2328;
+  border-color: #6cf7d8;
+  color: #6cf7d8;
+  box-shadow: 0 0 6px rgba(72, 240, 203, 0.35);
 }
 
-/* Damaged (clicked): Dark orange text, border, and 30% darker background */
+/* Damaged (selected / clicked): text and border #ba1655, background #17020a */
 .system-btn.is-damaged {
-  background: rgba(153, 76, 28, 0.16);
-  color: #e66a1f;
-  border: 1px solid rgba(230, 106, 31, 0.48);
+  background: #17020a;
+  color: #ba1655;
+  border: 1px solid #ba1655;
 }
 
 .system-btn.is-damaged:hover {
-  background: rgba(153, 76, 28, 0.26);
-  border-color: rgba(230, 106, 31, 0.75);
-  color: #f07b32;
+  background: #270412;
+  border-color: #dc1d66;
+  color: #dc1d66;
+  box-shadow: 0 0 6px rgba(186, 22, 85, 0.35);
 }
 
 .panel-header-simple {
