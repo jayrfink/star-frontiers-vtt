@@ -444,25 +444,25 @@
         </div>
 
         <!-- Detailed Species Abilities Panel -->
-        <section class="card racial-panel">
-          <h4>Species Traits & Abilities</h4>
-          <div v-if="selectedChar.race === 'Human'" class="racial-details">
-            <p><strong>Human Adaptability:</strong> Versatile species. Receives a +5 bonus to any single ability score during creation.</p>
+        <section class="card racial-panel species-traits-banner">
+          <span class="traits-badge">🧬 Species Traits &amp; Abilities &bull; {{ selectedChar.race }}</span>
+          <div v-if="selectedChar.race === 'Human'" class="traits-rule-text">
+            <span><strong>Human Adaptability:</strong> Versatile species. Receives a <strong>+5 bonus</strong> to any single ability score during creation.</span>
           </div>
-          <div v-else-if="selectedChar.race === 'Dralasite'" class="racial-details">
-            <p><strong>Elasticity:</strong> Can sprout up to <strong>{{ dralasiteLimbsLimit }}</strong> limbs (DEX / 10).</p>
-            <p><strong>Lie Detection:</strong> <strong>{{ lieDetectionChance }}%</strong> base chance (5% base + 5% per level if skill used).</p>
+          <div v-else-if="selectedChar.race === 'Dralasite'" class="traits-rule-text">
+            <span><strong>Elasticity:</strong> Can sprout up to <strong>{{ dralasiteLimbsLimit }}</strong> limbs (DEX / 10).</span>
+            <span><strong>Lie Detection:</strong> <strong>{{ lieDetectionChance }}%</strong> base chance (5% base + 5% per level if skill used).</span>
           </div>
-          <div v-else-if="selectedChar.race === 'Vrusk'" class="racial-details">
-            <p><strong>Ambidexterity:</strong> Can use either hand without off-hand penalty.</p>
-            <p><strong>Comprehension:</strong> <strong>{{ comprehensionChance }}%</strong> base chance to understand unknown machinery/technology.</p>
+          <div v-else-if="selectedChar.race === 'Vrusk'" class="traits-rule-text">
+            <span><strong>Ambidexterity:</strong> Can use either hand without off-hand penalty.</span>
+            <span><strong>Comprehension:</strong> <strong>{{ comprehensionChance }}%</strong> base chance to understand unknown machinery/technology.</span>
           </div>
-          <div v-else-if="selectedChar.race === 'Yazirian'" class="racial-details">
-            <p><strong>Gliding:</strong> Can glide using skin membranes (Glide movement: 4 m/s).</p>
-            <p><strong>Battle Rage:</strong> <strong>{{ battleRageChance }}%</strong> base chance. When enraged, gains +20 bonus to hit in melee.</p>
+          <div v-else-if="selectedChar.race === 'Yazirian'" class="traits-rule-text">
+            <span><strong>Gliding:</strong> Can glide using skin membranes (Glide movement: <strong>4 m/s</strong>).</span>
+            <span><strong>Battle Rage:</strong> <strong>{{ battleRageChance }}%</strong> base chance. When enraged, gains <strong>+20 bonus</strong> to hit in melee.</span>
           </div>
-          <div v-else class="racial-details">
-            <p><strong>Custom Species:</strong> Custom species without standard Star Frontiers species traits.</p>
+          <div v-else class="traits-rule-text">
+            <span><strong>Custom Species:</strong> Custom species without standard Star Frontiers species traits.</span>
           </div>
         </section>
 
@@ -477,8 +477,24 @@
             <div v-if="!selectedChar.skills || selectedChar.skills.length === 0" class="empty-list">
               No skills added.
             </div>
-            <ul class="items-list">
-              <li v-for="(skill, index) in selectedChar.skills" :key="index" class="item-row skill-row">
+            <ul v-else class="items-list">
+              <li
+                v-for="(skill, index) in selectedChar.skills"
+                :key="skill.id || index"
+                class="item-row skill-row"
+                :class="{ 'drag-over': dragOverSkillIndex === index, 'dragging': draggedSkillIndex === index }"
+                draggable="true"
+                @dragstart="onSkillDragStart($event, index)"
+                @dragover="onSkillDragOver($event, index)"
+                @dragleave="onSkillDragLeave($event, index)"
+                @drop="onSkillDrop($event, index)"
+                @dragend="onSkillDragEnd"
+              >
+                <span
+                  class="drag-handle"
+                  title="Drag to reorder skill"
+                  @click.stop
+                >⋮⋮</span>
                 <div class="skill-main-select">
                   <select v-model="skill.name" @change="updateCharacter" class="select-official-skill">
                     <option v-for="offSk in officialSkills" :key="offSk.name" :value="offSk.name">
@@ -508,7 +524,23 @@
                     +Lvl ({{ getXPCost(skill.name, skill.level + 1, skill.psa) }} XP)
                   </button>
                 </div>
-                <button class="btn-remove" @click="removeSkill(index)">✕</button>
+                <div class="reorder-actions">
+                  <button
+                    type="button"
+                    class="btn-reorder btn-move-up"
+                    title="Move Skill Up"
+                    :disabled="index === 0"
+                    @click.stop="moveSkill(index, -1)"
+                  >▲</button>
+                  <button
+                    type="button"
+                    class="btn-reorder btn-move-down"
+                    title="Move Skill Down"
+                    :disabled="index === (selectedChar.skills ? selectedChar.skills.length - 1 : 0)"
+                    @click.stop="moveSkill(index, 1)"
+                  >▼</button>
+                </div>
+                <button class="btn-remove" title="Remove Skill" @click="removeSkill(index)">✕</button>
               </li>
             </ul>
           </section>
@@ -535,7 +567,23 @@
               {{ searchInventoryQuery ? 'No matching items in inventory.' : 'No equipment in inventory. Search available equipment or add a custom item!' }}
             </div>
             <ul v-else class="items-list">
-              <li v-for="(item, index) in filteredInventory" :key="index" class="item-row inventory-row">
+              <li
+                v-for="(item, index) in filteredInventory"
+                :key="item.id || index"
+                class="item-row inventory-row"
+                :class="{ 'drag-over': dragOverInventoryIndex === index, 'dragging': draggedInventoryIndex === index }"
+                draggable="true"
+                @dragstart="onInventoryDragStart($event, index)"
+                @dragover="onInventoryDragOver($event, index)"
+                @dragleave="onInventoryDragLeave($event, index)"
+                @drop="onInventoryDrop($event, index)"
+                @dragend="onInventoryDragEnd"
+              >
+                <span
+                  class="drag-handle"
+                  title="Drag to reorder item"
+                  @click.stop
+                >⋮⋮</span>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
                   <input
                     type="text"
@@ -573,6 +621,22 @@
                     min="1"
                     class="item-level-input"
                   />
+                </div>
+                <div class="reorder-actions">
+                  <button
+                    type="button"
+                    class="btn-reorder btn-move-up"
+                    title="Move Item Up"
+                    :disabled="isInventoryMoveDisabled(item, -1)"
+                    @click.stop="moveInventoryItem(item, -1)"
+                  >▲</button>
+                  <button
+                    type="button"
+                    class="btn-reorder btn-move-down"
+                    title="Move Item Down"
+                    :disabled="isInventoryMoveDisabled(item, 1)"
+                    @click.stop="moveInventoryItem(item, 1)"
+                  >▼</button>
                 </div>
                 <button class="btn-remove" title="Remove Item" @click="removeInventoryItem(item)">✕</button>
               </li>
@@ -785,6 +849,10 @@ export default {
       errorMessage: '',
       draggedCharIndex: null,
       dragOverCharIndex: null,
+      draggedSkillIndex: null,
+      dragOverSkillIndex: null,
+      draggedInventoryIndex: null,
+      dragOverInventoryIndex: null,
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'char',
@@ -1448,6 +1516,57 @@ export default {
       this.selectedChar.skills.splice(index, 1);
       this.updateCharacter();
     },
+    moveSkill(index, direction) {
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= this.selectedChar.skills.length) return;
+      const [moved] = this.selectedChar.skills.splice(index, 1);
+      this.selectedChar.skills.splice(targetIndex, 0, moved);
+      this.updateCharacter();
+    },
+    onSkillDragStart(event, index) {
+      const tag = event.target?.tagName?.toLowerCase();
+      if (['input', 'select', 'textarea', 'button'].includes(tag)) {
+        event.preventDefault();
+        return;
+      }
+      this.draggedSkillIndex = index;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+      }
+    },
+    onSkillDragOver(event, index) {
+      if (this.draggedSkillIndex === null) return;
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+      this.dragOverSkillIndex = index;
+    },
+    onSkillDragLeave(event, index) {
+      if (this.dragOverSkillIndex === index) {
+        this.dragOverSkillIndex = null;
+      }
+    },
+    onSkillDrop(event, targetIndex) {
+      event.preventDefault();
+      const fromIndex = this.draggedSkillIndex;
+      this.draggedSkillIndex = null;
+      this.dragOverSkillIndex = null;
+      if (fromIndex === null || fromIndex === undefined || fromIndex === targetIndex) return;
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return;
+      if (fromIndex < 0 || fromIndex >= this.selectedChar.skills.length) return;
+      if (targetIndex < 0 || targetIndex >= this.selectedChar.skills.length) return;
+
+      const [moved] = this.selectedChar.skills.splice(fromIndex, 1);
+      this.selectedChar.skills.splice(targetIndex, 0, moved);
+      this.updateCharacter();
+    },
+    onSkillDragEnd() {
+      this.draggedSkillIndex = null;
+      this.dragOverSkillIndex = null;
+    },
     upgradeSkillLevel(index) {
       const sk = this.selectedChar?.skills?.[index];
       if (sk && sk.level < 6) {
@@ -1568,6 +1687,74 @@ export default {
         }
       }
       this.updateCharacter();
+    },
+    isInventoryMoveDisabled(item, direction) {
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.inventory)) return true;
+      const idx = this.selectedChar.inventory.indexOf(item);
+      if (idx === -1) return true;
+      const targetIndex = idx + direction;
+      return targetIndex < 0 || targetIndex >= this.selectedChar.inventory.length;
+    },
+    moveInventoryItem(itemOrIndex, direction) {
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.inventory)) return;
+      const index = typeof itemOrIndex === 'number'
+        ? itemOrIndex
+        : this.selectedChar.inventory.indexOf(itemOrIndex);
+      if (index === -1) return;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= this.selectedChar.inventory.length) return;
+      const [moved] = this.selectedChar.inventory.splice(index, 1);
+      this.selectedChar.inventory.splice(targetIndex, 0, moved);
+      this.updateCharacter();
+    },
+    onInventoryDragStart(event, index) {
+      const tag = event.target?.tagName?.toLowerCase();
+      if (['input', 'select', 'textarea', 'button'].includes(tag)) {
+        event.preventDefault();
+        return;
+      }
+      this.draggedInventoryIndex = index;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+      }
+    },
+    onInventoryDragOver(event, index) {
+      if (this.draggedInventoryIndex === null) return;
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+      this.dragOverInventoryIndex = index;
+    },
+    onInventoryDragLeave(event, index) {
+      if (this.dragOverInventoryIndex === index) {
+        this.dragOverInventoryIndex = null;
+      }
+    },
+    onInventoryDrop(event, targetFilteredIndex) {
+      event.preventDefault();
+      const fromFilteredIndex = this.draggedInventoryIndex;
+      this.draggedInventoryIndex = null;
+      this.dragOverInventoryIndex = null;
+      if (fromFilteredIndex === null || fromFilteredIndex === undefined || fromFilteredIndex === targetFilteredIndex) return;
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.inventory)) return;
+      const list = this.filteredInventory;
+      const sourceItem = list[fromFilteredIndex];
+      const targetItem = list[targetFilteredIndex];
+      if (!sourceItem || !targetItem) return;
+
+      const actualFromIndex = this.selectedChar.inventory.indexOf(sourceItem);
+      const actualTargetIndex = this.selectedChar.inventory.indexOf(targetItem);
+      if (actualFromIndex === -1 || actualTargetIndex === -1) return;
+
+      const [moved] = this.selectedChar.inventory.splice(actualFromIndex, 1);
+      this.selectedChar.inventory.splice(actualTargetIndex, 0, moved);
+      this.updateCharacter();
+    },
+    onInventoryDragEnd() {
+      this.draggedInventoryIndex = null;
+      this.dragOverInventoryIndex = null;
     },
     canReorder(char) {
       if (!char) return false;
@@ -2465,15 +2652,43 @@ export default {
   transform: translateY(1px);
 }
 
-/* Species Traits Panel */
-.racial-panel h4 {
-  margin: 0 0 10px 0;
-  color: #45acba;
+/* Species Traits Banner (styled after Ship Sheets Standard Flip Capable banner) */
+.racial-panel.species-traits-banner {
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.racial-details p {
-  margin: 4px 0;
-  font-size: 0.9rem;
+.traits-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.traits-rule-text {
+  font-size: 0.8rem;
+  color: #8b949e;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.traits-rule-text strong {
   color: #cecece;
 }
 
@@ -2515,6 +2730,20 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.item-row.drag-over {
+  border-color: #00e5ff;
+  background: rgba(0, 229, 255, 0.08);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+}
+
+.item-row.dragging {
+  opacity: 0.4;
 }
 
 .skill-main-select {

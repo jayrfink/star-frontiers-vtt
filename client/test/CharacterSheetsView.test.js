@@ -1319,6 +1319,321 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       }
     });
   });
+
+  describe('Species Traits & Abilities Banner Presentation', () => {
+    it('renders traits banner formatted after ship flip-burn capable banner without h4', async () => {
+      setActivePinia(createPinia());
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Vrusk Tech',
+              race: 'Vrusk',
+              skills: [],
+              inventory: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const banner = wrapper.find('.species-traits-banner');
+        expect(banner.exists()).toBe(true);
+        expect(banner.find('h4').exists()).toBe(false);
+
+        const badge = banner.find('.traits-badge');
+        expect(badge.exists()).toBe(true);
+        expect(badge.text()).toContain('Species Traits & Abilities');
+        expect(badge.text()).toContain('Vrusk');
+
+        const ruleText = banner.find('.traits-rule-text');
+        expect(ruleText.exists()).toBe(true);
+        expect(ruleText.text()).toContain('Ambidexterity:');
+        expect(ruleText.text()).toContain('Comprehension:');
+
+        // Verify non-mutable presentation (no input or select fields inside banner)
+        expect(banner.find('input').exists()).toBe(false);
+        expect(banner.find('select').exists()).toBe(false);
+        expect(banner.find('button').exists()).toBe(false);
+
+        // Verify styles match Ship Sheets flip-burn banner color scheme
+        const fs = require('fs');
+        const path = require('path');
+        const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+        expect(vueFile).toMatch(/\.racial-panel\.species-traits-banner\s*\{[^}]*background:\s*rgba\(56,\s*189,\s*248,\s*0\.05\)/);
+        expect(vueFile).toMatch(/\.racial-panel\.species-traits-banner\s*\{[^}]*border:\s*1px solid rgba\(56,\s*189,\s*248,\s*0\.35\)/);
+        expect(vueFile).toMatch(/\.traits-badge\s*\{[^}]*color:\s*#38bdf8/);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
+
+  describe('Skill Reordering in Skills & Experience List', () => {
+    it('reorders skills via moveSkill and calls updateCharacter', () => {
+      const vm = {
+        selectedChar: {
+          skills: [
+            { name: 'Beam Weapons', level: 2 },
+            { name: 'Technician', level: 1 },
+            { name: 'Piloting', level: 3 },
+          ],
+        },
+        updateCharacter: vi.fn(),
+      };
+
+      // Boundary check: move up from index 0 should do nothing
+      CharacterSheetsView.methods.moveSkill.call(vm, 0, -1);
+      expect(vm.selectedChar.skills[0].name).toBe('Beam Weapons');
+      expect(vm.updateCharacter).not.toHaveBeenCalled();
+
+      // Move Technician (index 1) up to index 0
+      CharacterSheetsView.methods.moveSkill.call(vm, 1, -1);
+      expect(vm.selectedChar.skills[0].name).toBe('Technician');
+      expect(vm.selectedChar.skills[1].name).toBe('Beam Weapons');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+
+      // Boundary check: move down from last index should do nothing
+      CharacterSheetsView.methods.moveSkill.call(vm, 2, 1);
+      expect(vm.selectedChar.skills[2].name).toBe('Piloting');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+
+      // Move Beam Weapons (index 1) down to index 2
+      CharacterSheetsView.methods.moveSkill.call(vm, 1, 1);
+      expect(vm.selectedChar.skills[1].name).toBe('Piloting');
+      expect(vm.selectedChar.skills[2].name).toBe('Beam Weapons');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(2);
+    });
+
+    it('handles skill drag and drop reordering', () => {
+      const vm = {
+        selectedChar: {
+          skills: [
+            { name: 'Beam Weapons', level: 2 },
+            { name: 'Technician', level: 1 },
+            { name: 'Piloting', level: 3 },
+          ],
+        },
+        draggedSkillIndex: null,
+        dragOverSkillIndex: null,
+        updateCharacter: vi.fn(),
+      };
+
+      // Ignore drag on input
+      const inputEvent = { target: { tagName: 'INPUT' }, preventDefault: vi.fn() };
+      CharacterSheetsView.methods.onSkillDragStart.call(vm, inputEvent, 0);
+      expect(inputEvent.preventDefault).toHaveBeenCalled();
+      expect(vm.draggedSkillIndex).toBe(null);
+
+      // Drag from index 2 to index 0
+      const dragEvent = {
+        target: { tagName: 'DIV' },
+        dataTransfer: { effectAllowed: '', setData: vi.fn() },
+      };
+      CharacterSheetsView.methods.onSkillDragStart.call(vm, dragEvent, 2);
+      expect(vm.draggedSkillIndex).toBe(2);
+
+      const dropEvent = { preventDefault: vi.fn() };
+      CharacterSheetsView.methods.onSkillDrop.call(vm, dropEvent, 0);
+      expect(dropEvent.preventDefault).toHaveBeenCalled();
+      expect(vm.selectedChar.skills[0].name).toBe('Piloting');
+      expect(vm.selectedChar.skills[1].name).toBe('Beam Weapons');
+      expect(vm.selectedChar.skills[2].name).toBe('Technician');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders drag handle and reorder buttons on each skill row in the UI', async () => {
+      setActivePinia(createPinia());
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Skill Specialist',
+              race: 'Human',
+              skills: [
+                { name: 'Beam Weapons', level: 2 },
+                { name: 'Technician', level: 1 },
+              ],
+              inventory: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const skillRows = wrapper.findAll('.skill-row');
+        expect(skillRows.length).toBe(2);
+
+        // First row: drag handle and reorder buttons
+        const firstRowHandle = skillRows[0].find('.drag-handle');
+        expect(firstRowHandle.exists()).toBe(true);
+        const firstUp = skillRows[0].find('.btn-move-up');
+        const firstDown = skillRows[0].find('.btn-move-down');
+        expect(firstUp.exists()).toBe(true);
+        expect(firstDown.exists()).toBe(true);
+        expect(firstUp.attributes('disabled')).toBeDefined(); // disabled at top
+        expect(firstDown.attributes('disabled')).toBeUndefined(); // enabled to move down
+
+        // Second row: Move Down should be disabled at bottom
+        const secondUp = skillRows[1].find('.btn-move-up');
+        const secondDown = skillRows[1].find('.btn-move-down');
+        expect(secondUp.attributes('disabled')).toBeUndefined();
+        expect(secondDown.attributes('disabled')).toBeDefined();
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
+
+  describe('Inventory Reordering in Inventory & Mass List', () => {
+    it('reorders inventory items via moveInventoryItem and calls updateCharacter', () => {
+      const item1 = { name: 'Rations', quantity: 2, weight: 0.5 };
+      const item2 = { name: 'Laser Pistol', quantity: 1, weight: 1.0 };
+      const item3 = { name: 'Medkit', quantity: 1, weight: 1.5 };
+      const vm = {
+        selectedChar: {
+          inventory: [item1, item2, item3],
+        },
+        updateCharacter: vi.fn(),
+      };
+
+      // Edge disabled checks
+      expect(CharacterSheetsView.methods.isInventoryMoveDisabled.call(vm, item1, -1)).toBe(true);
+      expect(CharacterSheetsView.methods.isInventoryMoveDisabled.call(vm, item1, 1)).toBe(false);
+      expect(CharacterSheetsView.methods.isInventoryMoveDisabled.call(vm, item3, 1)).toBe(true);
+
+      // Move item2 up to index 0
+      CharacterSheetsView.methods.moveInventoryItem.call(vm, item2, -1);
+      expect(vm.selectedChar.inventory[0].name).toBe('Laser Pistol');
+      expect(vm.selectedChar.inventory[1].name).toBe('Rations');
+      expect(vm.selectedChar.inventory[2].name).toBe('Medkit');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+
+      // Boundary check on index 0
+      CharacterSheetsView.methods.moveInventoryItem.call(vm, item2, -1);
+      expect(vm.selectedChar.inventory[0].name).toBe('Laser Pistol');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles inventory drag and drop even with filtered inventory', () => {
+      const item1 = { name: 'Alpha Rations', quantity: 2, weight: 0.5, notes: 'Food' };
+      const item2 = { name: 'Beta Blaster', quantity: 1, weight: 1.0, notes: 'SEU' };
+      const item3 = { name: 'Gamma Grenade', quantity: 3, weight: 0.25, notes: 'Explosive' };
+
+      const vm = {
+        selectedChar: {
+          inventory: [item1, item2, item3],
+        },
+        searchInventoryQuery: 'b',
+        draggedInventoryIndex: null,
+        dragOverInventoryIndex: null,
+        updateCharacter: vi.fn(),
+      };
+      Object.defineProperty(vm, 'filteredInventory', {
+        get() {
+          return CharacterSheetsView.computed.filteredInventory.call(vm);
+        },
+      });
+
+      // Filtered list contains only item2 ('Beta Blaster')
+      expect(vm.filteredInventory.length).toBe(1);
+
+      // Clear search to test multi-item drop
+      vm.searchInventoryQuery = '';
+      expect(vm.filteredInventory.length).toBe(3);
+
+      vm.draggedInventoryIndex = 0; // Alpha Rations
+      const dropEvent = { preventDefault: vi.fn() };
+      CharacterSheetsView.methods.onInventoryDrop.call(vm, dropEvent, 2); // Drop onto Gamma Grenade
+
+      expect(dropEvent.preventDefault).toHaveBeenCalled();
+      expect(vm.selectedChar.inventory[0].name).toBe('Beta Blaster');
+      expect(vm.selectedChar.inventory[1].name).toBe('Gamma Grenade');
+      expect(vm.selectedChar.inventory[2].name).toBe('Alpha Rations');
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders drag handle and reorder buttons on each inventory row in the UI', async () => {
+      setActivePinia(createPinia());
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Explorer',
+              race: 'Human',
+              skills: [],
+              inventory: [
+                { name: 'Chronocom', quantity: 1, weight: 0.1, notes: 'Wrist comm' },
+                { name: 'Flashlight', quantity: 1, weight: 0.5, notes: 'Electric torch' },
+              ],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const invRows = wrapper.findAll('.inventory-row');
+        expect(invRows.length).toBe(2);
+
+        // First row: drag handle and reorder buttons
+        const firstRowHandle = invRows[0].find('.drag-handle');
+        expect(firstRowHandle.exists()).toBe(true);
+        const firstUp = invRows[0].find('.btn-move-up');
+        const firstDown = invRows[0].find('.btn-move-down');
+        expect(firstUp.exists()).toBe(true);
+        expect(firstDown.exists()).toBe(true);
+        expect(firstUp.attributes('disabled')).toBeDefined(); // disabled at top
+        expect(firstDown.attributes('disabled')).toBeUndefined(); // enabled to move down
+
+        // Second row: Move Down should be disabled at bottom
+        const secondUp = invRows[1].find('.btn-move-up');
+        const secondDown = invRows[1].find('.btn-move-down');
+        expect(secondUp.attributes('disabled')).toBeUndefined();
+        expect(secondDown.attributes('disabled')).toBeDefined();
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
 });
 
 
