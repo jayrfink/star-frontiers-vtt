@@ -3505,21 +3505,22 @@ export default {
 .notes-textarea {
   width: 100%;
   box-sizing: border-box;
-  background-color: #000000;
-  border: 1px solid #333;
-  border-radius: 4px;
+  background: #0d1117;
+  border: 1px solid #30363d;
   color: #cecece;
-  padding: 0.75rem;
+  border-radius: 6px;
+  padding: 10px 12px;
   font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-size: 0.92rem;
+  line-height: 1.5;
   resize: vertical;
   min-height: 90px;
 }
 
 .notes-textarea:focus {
   outline: none;
-  border-color: #4fc3f7;
+  border-color: #2394a6;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
 }
 
 .weapon-title-input {
