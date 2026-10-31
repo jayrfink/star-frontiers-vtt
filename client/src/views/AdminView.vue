@@ -962,7 +962,7 @@ defineExpose({
 }
 
 .admin-header h2 {
-  font-size: 22px;
+  font-size: 24px;
   margin-bottom: 4px;
   color: #00ffff;
 }
@@ -1010,7 +1010,7 @@ defineExpose({
 }
 
 .admin-card h3 {
-  font-size: 16px;
+  font-size: 18px;
   margin-bottom: 16px;
   color: #2394a6;
 }
@@ -1424,7 +1424,7 @@ defineExpose({
 
 .modal-header h4 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   color: aqua;
 }
 

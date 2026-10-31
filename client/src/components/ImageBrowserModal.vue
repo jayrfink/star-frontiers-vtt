@@ -472,7 +472,7 @@ export default {
 
 .modal-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.27rem;
   font-weight: 700;
   color: #00ffff;
   letter-spacing: 0.5px;

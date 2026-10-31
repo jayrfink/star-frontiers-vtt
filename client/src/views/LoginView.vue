@@ -87,7 +87,7 @@ async function handleAuth({ username, password }) {
 }
 
 h1 {
-  font-size: 24px;
+  font-size: 26.5px;
   font-weight: 700;
 }
 

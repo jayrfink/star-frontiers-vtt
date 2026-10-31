@@ -690,7 +690,7 @@ const noResults = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 0.5px;
@@ -944,7 +944,7 @@ const noResults = computed(() => {
 }
 
 .legend-title {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 12px 0;
@@ -1058,7 +1058,7 @@ const noResults = computed(() => {
 }
 
 .empty-state h3 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   margin: 0;
 }

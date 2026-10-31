@@ -226,7 +226,7 @@ export default {
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #00ffff;
   letter-spacing: 1px;

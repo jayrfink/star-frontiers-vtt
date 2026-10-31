@@ -1620,7 +1620,7 @@ export default {
 
 .sidebar-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.21rem;
   color: #3a859c;
 }
 

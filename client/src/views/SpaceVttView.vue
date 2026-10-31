@@ -3733,7 +3733,7 @@ onBeforeUnmount(() => {
 }
 
 .map-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -4400,7 +4400,7 @@ onBeforeUnmount(() => {
 }
 
 .section-box h4 {
-  font-size: 14px;
+  font-size: 15.5px;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border);
   padding-bottom: 6px;
@@ -4964,7 +4964,7 @@ onBeforeUnmount(() => {
 }
 
 .no-map-card h3 {
-  font-size: 20px;
+  font-size: 22px;
   color: var(--text-primary, #cecece);
   margin-bottom: 8px;
 }
@@ -5718,7 +5718,7 @@ onBeforeUnmount(() => {
 
 .crew-gcheck-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.27rem;
   color: #38bdf8;
 }
 
@@ -6276,7 +6276,7 @@ onBeforeUnmount(() => {
 
 .slingshot-modal-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.27rem;
   color: #c084fc;
 }
 

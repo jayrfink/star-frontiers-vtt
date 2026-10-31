@@ -1627,7 +1627,7 @@ export default {
 
 .sidebar-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.21rem;
   color: #3a859c;
 }
 
@@ -2952,7 +2952,7 @@ export default {
 .modal-header-row h3 {
   margin: 0;
   color: #00ffff;
-  font-size: 1.15rem;
+  font-size: 1.27rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -3127,7 +3127,7 @@ export default {
 .custom-weapon-panel h4 {
   margin: 0;
   color: #00ffff;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   text-transform: uppercase;
 }
 

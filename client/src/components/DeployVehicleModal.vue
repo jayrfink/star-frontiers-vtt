@@ -708,7 +708,7 @@ export default {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.32rem;
   color: #00ffff;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -853,7 +853,7 @@ textarea:focus {
 
 .spec-title-area h4 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.21rem;
   color: #00ffff;
 }
 
@@ -915,7 +915,7 @@ textarea:focus {
 .custom-vehicles-section h4,
 .create-custom-section h4 {
   margin: 0 0 10px 0;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: #00ffff;
 }
 

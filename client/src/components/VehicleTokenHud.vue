@@ -406,7 +406,7 @@ export default {
 
 .hud-token-name {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #cecece;
 }
@@ -755,7 +755,7 @@ export default {
 
 .section-title {
   margin: 0 0 6px 0;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   text-transform: uppercase;
   color: #00ffff;
   letter-spacing: 0.5px;

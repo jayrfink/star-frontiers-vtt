@@ -861,7 +861,7 @@ export default {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.27rem;
   color: #00ffff;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -1244,7 +1244,7 @@ export default {
 
 .preview-meta h4 {
   margin: 0 0 3px 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: #cecece;
 }
 

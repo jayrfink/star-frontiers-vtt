@@ -35,6 +35,13 @@ describe('Sitewide Font Family (D&D Beyond Character Sheet Font - Roboto)', () =
     expect(mainCss).toMatch(/\.navbar-brand/);
   });
 
+  it('defines 10% larger font sizes for headings in main.css', () => {
+    expect(mainCss).toMatch(/h1\s*\{[^}]*font-size:\s*2\.2rem;/);
+    expect(mainCss).toMatch(/h2\s*\{[^}]*font-size:\s*1\.65rem;/);
+    expect(mainCss).toMatch(/h3\s*\{[^}]*font-size:\s*1\.3rem;/);
+    expect(mainCss).toMatch(/h4\s*\{[^}]*font-size:\s*1\.1rem;/);
+  });
+
   it('sets Roboto as the primary font-family on body in main.css', () => {
     expect(mainCss).toMatch(/font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
     expect(mainCss).toMatch(/body\s*\{[^}]*font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
