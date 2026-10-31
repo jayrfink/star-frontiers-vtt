@@ -4877,6 +4877,7 @@ onBeforeUnmount(() => {
 
 .modal-card input[type="text"],
 .modal-card input[type="number"] {
+  color-scheme: dark;
   background-color: #000000 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #00ffff !important;

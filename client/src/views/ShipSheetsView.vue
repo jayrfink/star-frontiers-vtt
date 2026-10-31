@@ -2091,6 +2091,21 @@ export default {
   border-radius: 4px;
   padding: 4px;
   margin-top: 4px;
+  color-scheme: dark;
+}
+
+.stat-input::-webkit-inner-spin-button,
+.stat-input::-webkit-outer-spin-button {
+  cursor: pointer;
+  opacity: 0.85;
+  filter: sepia(100%) saturate(300%) hue-rotate(135deg) brightness(1.2);
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.stat-input:hover::-webkit-inner-spin-button,
+.stat-input:focus::-webkit-inner-spin-button {
+  opacity: 1;
+  filter: sepia(100%) saturate(500%) hue-rotate(135deg) brightness(1.4) drop-shadow(0 0 2px #00ffff);
 }
 
 /* Flip & Burn Banner */
@@ -2664,6 +2679,7 @@ export default {
 
 .modal-card input[type="text"],
 .modal-card input[type="number"] {
+  color-scheme: dark;
   background-color: #000000 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #00ffff !important;

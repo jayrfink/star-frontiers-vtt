@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-tertiary: #21262d;
@@ -205,6 +206,7 @@ button.active {
 input,
 select,
 textarea {
+  color-scheme: dark;
   background-color: #000000;
   border: 1px solid rgba(0, 128, 128, 0.6);
   border-radius: var(--radius);
@@ -223,8 +225,40 @@ textarea:focus {
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
-select {
+/* Number Input Up/Down Stepper Arrows (Spin Buttons) */
+input[type="number"] {
+  color-scheme: dark;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
   cursor: pointer;
+  opacity: 0.8;
+  filter: sepia(100%) saturate(300%) hue-rotate(135deg) brightness(1.2);
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+input[type="number"]:hover::-webkit-inner-spin-button,
+input[type="number"]:focus::-webkit-inner-spin-button {
+  opacity: 1;
+  filter: sepia(100%) saturate(500%) hue-rotate(135deg) brightness(1.4) drop-shadow(0 0 2px #00ffff);
+}
+
+/* Select Dropdown Arrows (Custom Sci-Fi Chevrons) */
+select {
+  color-scheme: dark;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='%2300ffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='7 9 12 4 17 9'%3E%3C/polyline%3E%3Cpolyline points='7 15 12 20 17 15'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+select:hover:not(:disabled) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='7 9 12 4 17 9'%3E%3C/polyline%3E%3Cpolyline points='7 15 12 20 17 15'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
 select option {
