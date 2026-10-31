@@ -28,6 +28,13 @@ describe('Sitewide Font Family (D&D Beyond Character Sheet Font - Roboto)', () =
     expect(mainCss).toMatch(/h1,\s*h2,\s*h3,\s*h4,\s*h5,\s*h6[^{]*\{[^}]*font-family:\s*(?:var\(--font-family-header\)|[^;]*Modesto)/);
   });
 
+  it('sets Modesto as the font-family on SFVTT brand title in NavBar.vue and main.css', () => {
+    const navBarPath = path.resolve(__dirname, '../src/components/NavBar.vue');
+    const navBarContent = fs.readFileSync(navBarPath, 'utf-8');
+    expect(navBarContent).toMatch(/\.navbar-brand\s*\{[^}]*font-family:\s*(?:var\(--font-family-header[^)]*\)|['"]?Modesto['"]?)/);
+    expect(mainCss).toMatch(/\.navbar-brand/);
+  });
+
   it('sets Roboto as the primary font-family on body in main.css', () => {
     expect(mainCss).toMatch(/font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);
     expect(mainCss).toMatch(/body\s*\{[^}]*font-family:\s*[^;]*['"]?Roboto['"]?[^;]*;/);

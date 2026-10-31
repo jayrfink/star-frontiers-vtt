@@ -128,7 +128,8 @@ h6,
 .modal-title,
 .section-title,
 .hud-token-name,
-.map-title {
+.map-title,
+.navbar-brand {
   font-family: var(--font-family-header);
 }
 

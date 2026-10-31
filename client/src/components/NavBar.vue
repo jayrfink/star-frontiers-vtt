@@ -129,6 +129,7 @@ async function handleLogout() {
 }
 
 .navbar-brand {
+  font-family: var(--font-family-header, 'Modesto', serif);
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 1.5px;
