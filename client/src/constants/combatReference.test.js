@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   SHIP_COMBAT_REF,
   SHIP_DAMAGED_SYSTEMS,
+  DAMAGE_CONTROL_REF,
   SELECTIVE_TARGETING_REF,
   RANGED_COMBAT_REF,
   MELEE_COMBAT_REF,
@@ -167,6 +168,43 @@ describe('combatReference', () => {
         expect(t).toHaveProperty('topic');
         expect(t).toHaveProperty('rule');
         expect(t).toHaveProperty('detail');
+      });
+    });
+
+    it('contains damage control (DCR) and repair rules with accurate Knight Hawks rules schema', () => {
+      expect(SHIP_COMBAT_REF.damageControl).toBeDefined();
+      expect(Array.isArray(SHIP_COMBAT_REF.damageControl.rules)).toBe(true);
+      expect(SHIP_COMBAT_REF.damageControl.rules.length).toBeGreaterThanOrEqual(8);
+      expect(DAMAGE_CONTROL_REF).toBe(SHIP_COMBAT_REF.damageControl);
+
+      const topics = SHIP_COMBAT_REF.damageControl.rules.map((r) => r.topic);
+      expect(topics).toContain('DCR Point Allocation');
+      expect(topics).toContain('The DCR Roll');
+      expect(topics).toContain('Drive & Steering Repairs');
+      expect(topics).toContain('Hull Repairs');
+      expect(topics).toContain('Automatic Failure');
+      expect(topics).toContain('Permanent / Airdock Damage');
+
+      const dcrRollRule = SHIP_COMBAT_REF.damageControl.rules.find((r) => r.topic === 'The DCR Roll');
+      expect(dcrRollRule.rule).toContain('d100');
+
+      const hullRule = SHIP_COMBAT_REF.damageControl.rules.find((r) => r.topic === 'Hull Repairs');
+      expect(hullRule.rule).toContain('1d10');
+
+      const autoFailRule = SHIP_COMBAT_REF.damageControl.rules.find((r) => r.topic === 'Automatic Failure');
+      expect(autoFailRule.rule).toContain('90–00');
+
+      const airdockRule = SHIP_COMBAT_REF.damageControl.rules.find((r) => r.topic === 'Permanent / Airdock Damage');
+      expect(airdockRule.rule).toContain('99–00');
+      expect(airdockRule.detail.toLowerCase()).toContain('airdock');
+
+      SHIP_COMBAT_REF.damageControl.rules.forEach((r) => {
+        expect(r).toHaveProperty('topic');
+        expect(r).toHaveProperty('rule');
+        expect(r).toHaveProperty('detail');
+        expect(typeof r.topic).toBe('string');
+        expect(typeof r.rule).toBe('string');
+        expect(typeof r.detail).toBe('string');
       });
     });
   });

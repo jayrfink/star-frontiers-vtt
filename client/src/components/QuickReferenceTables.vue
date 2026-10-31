@@ -212,6 +212,36 @@
           </div>
         </section>
 
+        <!-- Damage Control & Repairs -->
+        <section v-if="filteredShipDamageControl.length > 0" class="ref-section">
+          <h2 class="section-title">
+            <span class="title-badge success">Repair Operations</span>
+            Damage Control (DCR) &amp; Repair Rules
+          </h2>
+          <div class="table-responsive">
+            <table class="ref-table">
+              <thead>
+                <tr>
+                  <th style="width: 210px;">Topic</th>
+                  <th style="width: 220px;">Rule / Roll</th>
+                  <th>Tactical &amp; Mechanical Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="d in filteredShipDamageControl" :key="d.topic">
+                  <td class="col-name font-bold">{{ d.topic }}</td>
+                  <td>
+                    <span class="modifier-pill" :class="modifierClass(d.rule)">
+                      {{ d.rule }}
+                    </span>
+                  </td>
+                  <td class="col-effect">{{ d.detail }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- Selective Targeting & Reflective Hull -->
         <section v-if="filteredSelectiveTargeting.length > 0" class="ref-section">
           <h2 class="section-title">
@@ -547,6 +577,9 @@ const filteredShipCriticalHits = computed(() =>
 const filteredShipDamagedSystems = computed(() =>
   (SHIP_COMBAT_REF.damagedSystems || []).filter((item) => matchesQuery(item, searchQuery.value))
 );
+const filteredShipDamageControl = computed(() =>
+  (SHIP_COMBAT_REF.damageControl?.rules || []).filter((item) => matchesQuery(item, searchQuery.value))
+);
 const filteredSelectiveTargeting = computed(() =>
   (SHIP_COMBAT_REF.selectiveTargeting || []).filter((item) => matchesQuery(item, searchQuery.value))
 );
@@ -594,6 +627,7 @@ const noResults = computed(() => {
       filteredShipDefenses.value.length === 0 &&
       filteredShipCriticalHits.value.length === 0 &&
       filteredShipDamagedSystems.value.length === 0 &&
+      filteredShipDamageControl.value.length === 0 &&
       filteredSelectiveTargeting.value.length === 0
     );
   }
@@ -791,6 +825,12 @@ const noResults = computed(() => {
   background: rgba(88, 166, 255, 0.15);
   color: #58a6ff;
   border-color: rgba(88, 166, 255, 0.3);
+}
+
+.title-badge.success {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--success);
+  border-color: rgba(63, 185, 80, 0.3);
 }
 
 /* Sequence Grid & Cards */

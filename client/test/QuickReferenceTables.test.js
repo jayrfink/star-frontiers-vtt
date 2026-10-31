@@ -90,9 +90,17 @@ describe('QuickReferenceTables.vue', () => {
       expect(html).toContain('50% Double Damage');
       expect(html).toContain('Reflective Hull Durability');
       expect(html).toMatch(/cannot be broken|passive/i);
+
+      // Damage Control (DCR) & Repair Rules section
+      expect(html).toContain('Damage Control (DCR) &amp; Repair Rules');
+      expect(html).toContain('The DCR Roll');
+      expect(html).toContain('Drive &amp; Steering Repairs');
+      expect(html).toContain('Hull Repairs');
+      expect(html).toContain('Roll 90–00 Always Fails');
+      expect(html).toContain('Roll 99–00 Requires Airdock');
     });
 
-    it('filters Damaged Systems and Selective Targeting when searching', async () => {
+    it('filters Damaged Systems, Damage Control, and Selective Targeting when searching', async () => {
       const wrapper = mount(QuickReferenceTables, {
         props: { initialCategory: 'ship', initialSearch: 'short circuit' }
       });
@@ -107,6 +115,14 @@ describe('QuickReferenceTables.vue', () => {
       const html2 = wrapper2.html();
       expect(html2).toContain('50% Double Damage');
       expect(html2).not.toContain('Power Short Circuit');
+
+      const wrapper3 = mount(QuickReferenceTables, {
+        props: { initialCategory: 'ship', initialSearch: 'airdock' }
+      });
+      const html3 = wrapper3.html();
+      expect(html3).toContain('Roll 99–00 Requires Airdock');
+      expect(html3).not.toContain('Power Short Circuit');
+      expect(html3).not.toContain('Laser Cannon');
     });
   });
 

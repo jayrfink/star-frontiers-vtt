@@ -335,10 +335,73 @@ export const SHIP_COMBAT_REF = {
       rule: 'Indestructible Coating',
       detail: 'Reflective Hull is a passive surface paint/coating, not an active electronic screen. It cannot be broken, stripped, or disabled by targeted shots, power shorts, or component damage, and permanently halves Laser Cannon and Laser Battery beam damage.'
     }
-  ]
+  ],
+
+  damageControl: {
+    overview: 'During combat, the crew and automated damage control systems repair damage using the ship\'s Damage Control Rating (DCR). Repairs take place every 3 combat turns.',
+    timing: 'Special Repair Turn occurs after every 3 combat turns (both sides repair simultaneously).',
+    rules: [
+      {
+        topic: 'Repair Turn Timing',
+        rule: 'Every 3 Combat Turns',
+        detail: 'A special repair turn occurs after every 3 turns of play (noted on the time track; represents 30 minutes of crew repair efforts). Both sides make repair rolls simultaneously.'
+      },
+      {
+        topic: 'DCR Point Allocation',
+        rule: 'Assign Points = Success %',
+        detail: 'All of a ship\'s DCR points can be divided among any number of damaged systems or concentrated on a few. The number of points allocated to a system equals the percentage chance of success (1–100%).'
+      },
+      {
+        topic: 'The DCR Roll',
+        rule: 'Roll d100 ≤ Allocated DCR',
+        detail: 'Roll d100 (or d%) for each repair attempt. If the roll is equal to or less than the allocated DCR points, the repair succeeds and damage is erased. If higher, the system remains damaged.'
+      },
+      {
+        topic: 'Drive & Steering Repairs',
+        rule: '+1 ADF or +1 MR per Success',
+        detail: 'Each successful repair restores only 1 ADF or 1 MR, even if the entire system was lost in one hit. Players may allocate multiple separate blocks of DCR points (e.g., three 30% blocks) to repair multiple points in the same turn.'
+      },
+      {
+        topic: 'Hull Repairs',
+        rule: 'Roll 1d10 HP Restored',
+        detail: 'Allocate DCR points and roll d100 as usual. If successful, roll 1d10 to determine the number of Hull Points restored to the ship (up to its original maximum HP).'
+      },
+      {
+        topic: 'Extinguishing Fires',
+        rule: 'Extinguishes Fire Only',
+        detail: 'A successful repair extinguishes an electrical or disastrous fire, preventing future fire rolls. It does not repair previous fire damage. Extinguishing a Disastrous Fire does not restore halved DCR, lost movement, or combat control.'
+      },
+      {
+        topic: 'Weapons & Defense Systems',
+        rule: 'Restores Knocked-Out System',
+        detail: 'A successful repair roll restores a knocked-out weapon battery, launcher, defense screen, or combat control/navigation computer to full operation (screens can be powered up next turn).'
+      },
+      {
+        topic: 'Automatic Failure',
+        rule: 'Roll 90–00 Always Fails',
+        detail: 'A damage control roll of 90 to 00 is always unsuccessful, regardless of how many DCR points were allocated to the attempt.'
+      },
+      {
+        topic: 'Permanent / Airdock Damage',
+        rule: 'Roll 99–00 Requires Airdock',
+        detail: 'If a repair roll is 99 or 00, the damage is catastrophic and too severe to be repaired in space. It requires a star station airdock, and no further repair attempts can be made on that system during the battle.'
+      },
+      {
+        topic: 'Halved DCR Condition',
+        rule: '½ DCR (Round Up)',
+        detail: 'A ship\'s total DCR is cut in half if it suffers a Damage Control hit or Disastrous Fire, or if operating without a Damage Control computer program.'
+      },
+      {
+        topic: 'Engineer Skill Bonus',
+        rule: '+10% × Skill Level',
+        detail: 'In RPG campaigns, an onboard Starship Engineer adds +10% per skill level to the ship\'s DCR. Unlike ship DCR, the engineer can only apply this bonus to one single repair attempt per repair turn.'
+      }
+    ]
+  }
 };
 
 export const SHIP_DAMAGED_SYSTEMS = SHIP_COMBAT_REF.damagedSystems;
+export const DAMAGE_CONTROL_REF = SHIP_COMBAT_REF.damageControl;
 export const SELECTIVE_TARGETING_REF = SHIP_COMBAT_REF.selectiveTargeting;
 
 export const RANGED_COMBAT_REF = {
