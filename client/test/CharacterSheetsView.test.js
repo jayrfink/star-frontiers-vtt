@@ -570,23 +570,23 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       // Compute percentage: 40/50 = 80%
       expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(80);
-      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#00e5ff');
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#0097a7');
 
       // Adjust SEU: -5
       CharacterSheetsView.methods.adjustSeu.call(vm, -5);
       expect(vm.selectedChar.current_seu).toBe(35);
       expect(vm.updateCharacter).toHaveBeenCalled();
 
-      // Freeform burn: 35 - 10 = 25 (50% -> gold/amber)
+      // Freeform burn: 35 - 10 = 25 (50% -> orange)
       CharacterSheetsView.methods.applySeuBurn.call(vm);
       expect(vm.selectedChar.current_seu).toBe(25);
       expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(50);
-      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#ffb700');
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#ff9800');
 
       // Critical low (< 25% -> red)
       vm.selectedChar.current_seu = 5;
       expect(CharacterSheetsView.computed.seuPercentage.call(vm)).toBe(10);
-      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#ff5252');
+      expect(CharacterSheetsView.computed.seuColor.call(vm)).toBe('#f44336');
 
       // Freeform recharge: 5 + 20 = 25
       vm.seuDelta = 20;
