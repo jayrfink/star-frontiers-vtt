@@ -3,9 +3,11 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import fs from 'fs';
 import path from 'path';
 import ShipSheetsView from '../src/views/ShipSheetsView.vue';
+import { useAuthStore } from '../src/stores/auth.js';
 import ImageBrowserModal from '../src/components/ImageBrowserModal.vue';
 import { SHIP_WEAPONS_CATALOG } from '../src/constants/shipWeapons.js';
 
@@ -1113,6 +1115,148 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       const path = require('path');
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(content).toMatch(/<div class="sidebar-header">\s*<h3>Ships<\/h3>/);
+    });
+  });
+
+  describe('Ship Sheets - Player Assignment (GM only)', () => {
+    it('fetches registered users on mount when user is GameMaster and renders player assignment dropdown', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'gmUser', role: 'GameMaster' };
+
+      const origFetch = global.fetch;
+      let putBody = null;
+      global.fetch = vi.fn().mockImplementation((url, opts) => {
+        if (url === '/api/ships' && (!opts || opts.method === undefined || opts.method === 'GET')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 10,
+              user_id: 2,
+              owner_username: 'playerAlice',
+              name: 'Alice Fighter',
+              ship_type: 'Fighter',
+              hull_points: 50,
+              current_hp: 50,
+            }]),
+          });
+        }
+        if (url === '/api/auth/users') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([
+              { id: 1, username: 'gmUser', role: 'GameMaster' },
+              { id: 2, username: 'playerAlice', role: 'Player' },
+            ]),
+          });
+        }
+        if (url === '/api/ships/10' && opts?.method === 'PUT') {
+          putBody = JSON.parse(opts.body);
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 10,
+              user_id: putBody.user_id,
+              owner_username: 'gmUser',
+              name: 'Alice Fighter',
+              ship_type: 'Fighter',
+              hull_points: 50,
+              current_hp: 50,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        expect(global.fetch).toHaveBeenCalledWith('/api/auth/users', expect.any(Object));
+        const playerSelect = wrapper.find('.player-select-wrap select');
+        expect(playerSelect.exists()).toBe(true);
+
+        // Selecting a new player invokes updateShip with the selected user_id
+        await playerSelect.setValue('1');
+        await flushPromises();
+        expect(putBody).not.toBeNull();
+        expect(Number(putBody.user_id)).toBe(1);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('renders read-only badge-player for non-GM players', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 2, username: 'playerAlice', role: 'Player' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/ships') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 10,
+              user_id: 2,
+              owner_username: 'playerAlice',
+              name: 'Alice Fighter',
+              ship_type: 'Fighter',
+              hull_points: 50,
+              current_hp: 50,
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        expect(wrapper.find('.player-select-wrap select').exists()).toBe(false);
+        const badge = wrapper.find('.badge-player');
+        expect(badge.exists()).toBe(true);
+        expect(badge.text()).toContain('playerAlice');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('includes Assigned Player select in Create Ship modal when isGm is true', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 1, username: 'gmUser', role: 'GameMaster' };
+
+      const vm = {
+        isGm: true,
+        registeredUsers: [
+          { id: 1, username: 'gmUser', role: 'GameMaster' },
+          { id: 2, username: 'playerAlice', role: 'Player' },
+        ],
+        newShipForm: {},
+        showCreateModal: false,
+        selectedPresetType: 'Assault Scout',
+        presets: [{ type: 'Assault Scout', adf: 5, mr: 4, dcr: 35, hull_points: 15, weapons: [], defenses: {} }],
+        applyPresetToCreateForm: ShipSheetsView.methods.applyPresetToCreateForm,
+        normalizeWeapons: ShipSheetsView.methods.normalizeWeapons,
+      };
+
+      ShipSheetsView.methods.openCreateModal.call(vm);
+      expect(vm.showCreateModal).toBe(true);
+      expect(vm.newShipForm.user_id).toBe(1);
     });
   });
 });

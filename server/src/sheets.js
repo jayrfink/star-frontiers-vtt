@@ -37,6 +37,8 @@ function formatShipSheet(row) {
   if (!row) return null;
   return {
     ...row,
+    user_id: Number(row.user_id),
+    owner_username: row.owner_username || '',
     avatar_url: row.avatar_url || '',
     weapons: safeJsonParse(row.weapons, []),
     defenses: safeJsonParse(row.defenses, []),
@@ -401,7 +403,12 @@ export function createShipRouter(db, io) {
 
   router.get('/', (req, res) => {
     try {
-      const rows = db.prepare('SELECT * FROM ship_sheets ORDER BY sort_order ASC, id ASC').all();
+      const rows = db.prepare(`
+        SELECT s.*, u.username AS owner_username
+        FROM ship_sheets s
+        LEFT JOIN users u ON s.user_id = u.id
+        ORDER BY s.sort_order ASC, s.id ASC
+      `).all();
       res.json(rows.map(formatShipSheet));
     } catch (err) {
       console.error('Error listing ships:', err);
@@ -450,7 +457,12 @@ export function createShipRouter(db, io) {
 
   router.get('/:id', (req, res) => {
     try {
-      const row = db.prepare('SELECT * FROM ship_sheets WHERE id = ?').get(req.params.id);
+      const row = db.prepare(`
+        SELECT s.*, u.username AS owner_username
+        FROM ship_sheets s
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.id = ?
+      `).get(req.params.id);
       if (!row) {
         return res.status(404).json({ error: 'Ship sheet not found' });
       }
@@ -481,6 +493,16 @@ export function createShipRouter(db, io) {
         return res.status(400).json({ error: 'Name and ship_type are required' });
       }
 
+      const isGM = isGameMaster(db, req.session.userId);
+      let ownerId = req.session.userId;
+      if (isGM && req.body.user_id !== undefined && req.body.user_id !== null) {
+        const targetUser = db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.body.user_id);
+        if (!targetUser) {
+          return res.status(400).json({ error: 'Assigned user does not exist' });
+        }
+        ownerId = targetUser.id;
+      }
+
       const clampedHullPoints = clampStat(hull_points, 50, 1, 10000);
       const clampedCurrentHp = current_hp !== undefined && current_hp !== null
         ? clampStat(current_hp, clampedHullPoints, 0, clampedHullPoints)
@@ -505,11 +527,16 @@ export function createShipRouter(db, io) {
       `);
 
       const result = stmt.run(
-        req.session.userId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr,
+        ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr,
         weaponsStr, defensesStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
-      const created = db.prepare('SELECT * FROM ship_sheets WHERE id = ?').get(result.lastInsertRowid);
+      const created = db.prepare(`
+        SELECT s.*, u.username AS owner_username
+        FROM ship_sheets s
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.id = ?
+      `).get(result.lastInsertRowid);
       const sheet = formatShipSheet(created);
 
       if (io) {
@@ -534,6 +561,15 @@ export function createShipRouter(db, io) {
       const isGM = isGameMaster(db, req.session.userId);
       if (!isOwner && !isGM) {
         return res.status(403).json({ error: 'Access denied' });
+      }
+
+      let ownerId = existing.user_id;
+      if (isGM && req.body.user_id !== undefined && req.body.user_id !== null) {
+        const targetUser = db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.body.user_id);
+        if (!targetUser) {
+          return res.status(400).json({ error: 'Assigned user does not exist' });
+        }
+        ownerId = targetUser.id;
       }
 
       const {
@@ -564,14 +600,14 @@ export function createShipRouter(db, io) {
 
       const stmt = db.prepare(`
         UPDATE ship_sheets SET
-          name = ?, ship_type = ?, hull_points = ?, current_hp = ?,
+          user_id = ?, name = ?, ship_type = ?, hull_points = ?, current_hp = ?,
           adf = ?, mr = ?, dcr = ?, weapons = ?, defenses = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
-        name, ship_type, clampedHullPoints, clampedCurrentHp,
+        ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp,
         clampedAdf, clampedMr, clampedDcr, weaponsStr, defensesStr, notes, avatarUrl,
         req.params.id
       );
@@ -606,7 +642,12 @@ export function createShipRouter(db, io) {
         }
       }
 
-      const updated = db.prepare('SELECT * FROM ship_sheets WHERE id = ?').get(req.params.id);
+      const updated = db.prepare(`
+        SELECT s.*, u.username AS owner_username
+        FROM ship_sheets s
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.id = ?
+      `).get(req.params.id);
       const sheet = formatShipSheet(updated);
 
       if (io) {

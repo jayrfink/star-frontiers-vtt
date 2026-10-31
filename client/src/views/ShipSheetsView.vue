@@ -101,6 +101,19 @@
                 </option>
               </select>
             </div>
+            <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
+              <label>Player:</label>
+              <select v-model="selectedShip.user_id" @change="updateShip" class="select-player">
+                <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                  {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+                </option>
+              </select>
+            </div>
+            <div v-else-if="selectedShip.owner_username" class="player-badge-wrap">
+              <span class="badge-player" title="Assigned Player">
+                👤 {{ selectedShip.owner_username }}
+              </span>
+            </div>
             <span class="badge-hull-size">Hull Size {{ shipHullSize }}</span>
           </div>
         </header>
@@ -468,6 +481,14 @@
             <label>Ship Name</label>
             <input type="text" v-model="newShipForm.name" required placeholder="e.g. UPF Gullwind" />
           </div>
+          <div v-if="isGm && registeredUsers.length > 0" class="form-group">
+            <label>Assigned Player</label>
+            <select v-model="newShipForm.user_id" class="ship-create-select">
+              <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+              </option>
+            </select>
+          </div>
           <div class="form-group">
             <label>Token Image / Avatar (Optional)</label>
             <div class="modal-avatar-row">
@@ -754,10 +775,12 @@ export default {
         selectedTags: [],
         customRestrictions: '',
       },
+      registeredUsers: [],
       newShipForm: {
         name: '',
         type: 'Assault Scout',
         avatar_url: '',
+        user_id: null,
         adf: 5,
         mr: 4,
         dcr: 35,
@@ -806,6 +829,9 @@ export default {
   mounted() {
     this.fetchShips();
     this.setupSocketListeners();
+    if (this.isGm) {
+      this.fetchUsers();
+    }
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', this.handleKeydown);
     }
@@ -940,7 +966,21 @@ export default {
       copy.defenses = this.normalizeDefenses(copy.defenses);
       copy.weapons = this.normalizeWeapons(copy.weapons);
       copy.notes = copy.notes || '';
+      copy.user_id = copy.user_id !== undefined && copy.user_id !== null ? Number(copy.user_id) : null;
+      copy.owner_username = copy.owner_username || '';
       return copy;
+    },
+    async fetchUsers() {
+      try {
+        const res = await fetch('/api/auth/users', { credentials: 'include' });
+        if (res.ok) {
+          this.registeredUsers = await res.json();
+        } else {
+          this.registeredUsers = [];
+        }
+      } catch {
+        this.registeredUsers = [];
+      }
     },
     async fetchShips() {
       this.loading = true;
@@ -998,6 +1038,14 @@ export default {
       this.applyPresetToCreateForm();
       this.newShipForm.name = '';
       this.newShipForm.avatar_url = '';
+      let defaultUserId = null;
+      try {
+        const authStore = useAuthStore();
+        defaultUserId = authStore?.user?.id ?? (this.registeredUsers?.[0]?.id ?? null);
+      } catch {
+        defaultUserId = this.registeredUsers?.[0]?.id ?? null;
+      }
+      this.newShipForm.user_id = defaultUserId;
       this.showCreateModal = true;
     },
     openImageBrowser(target = 'sheet') {
@@ -1079,6 +1127,7 @@ export default {
           name: this.newShipForm.name.trim(),
           ship_type: this.newShipForm.type || 'Fighter',
           avatar_url: this.newShipForm.avatar_url || '',
+          user_id: this.newShipForm.user_id !== undefined && this.newShipForm.user_id !== null ? this.newShipForm.user_id : undefined,
           adf: this.newShipForm.adf || 2,
           mr: this.newShipForm.mr || 2,
           dcr: this.newShipForm.dcr || 50,
@@ -1121,6 +1170,7 @@ export default {
           ...this.selectedShip,
           avatar_url: this.selectedShip.avatar_url || '',
           ship_type: this.selectedShip.type || this.selectedShip.ship_type || 'Fighter',
+          user_id: this.selectedShip.user_id !== undefined ? this.selectedShip.user_id : undefined,
           hull_points: this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 50,
           current_hp: this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0,
           notes: this.selectedShip.notes || '',
@@ -1874,7 +1924,8 @@ export default {
   border-radius: 4px;
 }
 
-.type-wrap {
+.type-wrap,
+.player-select-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1882,14 +1933,17 @@ export default {
 }
 
 .input-type-select,
-.input-type-select option {
+.input-type-select option,
+.select-player,
+.select-player option {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
   background-image: none !important;
 }
 
-.input-type-select {
+.input-type-select,
+.select-player {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
   padding: 8px 28px 8px 12px !important;
@@ -1897,10 +1951,26 @@ export default {
   font-size: 1rem;
 }
 
-.input-type-select:focus {
+.input-type-select:focus,
+.select-player:focus {
   outline: none;
   border-color: aqua !important;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.player-badge-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.badge-player {
+  border: 1px solid rgba(69, 172, 186, 0.4);
+  color: #45acba;
+  background: rgba(69, 172, 186, 0.12);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 /* Hull Section */
@@ -2661,14 +2731,17 @@ export default {
 }
 
 .preset-select,
-.preset-select option {
+.preset-select option,
+.ship-create-select,
+.ship-create-select option {
   background-color: #000000 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
   background-image: none !important;
 }
 
-.preset-select {
+.preset-select,
+.ship-create-select {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: var(--radius, 4px);
   padding: 8px 28px 8px 12px !important;
@@ -2677,7 +2750,8 @@ export default {
   width: 100%;
 }
 
-.preset-select:focus {
+.preset-select:focus,
+.ship-create-select:focus {
   outline: none;
   border-color: aqua !important;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);

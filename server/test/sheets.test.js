@@ -534,6 +534,99 @@ describe('Sheets API & Socket.io', () => {
       expect(res.status).toBe(400);
     });
 
+    it('includes owner_username in ship sheet responses', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmShipUser', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmShipUser', password: 'password123' });
+
+      const res = await gmAgent.post('/api/ships').send({ name: 'Explorer', ship_type: 'Scout' });
+      expect(res.status).toBe(201);
+      expect(res.body.owner_username).toBe('gmShipUser');
+
+      const listRes = await gmAgent.get('/api/ships');
+      expect(listRes.body[0].owner_username).toBe('gmShipUser');
+
+      const getRes = await gmAgent.get(`/api/ships/${res.body.id}`);
+      expect(getRes.body.owner_username).toBe('gmShipUser');
+    });
+
+    it('allows GM to assign ship to another player login on create and update', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmBossShip', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmBossShip', password: 'password123' });
+
+      // Register player account
+      const playerReg = await gmAgent.post('/api/auth/register').send({ username: 'playerShipAlice', password: 'password123' });
+      const playerUser = playerReg.body;
+
+      // GM creates ship assigned to playerShipAlice
+      const createRes = await gmAgent.post('/api/ships').send({
+        name: 'AliceShip',
+        ship_type: 'Fighter',
+        user_id: playerUser.id,
+      });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.user_id).toBe(playerUser.id);
+      expect(createRes.body.owner_username).toBe('playerShipAlice');
+
+      // GM reassigns ship back to GM
+      const gmInfo = (await gmAgent.get('/api/auth/me')).body;
+      const updateRes = await gmAgent.put(`/api/ships/${createRes.body.id}`).send({
+        user_id: gmInfo.id,
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.user_id).toBe(gmInfo.id);
+      expect(updateRes.body.owner_username).toBe('gmBossShip');
+    });
+
+    it('rejects ship assignment to non-existent user_id with 400', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmShipRoot', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmShipRoot', password: 'password123' });
+
+      const res = await gmAgent.post('/api/ships').send({
+        name: 'GhostShip',
+        ship_type: 'Scout',
+        user_id: 99999,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/user.*exist/i);
+
+      // Also on update
+      const validShip = await gmAgent.post('/api/ships').send({
+        name: 'RealShip',
+        ship_type: 'Scout',
+      });
+      const updateRes = await gmAgent.put(`/api/ships/${validShip.body.id}`).send({
+        user_id: 99999,
+      });
+      expect(updateRes.status).toBe(400);
+      expect(updateRes.body.error).toMatch(/user.*exist/i);
+    });
+
+    it('prevents non-GM players from changing user_id on PUT /api/ships/:id', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'gmShipAdmin', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'gmShipAdmin', password: 'password123' });
+
+      const p1 = (await gmAgent.post('/api/auth/register').send({ username: 'playerShipOne', password: 'password123' })).body;
+      const p2 = (await gmAgent.post('/api/auth/register').send({ username: 'playerShipTwo', password: 'password123' })).body;
+
+      const p1Agent = request.agent(app);
+      await p1Agent.post('/api/auth/login').send({ username: 'playerShipOne', password: 'password123' });
+
+      const ship = (await p1Agent.post('/api/ships').send({ name: 'P1Ship', ship_type: 'Fighter' })).body;
+      expect(ship.user_id).toBe(p1.id);
+
+      // Player attempts to reassign ship to playerShipTwo
+      const putRes = await p1Agent.put(`/api/ships/${ship.id}`).send({
+        user_id: p2.id,
+        name: 'RenamedShip',
+      });
+      expect(putRes.status).toBe(200);
+      expect(putRes.body.user_id).toBe(p1.id); // Must remain playerShipOne
+    });
+
     it('enforces ownership on character and ship update/delete, clears avatar, and decouples tokens', async () => {
       // First user is GM
       const gmAgent = request.agent(app);
