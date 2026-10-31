@@ -1107,6 +1107,13 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
         global.fetch = origFetch;
       }
     });
+
+    it('displays "Ships" in sidebar header', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(content).toMatch(/<div class="sidebar-header">\s*<h3>Ships<\/h3>/);
+    });
   });
 });
 

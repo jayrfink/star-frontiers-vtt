@@ -864,6 +864,15 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         global.fetch = origFetch;
       }
     });
+
+    it('displays "Characters" in sidebar header and no mini icon in SEU Energy Pool header', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const content = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      expect(content).toMatch(/<div class="sidebar-header">\s*<h3>Characters<\/h3>/);
+      expect(content).toMatch(/<div class="seu-header">\s*<h4>SEU Energy Pool<\/h4>/);
+      expect(content).not.toMatch(/<h4>⚡ SEU Energy Pool<\/h4>/);
+    });
   });
 });
 

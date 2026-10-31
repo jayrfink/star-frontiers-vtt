@@ -3,7 +3,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h3>Ship Sheets</h3>
+        <h3>Ships</h3>
         <button class="btn-primary btn-new-ship" @click="openCreateModal">+ New Ship</button>
       </div>
 

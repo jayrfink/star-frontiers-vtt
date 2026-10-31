@@ -3,7 +3,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h3>Character Sheets</h3>
+        <h3>Characters</h3>
         <button class="btn-primary btn-new-character" @click="openCreateModal">+ New Character</button>
       </div>
 
@@ -211,7 +211,7 @@
         <!-- SEU Energy Pool Tracker -->
         <section class="seu-section card">
           <div class="seu-header">
-            <h4>⚡ SEU Energy Pool</h4>
+            <h4>SEU Energy Pool</h4>
             <div class="seu-header-right">
               <button class="btn-action-reload" @click="reloadSeu" title="Reload: Restore SEU to maximum">
                 ⚡ Reload
