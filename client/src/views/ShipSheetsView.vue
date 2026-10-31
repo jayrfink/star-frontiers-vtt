@@ -36,7 +36,7 @@
           >⋮⋮</span>
           <div class="ship-item-info">
             <span class="ship-name">{{ ship.name || 'Unnamed Ship' }}</span>
-            <span class="ship-sub">{{ ship.ship_type || ship.type || 'Fighter' }} • HP {{ ship.current_hp ?? ship.current_hull_points ?? 0 }}/{{ ship.hull_points ?? ship.max_hull_points ?? 0 }}</span>
+            <span class="ship-sub">{{ ship.ship_type || ship.type || 'Fighter' }} • Size {{ getShipHullSize(ship) }} • HP {{ ship.current_hp ?? ship.current_hull_points ?? 0 }}/{{ ship.hull_points ?? ship.max_hull_points ?? 0 }}</span>
           </div>
           <div class="ship-item-actions">
             <div v-if="canReorder(ship)" class="reorder-actions">
@@ -101,6 +101,7 @@
                 </option>
               </select>
             </div>
+            <span class="badge-hull-size">Hull Size {{ shipHullSize }}</span>
           </div>
         </header>
 
@@ -701,7 +702,7 @@
 <script>
 import { socket } from '../services/socket.js';
 import { useAuthStore } from '../stores/auth.js';
-import { SHIP_PRESETS } from '../constants/shipPresets.js';
+import { SHIP_PRESETS, SHIP_HULL_SIZES } from '../constants/shipPresets.js';
 import ImageBrowserModal from '../components/ImageBrowserModal.vue';
 import { getUserState, saveUserState, getSafeUserId } from '../utils/userState.js';
 import { SHIP_WEAPONS_CATALOG, createWeaponInstance } from '../constants/shipWeapons.js';
@@ -768,6 +769,9 @@ export default {
     };
   },
   computed: {
+    shipHullSize() {
+      return this.getShipHullSize(this.selectedShip);
+    },
     isGm() {
       try {
         const authStore = useAuthStore();
@@ -818,6 +822,20 @@ export default {
     }
   },
   methods: {
+    getShipHullSize(ship) {
+      if (!ship) return 1;
+      if (ship.hull_size != null && !isNaN(ship.hull_size)) return Number(ship.hull_size);
+      if (ship.size != null && !isNaN(ship.size)) return Number(ship.size);
+      const type = ship.ship_type || ship.type;
+      if (type && SHIP_HULL_SIZES[type] !== undefined) {
+        return SHIP_HULL_SIZES[type];
+      }
+      const hp = ship.max_hull_points ?? ship.hull_points;
+      if (hp != null && !isNaN(hp)) {
+        return Math.max(1, Math.min(20, Math.round(Number(hp) / 5)));
+      }
+      return 1;
+    },
     canFlipAndBurn,
     canMultiTurnFlip,
     canStandardFlip,
@@ -1985,6 +2003,22 @@ export default {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.badge-hull-size {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .btn-hp {

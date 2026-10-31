@@ -130,3 +130,21 @@ export const SHIP_PRESETS = [
     defenses: { reflective_hull: true, masking_screens_max: 0, masking_screens_current: 0, icm_max: 0, icm_current: 0 }
   }
 ];
+
+export const SHIP_HULL_SIZES = {
+  'Fighter': 1,
+  'Assault Scout': 3,
+  'Corvette': 4,
+  'Frigate': 5,
+  'Destroyer': 6,
+  'Minelayer': 7,
+  'Assault Transport': 8,
+  'Light Cruiser': 14,
+  'Heavy Cruiser': 16,
+  'Assault Carrier': 15,
+  'Battleship': 20,
+  'Small Freighter': 5,
+  'Medium Freighter': 10,
+  'Heavy Freighter': 15,
+  'Space Station': 1,
+};

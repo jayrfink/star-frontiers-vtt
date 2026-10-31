@@ -36,7 +36,7 @@
           >⋮⋮</span>
           <div class="char-item-info">
             <span class="char-name">{{ char.name || 'Unnamed' }}</span>
-            <span class="char-sub">{{ char.race || 'Unknown Species' }} • STA {{ char.current_stamina }}/{{ char.max_stamina }}</span>
+            <span class="char-sub">{{ char.race || 'Unknown Species' }} • Tier {{ getCharTier(char) }} • STA {{ char.current_stamina }}/{{ char.max_stamina }}</span>
           </div>
           <div class="char-item-actions">
             <div v-if="canReorder(char)" class="reorder-actions">
@@ -116,6 +116,7 @@
                 <option value="Biosocial">Biosocial</option>
               </select>
             </div>
+            <span class="badge-tier">Tier {{ characterTier }}</span>
             <button
               class="btn-action-download"
               @click="downloadAsciiSheet"
@@ -757,6 +758,9 @@ export default {
     };
   },
   computed: {
+    characterTier() {
+      return this.getCharTier(this.selectedChar);
+    },
     isGm() {
       try {
         const authStore = useAuthStore();
@@ -907,6 +911,21 @@ export default {
     this.removeSocketListeners();
   },
   methods: {
+    getCharTier(char) {
+      if (!char) return 1;
+      if (char.tier != null && !isNaN(char.tier)) return Number(char.tier);
+      if (char.threat_tier != null && !isNaN(char.threat_tier)) return Number(char.threat_tier);
+      const skills = Array.isArray(char.skills) ? char.skills : [];
+      if (!skills.length) return 1;
+      const levels = skills.map(s => Number(s.level) || 0);
+      const maxLvl = Math.max(...levels, 0);
+      const totalLevels = levels.reduce((sum, lvl) => sum + lvl, 0);
+      if (maxLvl >= 6 || totalLevels >= 15) return 5;
+      if (maxLvl >= 5 || totalLevels >= 10) return 4;
+      if (maxLvl >= 3 || totalLevels >= 6) return 3;
+      if (maxLvl >= 2 || totalLevels >= 3) return 2;
+      return 1;
+    },
     getCurrentUserId() {
       return getSafeUserId();
     },
@@ -2050,6 +2069,22 @@ export default {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.badge-tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .btn-action-download {

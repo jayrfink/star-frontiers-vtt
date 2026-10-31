@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { describe, it, expect, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
 import * as characterExport from '../src/utils/characterExport.js';
 
@@ -772,6 +776,90 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(sentOrder).toEqual([2, 3, 1]);
         expect(vm.draggedCharIndex).toBeNull();
         expect(vm.dragOverCharIndex).toBeNull();
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
+
+  describe('Tier Badge Calculation & Display', () => {
+    it('computes character tier based on skills, explicit tier, or defaults to 1', () => {
+      const getCharTier = CharacterSheetsView.methods.getCharTier;
+
+      // Null or empty character
+      expect(getCharTier(null)).toBe(1);
+      expect(getCharTier({})).toBe(1);
+
+      // Explicit tier or threat_tier
+      expect(getCharTier({ tier: 3 })).toBe(3);
+      expect(getCharTier({ threat_tier: 4 })).toBe(4);
+
+      // Tier 1: No skills or max level 1
+      expect(getCharTier({ skills: [{ name: 'Beam Weapons', level: 1 }] })).toBe(1);
+
+      // Tier 2: Max level 2 or total >= 3
+      expect(getCharTier({ skills: [{ name: 'Beam Weapons', level: 2 }] })).toBe(2);
+      expect(getCharTier({
+        skills: [
+          { name: 'Beam Weapons', level: 1 },
+          { name: 'Melee Weapons', level: 1 },
+          { name: 'Technician', level: 1 },
+        ],
+      })).toBe(2);
+
+      // Tier 3: Max level 3 or 4
+      expect(getCharTier({ skills: [{ name: 'Beam Weapons', level: 3 }] })).toBe(3);
+      expect(getCharTier({ skills: [{ name: 'Beam Weapons', level: 4 }] })).toBe(3);
+
+      // Tier 4: Max level 5
+      expect(getCharTier({ skills: [{ name: 'Beam Weapons', level: 5 }] })).toBe(4);
+
+      // Tier 5: Max level 6
+      expect(getCharTier({ skills: [{ name: 'Beam Weapons', level: 6 }] })).toBe(5);
+    });
+
+    it('computes characterTier from selectedChar', () => {
+      const vm = {
+        selectedChar: {
+          skills: [{ name: 'Beam Weapons', level: 4 }],
+        },
+        getCharTier: CharacterSheetsView.methods.getCharTier,
+      };
+
+      const tier = CharacterSheetsView.computed.characterTier.call(vm);
+      expect(tier).toBe(3);
+    });
+
+    it('renders the Tier badge in the header when a character is selected', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes('/api/equipment')) {
+          return Promise.resolve({ ok: true, json: async () => [] });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ([{
+            id: 1,
+            name: 'Wulfen',
+            race: 'Yazirian',
+            current_stamina: 50,
+            max_stamina: 50,
+            skills: [{ name: 'Beam Weapons', level: 3 }],
+          }]),
+        });
+      });
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+        const badge = wrapper.find('.badge-tier');
+        expect(badge.exists()).toBe(true);
+        expect(badge.text()).toBe('Tier 3');
       } finally {
         global.fetch = origFetch;
       }

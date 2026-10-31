@@ -1039,6 +1039,75 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       global.fetch = origFetch;
     }
   });
+
+  describe('Ship Hull Size Calculation & Badge Display', () => {
+    it('calculates ship hull size based on official rules, explicit hull_size, or hull points', () => {
+      const getShipHullSize = ShipSheetsView.methods.getShipHullSize;
+
+      // Null or empty ship
+      expect(getShipHullSize(null)).toBe(1);
+      expect(getShipHullSize({})).toBe(1);
+
+      // Explicit hull_size or size
+      expect(getShipHullSize({ hull_size: 8 })).toBe(8);
+      expect(getShipHullSize({ size: 12 })).toBe(12);
+
+      // Official warship and civilian ship presets
+      expect(getShipHullSize({ ship_type: 'Fighter' })).toBe(1);
+      expect(getShipHullSize({ type: 'Assault Scout' })).toBe(3);
+      expect(getShipHullSize({ ship_type: 'Corvette' })).toBe(4);
+      expect(getShipHullSize({ ship_type: 'Frigate' })).toBe(5);
+      expect(getShipHullSize({ ship_type: 'Destroyer' })).toBe(6);
+      expect(getShipHullSize({ ship_type: 'Minelayer' })).toBe(7);
+      expect(getShipHullSize({ ship_type: 'Light Cruiser' })).toBe(14);
+      expect(getShipHullSize({ ship_type: 'Heavy Cruiser' })).toBe(16);
+      expect(getShipHullSize({ ship_type: 'Assault Carrier' })).toBe(15);
+      expect(getShipHullSize({ ship_type: 'Battleship' })).toBe(20);
+      expect(getShipHullSize({ ship_type: 'Small Freighter' })).toBe(5);
+      expect(getShipHullSize({ ship_type: 'Medium Freighter' })).toBe(10);
+      expect(getShipHullSize({ ship_type: 'Heavy Freighter' })).toBe(15);
+      expect(getShipHullSize({ ship_type: 'Space Station' })).toBe(1);
+
+      // Unknown or custom ship calculated from hull points (e.g. 30 HP / 5 = 6)
+      expect(getShipHullSize({ ship_type: 'Custom Vessel', max_hull_points: 30 })).toBe(6);
+      expect(getShipHullSize({ ship_type: 'Unknown Saucer', hull_points: 45 })).toBe(9);
+    });
+
+    it('computes shipHullSize from selectedShip', () => {
+      const vm = {
+        selectedShip: {
+          ship_type: 'Frigate',
+        },
+        getShipHullSize: ShipSheetsView.methods.getShipHullSize,
+      };
+
+      const size = ShipSheetsView.computed.shipHullSize.call(vm);
+      expect(size).toBe(5);
+    });
+
+    it('renders the Hull Size badge in the header when a ship is selected', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{ id: 1, name: 'Scimitar', ship_type: 'Assault Scout', hull_points: 15, current_hp: 15 }]),
+      });
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+        const badge = wrapper.find('.badge-hull-size');
+        expect(badge.exists()).toBe(true);
+        expect(badge.text()).toBe('Hull Size 3');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+  });
 });
 
 
