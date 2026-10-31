@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>Characters</h3>
-        <button class="btn-primary btn-new-character" @click="openCreateModal">+ New Character</button>
+        <button class="btn-primary btn-new-character" @click="openCreateModal">+ New</button>
       </div>
 
       <div v-if="loading" class="sidebar-loading">Loading characters...</div>

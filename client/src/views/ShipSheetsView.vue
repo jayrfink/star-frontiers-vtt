@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>Ships</h3>
-        <button class="btn-primary btn-new-ship" @click="openCreateModal">+ New Ship</button>
+        <button class="btn-primary btn-new-ship" @click="openCreateModal">+ New</button>
       </div>
 
       <div v-if="loading" class="sidebar-loading">Loading ships...</div>

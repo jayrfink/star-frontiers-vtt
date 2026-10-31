@@ -1987,6 +1987,11 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(vm.selectedShip.current_dcr).toBe(35);
       expect(vm.selectedShip.weapons[0].ammo_current).toBe(4);
     });
+
+    it('renders "+ New" on the create ship sidebar button', () => {
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/<button[^>]*class="[^"]*btn-new-ship[^"]*"[^>]*>\s*\+\s*New\s*<\/button>/);
+    });
   });
 });
 

@@ -1784,6 +1784,13 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         global.fetch = origFetch;
       }
     });
+
+    it('renders "+ New" on the create character sidebar button', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/<button[^>]*class="[^"]*btn-new-character[^"]*"[^>]*>\s*\+\s*New\s*<\/button>/);
+    });
   });
 });
 
