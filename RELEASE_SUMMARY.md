@@ -1,54 +1,80 @@
-# Star Frontiers VTT - Release v0.12.6 Summary
+# Star Frontiers VTT - Release v0.13.0 Summary
 
-**Release Tag:** `v0.12.6`  
-**Date:** October 30, 2026  
+**Release Tag:** `v0.13.0`  
+**Date:** October 31, 2026  
 **Status:** Stable / Production Ready
 
 ---
 
 ## 1. Overview
 
-Release `v0.12.6` focuses on visual polish, theme consistency, and UI control fixes across the virtual tabletop. It darkens the character sheet SEU energy pool bar to align with the visual weight and luminance of the STA bar, resolves a background arrow tiling defect on custom `<select>` dropdown controls in character and ship sheets, restyles the GM Admin and GM Sessions applets to use the core VTT green, aqua, and teal palette, and removes the emoji icon from the GM Sessions drawer header.
+Release `v0.13.0` is a major feature update delivering comprehensive player assignment across character and ship sheets, an upgraded Knight Hawks ship defenses system with custom catalog defenses and delete controls, an integrated Experience Points (XP) tracker with direct skill progression spending, a major ergonomic redesign of the character sheet header and middle layout, auth session storage resilience hardening against cross-OS WAL lock contention, and unified typography.
 
-All automated test suites (729 client tests across 54 files, and 256 server tests across 19 suites) pass with 100% compliance, and the client production build compiles cleanly.
+All automated test suites pass with 100% compliance: **764 client tests across 56 test files** and **266 server tests across 19 test suites**, and the client production bundle compiles cleanly.
 
 ---
 
-## 2. Key Enhancements in v0.12.6
+## 2. Key Enhancements in v0.13.0
 
-### Character Sheet SEU Energy Bar Harmonization
-- **Darkened Luminance & Visual Weight:**
-  - Darkened the SEU energy pool bar in [CharacterSheetsView.vue](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue) so its visual brightness is closely harmonized with the darkened STA stamina bar.
-  - High SEU (>50%): Darkened base color to `#0097a7` with gradient `linear-gradient(90deg, #0097a7, #00838f)` and border `rgba(0, 151, 167, 0.5)`.
-  - Mid SEU (>25%): Darkened base color to `#ff9800` with gradient `linear-gradient(90deg, #ff9800, #f57c00)` and border `rgba(255, 152, 0, 0.5)`.
-  - Low SEU (<=25%): Darkened base color to `#f44336` with gradient `linear-gradient(90deg, #f44336, #d32f2f)` and border `rgba(244, 67, 54, 0.5)`.
+### GM Player Assignment for Characters & Ships
+- **Backend Ownership & Permissions ([`server/src/sheets.js`](file:///Users/jrf/star-frontiers-vtt/server/src/sheets.js)):**
+  - Added user attribution (`user_id`) to `character_sheets` and `ship_sheets` database schemas with foreign key references to the `users` table.
+  - Restricted sheet reassignment to GameMasters while allowing players to view their assigned sheets.
+  - Broadcasted real-time Socket.io attribution updates (`sheets:updated`) to all connected clients upon player assignment changes.
+- **Frontend Player Selection Controls ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue), [`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - Integrated a GM Player assignment dropdown in both character and ship sheet headers, as well as the respective Create modals.
+  - Rendered a read-only badge (`👤 <owner_username>`) for players to easily identify sheet ownership without GM edit privileges.
 
-### Form Dropdown Chevron Hardening & Anti-Tiling
-- **Global & View-Level `<select>` Background Prevention:**
-  - Fixed an issue where opening native `<select>` dropdowns (such as the Primary Skill Area selector in the `+ New Character` modal, or Ship Type selectors) caused custom SVG chevrons to tile repeatedly across the open menu.
-  - Enforced `background-repeat: no-repeat !important`, `background-position: calc(100% - 10px) center !important`, and `background-size: 14px 10px !important` globally in [main.css](file:///Users/jrf/star-frontiers-vtt/client/src/main.css).
-  - Explicitly stripped background images on `<option>` and `<optgroup>` tags (`background-image: none !important`) so OS dropdown viewports do not inherit parent arrow backgrounds.
-  - Replaced shorthand `background: #000000` resets with explicit `background-color` and ensured standardized `padding-right: 28px !important` across `.input-type-select`, `.preset-select`, `.status-select`, `.select-race`, `.select-psa`, and `.select-official-skill`.
+### Knight Hawks Ship Defenses System Upgrade
+- **Modular Defense Catalog & Custom Defenses ([`client/src/constants/shipDefenses.js`](file:///Users/jrf/star-frontiers-vtt/client/src/constants/shipDefenses.js)):**
+  - Renamed the legacy "Defensive Screens" applet to "Defenses".
+  - Established a canonical Knight Hawks defense catalog covering Reflective Hull, Masking Screen, ECM, ICM, and Proton Screen with accurate rulebook stats.
+  - Added a `+ Add Defense` modal enabling GMs and players to equip catalog defenses or design custom screen systems with custom SEU drain, ammo, and defense rating parameters.
+  - Added delete capability (`✕`) on equipped defenses with bidirectional synchronization to legacy defense state columns.
 
-### GM Admin & GM Sessions Palette Realignment
-- **Teal / Aqua Theme Integration:**
-  - Restyled [AdminView.vue](file:///Users/jrf/star-frontiers-vtt/client/src/views/AdminView.vue) and [GmNotesView.vue](file:///Users/jrf/star-frontiers-vtt/client/src/views/GmNotesView.vue) to match the dark teal, aqua, and green aesthetic of the VTT interface.
-  - Replaced legacy blue button backgrounds, borders, and hover states (`#1976d2`, `#2196f3`, `#0d47a1`) with dark cyan/aqua tones (`background: #082d33`, `border: 1px solid #2394a6`, `color: #00ffff`).
-  - Standardized all headers, card titles, text elements, and input labels to `#cecece` and `#00ffff`.
-  - Removed the notebook emoji icon (`📓`) from the `<h3>GM Sessions</h3>` sidebar header in [GmNotesView.vue](file:///Users/jrf/star-frontiers-vtt/client/src/views/GmNotesView.vue).
+### Character Sheet XP Tracker & Skill Progression
+- **Persistent XP Tracking ([`server/src/db.js`](file:///Users/jrf/star-frontiers-vtt/server/src/db.js), [`server/src/sheets.js`](file:///Users/jrf/star-frontiers-vtt/server/src/sheets.js)):**
+  - Added `current_xp` integer column to `character_sheets` with automatic SQLite migration and range validation `[0, 1000000]`.
+- **Streamlined XP Controls ([`client/src/views/CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Placed an XP tracker with all-caps light lettering (`EXPERIENCE POINTS (XP)`) in the compact trackers card.
+  - Provided a streamlined amount box with `[- Spend]` and `[+ Award]` buttons.
+  - Integrated direct skill advancement spending, deducting XP in real time when increasing skill levels.
+
+### Character Sheet Middle Layout & Header Redesign
+- **Decluttered Sheet Header ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Separated header into a top row (Name input, Tier badge, clean Download button) and a dedicated sub-row (Species, PSA, Player assignment).
+  - Scaled character portrait up 10% (57&times;57px) and aligned its top edge directly with the name input.
+- **Balanced Two-Column Middle Grid ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - **Left Box — Primary Attributes:** Stacked the 4 primary attribute pairs into a compact 2&times;2 grid (`STR / STA`, `DEX / RS`, `INT / LOG`, `PER / LDR`) located directly beneath the tactical bar.
+  - **Right Box — Compact Trackers:** Grouped Stamina (STA), SEU Energy Pool, and XP into a matching compact column.
+  - Thin 8px meter bars for STA and SEU harmonized with the Encumbrance bar.
+  - Standardized tracker headers to use all-caps light lettering (`tracker-label`) rather than bulky `<h4>` headers.
+
+### Auth & Session Storage Resilience
+- **SQLite Session Crash Protection ([`server/src/middleware.js`](file:///Users/jrf/star-frontiers-vtt/server/src/middleware.js)):**
+  - Hardened `BetterSqlite3Store.get()` and `touch()` against read and JSON parse errors, gracefully destroying corrupt sessions and returning null instead of throwing unhandled 500 crashes.
+- **Isolated Status Inspections ([`sf-vtt-ctl.sh`](file:///Users/jrf/star-frontiers-vtt/sf-vtt-ctl.sh)):**
+  - Shifted status inspection SQLite queries inside the Docker container via `docker exec`, preventing cross-OS WAL/SHM file locking contention on macOS bind mounts.
+
+### Typography & Theme Polish
+- **Branded Typography ([`client/src/main.css`](file:///Users/jrf/star-frontiers-vtt/client/src/main.css)):**
+  - SFVTT brand title set to Modesto font.
+  - Headers set to Modesto falling back to Consolas and Roboto.
+  - Locally served Roboto applied sitewide for clean legibility.
+  - Harmonized muted steel-cyan accent (`#45acba`) across character and ship sheet components.
 
 ---
 
 ## 3. Verification & Test Metrics
 
-- **Client Test Suite**: 54 test files passed, 729 total tests passed (100% passing).
-- **Server Test Suite**: 19 test files passed, 256 total tests passed (100% passing).
-- **Client Build**: Clean Vite production bundle compilation (`sf-vtt-client@0.12.6`).
+- **Client Test Suite**: 56 test files passed, 764 total tests passed (100% passing).
+- **Server Test Suite**: 19 test files passed, 266 total tests passed (100% passing).
+- **Client Build**: Clean Vite production bundle compilation (`sf-vtt-client@0.13.0`).
 - **Services**: Dev server container `sf-vtt-dev` verified running with backend (port 3000) and frontend (port 3001) operational.
 
 ---
 
 ## 4. Git Artifacts & History
 
-- Tag: `v0.12.6`
-- Previous Tag: `v0.12.5`
+- Tag: `v0.13.0`
+- Previous Tag: `v0.12.6`
