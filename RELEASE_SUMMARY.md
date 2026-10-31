@@ -1,6 +1,6 @@
-# Star Frontiers VTT - Release v0.13.0 Summary
+# Star Frontiers VTT - Release v0.14.0 Summary
 
-**Release Tag:** `v0.13.0`  
+**Release Tag:** `v0.14.0`  
 **Date:** October 31, 2026  
 **Status:** Stable / Production Ready
 
@@ -8,73 +8,55 @@
 
 ## 1. Overview
 
-Release `v0.13.0` is a major feature update delivering comprehensive player assignment across character and ship sheets, an upgraded Knight Hawks ship defenses system with custom catalog defenses and delete controls, an integrated Experience Points (XP) tracker with direct skill progression spending, a major ergonomic redesign of the character sheet header and middle layout, auth session storage resilience hardening against cross-OS WAL lock contention, and unified typography.
+Release `v0.14.0` delivers extensive UI, ergonomic, and tactical layout upgrades across both Ship Sheets and Character Sheets. Highlights include an overhauled Ship Sheet header and middle section with a 40%/60% split, an ASCII starship export utility, an integrated Damage Control Rating (DCR) meter tracker with backend SQLite persistence, skill and inventory reordering controls, and unified styling across headers, buttons, traits, and notes sections.
 
-All automated test suites pass with 100% compliance: **764 client tests across 56 test files** and **266 server tests across 19 test suites**, and the client production bundle compiles cleanly.
+All automated test suites pass with 100% compliance: **782 client tests across 57 test files** and **267 server tests across 19 test suites**, and the client production bundle compiles cleanly.
 
 ---
 
-## 2. Key Enhancements in v0.13.0
+## 2. Key Enhancements in v0.14.0
 
-### GM Player Assignment for Characters & Ships
-- **Backend Ownership & Permissions ([`server/src/sheets.js`](file:///Users/jrf/star-frontiers-vtt/server/src/sheets.js)):**
-  - Added user attribution (`user_id`) to `character_sheets` and `ship_sheets` database schemas with foreign key references to the `users` table.
-  - Restricted sheet reassignment to GameMasters while allowing players to view their assigned sheets.
-  - Broadcasted real-time Socket.io attribution updates (`sheets:updated`) to all connected clients upon player assignment changes.
-- **Frontend Player Selection Controls ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue), [`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
-  - Integrated a GM Player assignment dropdown in both character and ship sheet headers, as well as the respective Create modals.
-  - Rendered a read-only badge (`👤 <owner_username>`) for players to easily identify sheet ownership without GM edit privileges.
+### Ship Sheets UI & Tactical Ergonomics Redesign
+- **Decluttered Header & ASCII Download ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue), [`shipExport.js`](file:///Users/jrf/star-frontiers-vtt/client/src/utils/shipExport.js)):**
+  - **Top Row:** Reorganized into Ship Name input, Hull Size badge, and an ASCII text file download button (`.btn-action-download`).
+  - **Sub-row:** Class Preset and Player assignment dropdown moved cleanly underneath the name row with `0.9rem` font sizing matching Character Sheets.
+  - **Export Utility:** Exports full starship specifications, tactical flight stats, hull points, DCR, equipped defenses, weapons, ammo counts, and notes to `<ship_name>_sheet.txt`.
+- **40% / 60% Middle Section Grid ([`ShipSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/ShipSheetsView.vue)):**
+  - **Left Half (40% width):** `FLIGHT STATS` vertical stack with ADF and MR inputs using light all-caps lettering (`tracker-label`).
+  - **Right Half (60% width):** Compact trackers card housing:
+    - **Hull Points Applet:** Light all-caps `HULL POINTS (HP)` header, `Full Repair` button, current/max HP inputs, thin 8px meter bar, stepper buttons (`-5`, `-1`, `+1`, `+5`), and freeform delta (`- Dmg`, `+ Heal`).
+    - **Damage Control Rating (DCR) Meter Applet:** Positioned under Hull Points with light all-caps `DAMAGE CONTROL RATING (DCR)` header, `Restore DCR` button, current/max DCR inputs, thin 8px meter bar with color thresholds matching Hull Points (> 50% `#4caf50`, > 25% `#ff9800`, &le; 25% `#f44336`), stepper buttons (`-5`, `-1`, `+1`, `+5`), and freeform delta (`- Red`, `+ Rep`).
+  - **Button Width Symmetry:** Standardized `min-width: 88px` and adjusted padding so the `Full Repair` button matches the exact width of `Restore DCR`.
+- **DCR Backend Persistence & Migration ([`db.js`](file:///Users/jrf/star-frontiers-vtt/server/src/db.js), [`sheets.js`](file:///Users/jrf/star-frontiers-vtt/server/src/sheets.js)):**
+  - Added `current_dcr` integer column to `ship_sheets` table with automatic database migration (`UPDATE ship_sheets SET current_dcr = dcr WHERE current_dcr IS NULL`).
+  - Supported `current_dcr` on `POST /api/ships` and `PUT /api/ships/:id` with clamping between 0 and max DCR.
 
-### Knight Hawks Ship Defenses System Upgrade
-- **Modular Defense Catalog & Custom Defenses ([`client/src/constants/shipDefenses.js`](file:///Users/jrf/star-frontiers-vtt/client/src/constants/shipDefenses.js)):**
-  - Renamed the legacy "Defensive Screens" applet to "Defenses".
-  - Established a canonical Knight Hawks defense catalog covering Reflective Hull, Masking Screen, ECM, ICM, and Proton Screen with accurate rulebook stats.
-  - Added a `+ Add Defense` modal enabling GMs and players to equip catalog defenses or design custom screen systems with custom SEU drain, ammo, and defense rating parameters.
-  - Added delete capability (`✕`) on equipped defenses with bidirectional synchronization to legacy defense state columns.
-
-### Character Sheet XP Tracker & Skill Progression
-- **Persistent XP Tracking ([`server/src/db.js`](file:///Users/jrf/star-frontiers-vtt/server/src/db.js), [`server/src/sheets.js`](file:///Users/jrf/star-frontiers-vtt/server/src/sheets.js)):**
-  - Added `current_xp` integer column to `character_sheets` with automatic SQLite migration and range validation `[0, 1000000]`.
-- **Streamlined XP Controls ([`client/src/views/CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Placed an XP tracker with all-caps light lettering (`EXPERIENCE POINTS (XP)`) in the compact trackers card.
-  - Provided a streamlined amount box with `[- Spend]` and `[+ Award]` buttons.
-  - Integrated direct skill advancement spending, deducting XP in real time when increasing skill levels.
-
-### Character Sheet Middle Layout & Header Redesign
-- **Decluttered Sheet Header ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - Separated header into a top row (Name input, Tier badge, clean Download button) and a dedicated sub-row (Species, PSA, Player assignment).
-  - Scaled character portrait up 10% (57&times;57px) and aligned its top edge directly with the name input.
-- **Balanced Two-Column Middle Grid ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
-  - **Left Box — Primary Attributes:** Stacked the 4 primary attribute pairs into a compact 2&times;2 grid (`STR / STA`, `DEX / RS`, `INT / LOG`, `PER / LDR`) located directly beneath the tactical bar.
-  - **Right Box — Compact Trackers:** Grouped Stamina (STA), SEU Energy Pool, and XP into a matching compact column.
-  - Thin 8px meter bars for STA and SEU harmonized with the Encumbrance bar.
-  - Standardized tracker headers to use all-caps light lettering (`tracker-label`) rather than bulky `<h4>` headers.
-
-### Auth & Session Storage Resilience
-- **SQLite Session Crash Protection ([`server/src/middleware.js`](file:///Users/jrf/star-frontiers-vtt/server/src/middleware.js)):**
-  - Hardened `BetterSqlite3Store.get()` and `touch()` against read and JSON parse errors, gracefully destroying corrupt sessions and returning null instead of throwing unhandled 500 crashes.
-- **Isolated Status Inspections ([`sf-vtt-ctl.sh`](file:///Users/jrf/star-frontiers-vtt/sf-vtt-ctl.sh)):**
-  - Shifted status inspection SQLite queries inside the Docker container via `docker exec`, preventing cross-OS WAL/SHM file locking contention on macOS bind mounts.
-
-### Typography & Theme Polish
-- **Branded Typography ([`client/src/main.css`](file:///Users/jrf/star-frontiers-vtt/client/src/main.css)):**
-  - SFVTT brand title set to Modesto font.
-  - Headers set to Modesto falling back to Consolas and Roboto.
-  - Locally served Roboto applied sitewide for clean legibility.
-  - Harmonized muted steel-cyan accent (`#45acba`) across character and ship sheet components.
+### Character Sheets Ergonomics & UI Polish
+- **Special Traits & Abilities Banner ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Styled species abilities as an immutable information banner mirroring the Ship Sheets Flip & Burn banner color scheme and border aesthetic.
+- **Skill & Inventory Reordering ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Added up/down buttons (`▲`, `▼`) and drag-and-drop reordering for both the Skills & Experience list and Inventory & Mass list.
+  - Automatically persists new order to character sheet record upon reordering.
+- **Compact XP Controls ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Streamlined XP tracker row, moving spend and award controls next to the `EXPERIENCE POINTS (XP)` label for a cleaner, more compact profile.
+- **Button Sizing & Icon Polish ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Removed mini icons from `Rest` and `Reload` buttons, matching their widths using `min-width: 58px` and balanced padding.
+  - Scaled sub-row font size (Species, PSA, Player) down 10% to `0.9rem`.
+- **Notes Section Alignment ([`CharacterSheetsView.vue`](file:///Users/jrf/star-frontiers-vtt/client/src/views/CharacterSheetsView.vue)):**
+  - Applied the exact styling, cyan `#45acba` heading color, margin, and padding (`padding-bottom: 2%`) from Ship Sheets Notes to Character Sheets Notes.
 
 ---
 
 ## 3. Verification & Test Metrics
 
-- **Client Test Suite**: 56 test files passed, 764 total tests passed (100% passing).
-- **Server Test Suite**: 19 test files passed, 266 total tests passed (100% passing).
-- **Client Build**: Clean Vite production bundle compilation (`sf-vtt-client@0.13.0`).
-- **Services**: Dev server container `sf-vtt-dev` verified running with backend (port 3000) and frontend (port 3001) operational.
+- **Client Test Suite**: 57 test files passed, 782 total tests passed (100% passing).
+- **Server Test Suite**: 19 test files passed, 267 total tests passed (100% passing).
+- **Client Build**: Clean Vite production bundle compilation (`sf-vtt-client@0.14.0`).
+- **Services**: Dev server container `sf-vtt-dev` operational.
 
 ---
 
 ## 4. Git Artifacts & History
 
-- Tag: `v0.13.0`
-- Previous Tag: `v0.12.6`
+- Tag: `v0.14.0`
+- Previous Tag: `v0.13.0`
