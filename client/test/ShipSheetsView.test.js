@@ -1819,9 +1819,9 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('configures middle-section-grid to 25% width for Flight Stats and the rest of space for Trackers', () => {
+    it('configures middle-section-grid to 15% width for Flight Stats, 35% for System Status, and the rest for Trackers', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
-      expect(content).toMatch(/\.middle-section-grid\s*\{[^}]*grid-template-columns:\s*25%\s+max-content\s+1fr;/);
+      expect(content).toMatch(/\.middle-section-grid\s*\{[^}]*grid-template-columns:\s*15%\s+35%\s+1fr;/);
     });
 
     it('renders Flight Stats with just ADF and MR without written-out explanations', async () => {
@@ -1863,7 +1863,7 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       }
     });
 
-    it('renders ship systems damage tracker box with 8 toggleable system buttons', async () => {
+    it('renders ship systems damage tracker box with 8 toggleable system buttons in two columns of 4', async () => {
       const origFetch = global.fetch;
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -1894,39 +1894,49 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
         const systemsSection = wrapper.find('.systems-status-section');
         expect(systemsSection.exists()).toBe(true);
 
-        const expectedSystems = [
-          'Bridge',
+        const expectedLeftSystems = [
           'Drives (ADF)',
           'Steering (MR)',
-          'Power Grid',
-          'Combat Control',
           'Navigation',
-          'Damage Control',
+          'Combat Control',
+        ];
+        const expectedRightSystems = [
+          'Bridge',
           'Life Support',
+          'Damage Control',
+          'Power Grid',
         ];
 
-        const buttons = systemsSection.findAll('.system-btn');
-        expect(buttons.length).toBe(8);
+        const cols = systemsSection.findAll('.systems-status-col');
+        expect(cols.length).toBe(2);
 
-        expectedSystems.forEach((sys, idx) => {
-          expect(buttons[idx].text()).toBe(sys);
+        const leftButtons = cols[0].findAll('.system-btn');
+        expect(leftButtons.length).toBe(4);
+        expectedLeftSystems.forEach((sys, idx) => {
+          expect(leftButtons[idx].text()).toBe(sys);
         });
 
-        // Bridge is damaged initially
-        expect(buttons[0].classes()).toContain('is-damaged');
-        expect(buttons[0].classes()).toContain('btn-sub');
+        const rightButtons = cols[1].findAll('.system-btn');
+        expect(rightButtons.length).toBe(4);
+        expectedRightSystems.forEach((sys, idx) => {
+          expect(rightButtons[idx].text()).toBe(sys);
+        });
 
-        // Drives (ADF) is okay initially
-        expect(buttons[1].classes()).toContain('is-ok');
-        expect(buttons[1].classes()).toContain('btn-add');
+        // Bridge in right col is damaged initially
+        expect(rightButtons[0].classes()).toContain('is-damaged');
+        expect(rightButtons[0].classes()).toContain('btn-sub');
+
+        // Drives (ADF) in left col is okay initially
+        expect(leftButtons[0].classes()).toContain('is-ok');
+        expect(leftButtons[0].classes()).toContain('btn-add');
 
         // Toggle Drives (ADF) to damaged
-        await buttons[1].trigger('click');
-        expect(buttons[1].classes()).toContain('is-damaged');
+        await leftButtons[0].trigger('click');
+        expect(leftButtons[0].classes()).toContain('is-damaged');
 
         // Toggle Bridge back to okay
-        await buttons[0].trigger('click');
-        expect(buttons[0].classes()).toContain('is-ok');
+        await rightButtons[0].trigger('click');
+        expect(rightButtons[0].classes()).toContain('is-ok');
       } finally {
         global.fetch = origFetch;
       }

@@ -169,18 +169,33 @@
             <div class="panel-header-simple">
               <span class="tracker-label">SYSTEM STATUS</span>
             </div>
-            <div class="systems-status-stack">
-              <button
-                v-for="sys in shipSystemList"
-                :key="sys"
-                type="button"
-                class="system-btn btn-delta"
-                :class="isSystemDamaged(sys) ? 'btn-sub is-damaged' : 'btn-add is-ok'"
-                @click="toggleSystemDamage(sys)"
-                :title="isSystemDamaged(sys) ? `${sys} is Damaged (click to repair)` : `${sys} is Operational (click to mark damaged)`"
-              >
-                {{ sys }}
-              </button>
+            <div class="systems-status-grid systems-status-stack">
+              <div class="systems-status-col">
+                <button
+                  v-for="sys in shipSystemsLeftCol"
+                  :key="sys"
+                  type="button"
+                  class="system-btn btn-delta"
+                  :class="isSystemDamaged(sys) ? 'btn-sub is-damaged' : 'btn-add is-ok'"
+                  @click="toggleSystemDamage(sys)"
+                  :title="isSystemDamaged(sys) ? `${sys} is Damaged (click to repair)` : `${sys} is Operational (click to mark damaged)`"
+                >
+                  {{ sys }}
+                </button>
+              </div>
+              <div class="systems-status-col">
+                <button
+                  v-for="sys in shipSystemsRightCol"
+                  :key="sys"
+                  type="button"
+                  class="system-btn btn-delta"
+                  :class="isSystemDamaged(sys) ? 'btn-sub is-damaged' : 'btn-add is-ok'"
+                  @click="toggleSystemDamage(sys)"
+                  :title="isSystemDamaged(sys) ? `${sys} is Damaged (click to repair)` : `${sys} is Operational (click to mark damaged)`"
+                >
+                  {{ sys }}
+                </button>
+              </div>
             </div>
           </section>
 
@@ -1083,15 +1098,27 @@ export default {
         defenses: {},
         damaged_systems: [],
       },
-      shipSystemList: [
-        'Bridge',
+      shipSystemsLeftCol: [
         'Drives (ADF)',
         'Steering (MR)',
-        'Power Grid',
-        'Combat Control',
         'Navigation',
-        'Damage Control',
+        'Combat Control',
+      ],
+      shipSystemsRightCol: [
+        'Bridge',
         'Life Support',
+        'Damage Control',
+        'Power Grid',
+      ],
+      shipSystemList: [
+        'Drives (ADF)',
+        'Steering (MR)',
+        'Navigation',
+        'Combat Control',
+        'Bridge',
+        'Life Support',
+        'Damage Control',
+        'Power Grid',
       ],
     };
   },
@@ -2669,10 +2696,10 @@ export default {
   font-weight: 600;
 }
 
-/* Middle Section: Flight Stats (Left - 25%), Ship Systems (Middle), and Trackers (Right - the rest of space) */
+/* Middle Section: Flight Stats (Left - 15%), Ship Systems (Middle - 35%), and Trackers (Right - the rest of space) */
 .middle-section-grid {
   display: grid;
-  grid-template-columns: 25% max-content 1fr;
+  grid-template-columns: 15% 35% 1fr;
   gap: 16px;
   align-items: stretch;
 }
@@ -2687,20 +2714,25 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 12px;
-  min-width: 170px;
 }
 
-.systems-status-stack {
+.systems-status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex: 1;
+}
+
+.systems-status-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  gap: 6px;
   justify-content: space-between;
 }
 
 .system-btn {
   width: 100%;
-  padding: 4px 12px;
+  padding: 4px 6px;
   font-size: 0.78rem;
   font-weight: 700;
   border-radius: 4px;
