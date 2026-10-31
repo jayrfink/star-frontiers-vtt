@@ -1680,6 +1680,7 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
 
         // Changing counter defense (Masking Screens) status to Offline disables its action button
         const actionBtns = wrapper.findAll('.defense-counter-box .btn-action');
+        expect(actionBtns[0].text()).toBe('Deploy');
         expect(actionBtns[0].attributes('disabled')).toBeUndefined();
         await defenseSelects[1].setValue('Offline');
         expect(wrapper.vm.selectedShip.defenses.items[1].status).toBe('Offline');

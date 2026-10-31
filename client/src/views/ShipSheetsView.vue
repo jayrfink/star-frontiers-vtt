@@ -1981,7 +1981,7 @@ export default {
     getDefenseActionLabel(defense) {
       if (!defense || !defense.name) return 'Use';
       const name = defense.name.toLowerCase();
-      if (name.includes('masking')) return 'Deploy Screen';
+      if (name.includes('masking')) return 'Deploy';
       if (name.includes('icm') || name.includes('interceptor')) return 'Launch ICM';
       return 'Deploy';
     },
