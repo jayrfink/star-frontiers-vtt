@@ -22,11 +22,11 @@
       <div class="header-right">
         <!-- GM Controls Drawer Toggle -->
         <button v-if="isGm" class="btn-gm" @click="showGmDrawer = !showGmDrawer">
-          🚀 GM Map Manager
+          GM Map Manager
         </button>
         <!-- Token Inspector Toggle -->
         <button class="btn-sidebar" @click="showTokenSidebar = !showTokenSidebar">
-          🎯 Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
+          Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
         </button>
       </div>
     </header>
@@ -337,7 +337,7 @@
             </p>
             <div v-if="isGm" class="no-map-actions">
               <button class="primary" @click="openCreateMapModal">+ Create Space Map</button>
-              <button class="btn-gm" @click="showGmDrawer = true">🚀 Open GM Map Manager</button>
+              <button class="btn-gm" @click="showGmDrawer = true">Open GM Map Manager</button>
             </div>
           </div>
         </div>
@@ -3774,13 +3774,13 @@ onBeforeUnmount(() => {
 
 .btn-gm {
   background: #082d33;
-  border: 1px solid #007fff;
+  border: 1px solid #2394a6;
   color: #00ffff;
 }
 
 .btn-gm:hover {
   background: #0d3b44;
-  border-color: #3399ff;
+  border-color: #33b5cb;
   color: #00ffff;
 }
 

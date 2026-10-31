@@ -22,19 +22,19 @@
       <div class="header-right">
         <!-- GM Controls Drawer Toggle -->
         <button v-if="isGm" class="btn-gm" @click="showGmDrawer = !showGmDrawer">
-          🗺️ GM Map Manager
+          GM Map Manager
         </button>
         <!-- Stock Adversary Button -->
         <button v-if="isGm" class="btn-gm btn-stock-encounter" @click="showStockAdversaryModal = true" title="Stock Adversaries on Active Map">
-          ⚔️ Stock Adversary
+          Stock Adversary
         </button>
         <!-- Deploy Vehicle Button -->
         <button v-if="isGm" class="btn-gm btn-deploy-vehicle" @click="showDeployVehicleModal = true" title="Deploy Vehicle on Active Map">
-          🚗 Deploy Vehicle
+          Deploy Vehicle
         </button>
         <!-- Token Inspector Toggle -->
         <button class="btn-sidebar" @click="showTokenSidebar = !showTokenSidebar">
-          🎯 Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
+          Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
         </button>
       </div>
     </header>
@@ -366,7 +366,7 @@
             </p>
             <div v-if="isGm" class="no-map-actions">
               <button class="primary" @click="openCreateMapModal">+ Create New Map</button>
-              <button class="btn-gm" @click="showGmDrawer = true">🗺️ Open GM Map Manager</button>
+              <button class="btn-gm" @click="showGmDrawer = true">Open GM Map Manager</button>
             </div>
           </div>
         </div>
@@ -530,8 +530,8 @@
         <div class="sidebar-content">
           <!-- Token Creation Button -->
           <button class="primary full-width btn-add-token" @click="openAddTokenModal">+ Add New Token</button>
-          <button v-if="isGm" class="secondary full-width btn-stock-adversary-alt" @click="showStockAdversaryModal = true" style="margin-top: 8px;">⚔️ Stock Adversary Encounter</button>
-          <button v-if="isGm" class="secondary full-width btn-deploy-vehicle-alt" @click="showDeployVehicleModal = true" style="margin-top: 8px;">🚗 Deploy Vehicle</button>
+          <button v-if="isGm" class="secondary full-width btn-stock-adversary-alt" @click="showStockAdversaryModal = true" style="margin-top: 8px;">Stock Adversary Encounter</button>
+          <button v-if="isGm" class="secondary full-width btn-deploy-vehicle-alt" @click="showDeployVehicleModal = true" style="margin-top: 8px;">Deploy Vehicle</button>
 
           <!-- Selected Token Details -->
           <div v-if="selectedToken" class="section-box token-inspector">
@@ -2619,16 +2619,25 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
-.btn-gm {
+.btn-gm,
+.btn-stock-encounter,
+.btn-deploy-vehicle {
   background: #082d33;
-  border: 1px solid #007fff;
+  border: 1px solid #2394a6;
   color: #00ffff;
 }
 
-.btn-gm:hover {
+.btn-gm:hover,
+.btn-stock-encounter:hover,
+.btn-deploy-vehicle:hover {
   background: #0d3b44;
-  border-color: #3399ff;
+  border-color: #33b5cb;
   color: #00ffff;
+}
+
+.btn-stock-adversary-alt,
+.btn-deploy-vehicle-alt {
+  border-color: #2394a6;
 }
 
 .btn-add-token {
