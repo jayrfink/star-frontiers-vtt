@@ -1933,7 +1933,27 @@ export default {
 }
 
 .input-type-select,
-.input-type-select option,
+.input-type-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+  background-image: none !important;
+}
+
+.input-type-select {
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border-radius: 4px;
+  padding: 8px 28px 8px 12px !important;
+  padding-right: 28px !important;
+  font-size: 1rem;
+}
+
+.input-type-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
 .select-player,
 .select-player option {
   background-color: #000000 !important;
@@ -1942,7 +1962,6 @@ export default {
   background-image: none !important;
 }
 
-.input-type-select,
 .select-player {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
@@ -1951,7 +1970,6 @@ export default {
   font-size: 1rem;
 }
 
-.input-type-select:focus,
 .select-player:focus {
   outline: none;
   border-color: aqua !important;
@@ -2731,7 +2749,28 @@ export default {
 }
 
 .preset-select,
-.preset-select option,
+.preset-select option {
+  background-color: #000000 !important;
+  color: aqua !important;
+  -webkit-text-fill-color: aqua;
+  background-image: none !important;
+}
+
+.preset-select {
+  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border-radius: var(--radius, 4px);
+  padding: 8px 28px 8px 12px !important;
+  padding-right: 28px !important;
+  font-size: 14px;
+  width: 100%;
+}
+
+.preset-select:focus {
+  outline: none;
+  border-color: aqua !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
 .ship-create-select,
 .ship-create-select option {
   background-color: #000000 !important;
@@ -2740,7 +2779,6 @@ export default {
   background-image: none !important;
 }
 
-.preset-select,
 .ship-create-select {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: var(--radius, 4px);
@@ -2750,7 +2788,6 @@ export default {
   width: 100%;
 }
 
-.preset-select:focus,
 .ship-create-select:focus {
   outline: none;
   border-color: aqua !important;
