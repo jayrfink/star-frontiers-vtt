@@ -454,7 +454,7 @@
                     <span class="range-unit">hex</span>
                   </div>
                   <div class="detail-field ammo-field" v-if="isLimitedAmmoWeapon(wpn)">
-                    <label>Ammo:</label>
+                    <label>Current:</label>
                     <input
                       type="number"
                       v-model.number="wpn.ammo_current"
@@ -462,7 +462,7 @@
                       class="item-num-input"
                       min="0"
                     />
-                    <span>/</span>
+                    <label>Max:</label>
                     <input
                       type="number"
                       v-model.number="wpn.ammo_max"
@@ -3201,6 +3201,14 @@ export default {
 
 .ammo-field {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ammo-field label {
+  font-size: 0.8rem;
+  color: #8b949e;
 }
 
 .item-dmg-input {

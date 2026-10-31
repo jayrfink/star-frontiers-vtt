@@ -781,6 +781,19 @@ describe('ShipSheetsView - 0 Ammo Display & 0 Hull Point Calculations', () => {
     expect(vm.isLimitedAmmoWeapon(laserBattery)).toBe(false);
   });
 
+  it('renders Current and Max labels for weapons with ammo and excludes the word Ammo', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+
+    // Verify template contains Current: and Max: in ammo-field without the word Ammo
+    expect(vueFile).toMatch(/<div[^>]*class="[^"]*ammo-field[^"]*"[^>]*>[\s\S]*?<label>Current:<\/label>[\s\S]*?<label>Max:<\/label>/);
+    expect(vueFile).not.toMatch(/<div[^>]*class="[^"]*ammo-field[^"]*"[^>]*>[\s\S]*?<label>Ammo:<\/label>/);
+
+    // Verify small matching font size is applied
+    expect(vueFile).toMatch(/\.ammo-field\s+label\s*\{[^}]*font-size:\s*0\.8rem;?[^}]*\}/);
+  });
+
   it('hullPercentage returns 0% when current_hull_points is 0', () => {
     const vm = {
       selectedShip: {
