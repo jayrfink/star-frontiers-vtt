@@ -82,133 +82,200 @@
             <div v-else class="portrait-placeholder">Click to select<br/>Token Image</div>
           </div>
           <div class="header-main">
-            <input
-              type="text"
-              v-model="selectedShip.name"
-              @change="updateShip"
-              class="input-name"
-              placeholder="Ship Name"
-            />
-            <div class="type-wrap">
-              <label>Class Preset:</label>
-              <select
-                :value="selectedShip.ship_type || selectedShip.type"
-                @change="onEditPresetChange($event.target.value)"
-                class="input-type-select"
+            <div class="header-top-row">
+              <input
+                type="text"
+                v-model="selectedShip.name"
+                @change="updateShip"
+                class="input-name"
+                placeholder="Ship Name"
+              />
+              <span class="badge-hull-size">Hull Size {{ shipHullSize }}</span>
+              <button
+                type="button"
+                class="btn-action-download"
+                @click="downloadAsciiSheet"
+                title="Download ASCII Ship Sheet (.txt)"
               >
-                <option v-for="preset in presets" :key="preset.type" :value="preset.type">
-                  {{ preset.type }}
-                </option>
-              </select>
-            </div>
-            <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
-              <label>Player:</label>
-              <select v-model="selectedShip.user_id" @change="updateShip" class="select-player">
-                <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
-                  {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
-                </option>
-              </select>
-            </div>
-            <div v-else-if="selectedShip.owner_username" class="player-badge-wrap">
-              <span class="badge-player" title="Assigned Player">
-                👤 {{ selectedShip.owner_username }}
-              </span>
-            </div>
-            <span class="badge-hull-size">Hull Size {{ shipHullSize }}</span>
-          </div>
-        </header>
-
-        <!-- Quick Hull Points Tracker -->
-        <section class="hull-section card">
-          <div class="hull-header">
-            <h4>Hull Points (HP)</h4>
-            <div class="hull-header-right">
-              <button class="btn-action-reset" @click="resetShipStats" title="Full Repair: Restore HP, DCR, and Ordnance Ammo to maximum">
-                🔄 Full Repair &amp; Resupply
+                Download Sheet (.txt)
               </button>
-              <div class="hull-values">
-                <span class="current">{{ selectedShip.current_hull_points ?? selectedShip.current_hp ?? 0 }}</span> / 
-                <input
-                  type="number"
-                  v-model.number="selectedShip.max_hull_points"
-                  @change="updateShip"
-                  class="input-max-hp"
-                  min="1"
-                /> Max HP
+            </div>
+
+            <div class="header-sub-row">
+              <div class="type-wrap">
+                <label>Class Preset:</label>
+                <select
+                  :value="selectedShip.ship_type || selectedShip.type"
+                  @change="onEditPresetChange($event.target.value)"
+                  class="input-type-select"
+                >
+                  <option v-for="preset in presets" :key="preset.type" :value="preset.type">
+                    {{ preset.type }}
+                  </option>
+                </select>
+              </div>
+              <div v-if="isGm && registeredUsers.length > 0" class="player-select-wrap">
+                <label>Player:</label>
+                <select v-model="selectedShip.user_id" @change="updateShip" class="select-player">
+                  <option v-for="u in registeredUsers" :key="u.id" :value="u.id">
+                    {{ u.username }} ({{ u.role === 'GameMaster' ? 'GM' : 'Player' }})
+                  </option>
+                </select>
+              </div>
+              <div v-else-if="selectedShip.owner_username" class="player-badge-wrap">
+                <span class="badge-player" title="Assigned Player">
+                  👤 {{ selectedShip.owner_username }}
+                </span>
               </div>
             </div>
           </div>
-          <div class="hull-bar-bg">
-            <div
-              class="hull-bar-fill"
-              :style="{ width: hullPercentage + '%', backgroundColor: hullColor }"
-            ></div>
-          </div>
-          <div class="hull-controls">
-            <div class="stepper-group">
-              <button class="btn-hp btn-sub" @click="adjustHullPoints(-5)">-5</button>
-              <button class="btn-hp btn-sub" @click="adjustHullPoints(-1)">-1</button>
-              <button class="btn-hp btn-add" @click="adjustHullPoints(+1)">+1</button>
-              <button class="btn-hp btn-add" @click="adjustHullPoints(+5)">+5</button>
-            </div>
-            <div class="freeform-delta-group">
-              <input
-                type="number"
-                v-model.number="hullDelta"
-                placeholder="Amt"
-                min="1"
-                class="input-delta"
-                @keydown.enter.prevent="applyHullDamage"
-              />
-              <button class="btn-delta btn-sub" @click="applyHullDamage" title="Subtract damage from Hull Points">- Dmg</button>
-              <button class="btn-delta btn-add" @click="applyHullHeal" title="Repair Hull Points">+ Heal</button>
-            </div>
-          </div>
-        </section>
+        </header>
 
-        <!-- Flight & Tactical Stats -->
-        <section class="stats-section card">
-          <h4>Flight & Tactical Stats</h4>
-          <div class="stats-grid">
-            <div class="stat-box">
-              <div class="stat-label">ADF</div>
-              <div class="stat-sublabel">Acceleration Decision Factor</div>
-              <input
-                type="number"
-                v-model.number="selectedShip.adf"
-                @change="updateShip"
-                class="stat-input"
-                min="0"
-                max="10"
-              />
+        <!-- Middle Section: Flight Stats (Left) and Compact Trackers (Right) -->
+        <div class="middle-section-grid">
+          <!-- Left Column: Flight Stats (ADF & MR Stacked) -->
+          <section class="card stats-section">
+            <div class="panel-header-simple">
+              <span class="tracker-label">FLIGHT STATS</span>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">MR</div>
-              <div class="stat-sublabel">Maneuver Rating</div>
-              <input
-                type="number"
-                v-model.number="selectedShip.mr"
-                @change="updateShip"
-                class="stat-input"
-                min="0"
-                max="10"
-              />
+            <div class="flight-stats-stack">
+              <div class="stat-box">
+                <div class="stat-label">ADF</div>
+                <div class="stat-sublabel">Acceleration Decision Factor</div>
+                <input
+                  type="number"
+                  v-model.number="selectedShip.adf"
+                  @change="updateShip"
+                  class="stat-input"
+                  min="0"
+                  max="10"
+                />
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">MR</div>
+                <div class="stat-sublabel">Maneuver Rating</div>
+                <input
+                  type="number"
+                  v-model.number="selectedShip.mr"
+                  @change="updateShip"
+                  class="stat-input"
+                  min="0"
+                  max="10"
+                />
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">DCR</div>
-              <div class="stat-sublabel">Damage Control Rating</div>
-              <input
-                type="number"
-                v-model.number="selectedShip.dcr"
-                @change="updateShip"
-                class="stat-input"
-                min="1"
-                max="200"
-              />
-            </div>
-          </div>
+          </section>
 
-          <div class="flip-burn-ship-banner" :class="{ capable: canStandardFlip(selectedShip.mr), 'multi-turn': canLumberingFlip(selectedShip.mr) || canSnapFlip(selectedShip.mr) }">
+          <!-- Right Column: Compact Trackers (Hull Points & DCR) -->
+          <section class="card compact-trackers-card">
+            <!-- Quick Hull Points Tracker -->
+            <div class="tracker-item hull-tracker-section">
+              <div class="tracker-header">
+                <span class="tracker-label">HULL POINTS (HP)</span>
+                <div class="tracker-header-right">
+                  <button
+                    class="btn-action-repair btn-action-reset"
+                    @click="resetShipStats"
+                    title="Full Repair: Restore HP, DCR, and Ordnance Ammo to maximum"
+                  >
+                    Full Repair
+                  </button>
+                  <div class="tracker-values">
+                    <span class="current">{{ selectedShip.current_hull_points ?? selectedShip.current_hp ?? 0 }}</span> / 
+                    <input
+                      type="number"
+                      v-model.number="selectedShip.max_hull_points"
+                      @change="updateShip"
+                      class="input-max-hp input-max-val"
+                      min="1"
+                    /> Max HP
+                  </div>
+                </div>
+              </div>
+              <div class="meter-bar-bg hull-bar-bg">
+                <div
+                  class="meter-bar-fill hull-bar-fill"
+                  :style="{ width: hullPercentage + '%', backgroundColor: hullColor }"
+                ></div>
+              </div>
+              <div class="tracker-controls hull-controls">
+                <div class="stepper-group">
+                  <button class="btn-hp btn-sub" @click="adjustHullPoints(-5)">-5</button>
+                  <button class="btn-hp btn-sub" @click="adjustHullPoints(-1)">-1</button>
+                  <button class="btn-hp btn-add" @click="adjustHullPoints(+1)">+1</button>
+                  <button class="btn-hp btn-add" @click="adjustHullPoints(+5)">+5</button>
+                </div>
+                <div class="freeform-delta-group">
+                  <input
+                    type="number"
+                    v-model.number="hullDelta"
+                    placeholder="Amt"
+                    min="1"
+                    class="input-delta"
+                    @keydown.enter.prevent="applyHullDamage"
+                  />
+                  <button class="btn-delta btn-sub" @click="applyHullDamage" title="Subtract damage from Hull Points">- Dmg</button>
+                  <button class="btn-delta btn-add" @click="applyHullHeal" title="Repair Hull Points">+ Heal</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Damage Control Rating (DCR) Tracker -->
+            <div class="tracker-item dcr-tracker-section">
+              <div class="tracker-header">
+                <span class="tracker-label">DAMAGE CONTROL RATING (DCR)</span>
+                <div class="tracker-header-right">
+                  <button
+                    class="btn-action-restore-dcr"
+                    @click="restoreDcr"
+                    title="Restore DCR to maximum"
+                  >
+                    Restore DCR
+                  </button>
+                  <div class="tracker-values">
+                    <span class="current">{{ selectedShip.current_dcr ?? selectedShip.dcr ?? 50 }}</span> / 
+                    <input
+                      type="number"
+                      v-model.number="selectedShip.max_dcr"
+                      @change="onMaxDcrChange"
+                      class="input-max-dcr input-max-val"
+                      min="1"
+                      max="200"
+                    /> Max DCR
+                  </div>
+                </div>
+              </div>
+              <div class="meter-bar-bg dcr-bar-bg">
+                <div
+                  class="meter-bar-fill dcr-bar-fill"
+                  :style="{ width: dcrPercentage + '%', backgroundColor: dcrColor }"
+                ></div>
+              </div>
+              <div class="tracker-controls dcr-controls">
+                <div class="stepper-group">
+                  <button class="btn-dcr btn-sub" @click="adjustDcr(-5)">-5</button>
+                  <button class="btn-dcr btn-sub" @click="adjustDcr(-1)">-1</button>
+                  <button class="btn-dcr btn-add" @click="adjustDcr(+1)">+1</button>
+                  <button class="btn-dcr btn-add" @click="adjustDcr(+5)">+5</button>
+                </div>
+                <div class="freeform-delta-group">
+                  <input
+                    type="number"
+                    v-model.number="dcrDelta"
+                    placeholder="Amt"
+                    min="1"
+                    class="input-delta"
+                    @keydown.enter.prevent="applyDcrDamage"
+                  />
+                  <button class="btn-delta btn-sub" @click="applyDcrDamage" title="Reduce DCR">- Red</button>
+                  <button class="btn-delta btn-add" @click="applyDcrRepair" title="Repair DCR">+ Rep</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="flip-burn-ship-banner" :class="{ capable: canStandardFlip(selectedShip.mr), 'multi-turn': canLumberingFlip(selectedShip.mr) || canSnapFlip(selectedShip.mr) }">
             <template v-if="canStandardFlip(selectedShip.mr)">
               <span class="fb-badge capable">🔄 Standard Flip Capable (MR {{ selectedShip.mr }} &ge; 3)</span>
               <span class="fb-rule-text">
@@ -228,7 +295,6 @@
               </span>
             </template>
           </div>
-        </section>
 
         <!-- Defense & Armament Grid -->
         <div class="two-column-lists">
@@ -833,6 +899,7 @@ import {
   canSnapFlip,
   SAFE_COMPENSATOR_DELTA_V,
 } from '../utils/flipAndBurn.js';
+import { downloadShipAscii } from '../utils/shipExport.js';
 
 export default {
   name: 'ShipSheetsView',
@@ -857,6 +924,7 @@ export default {
         onConfirm: null,
       },
       hullDelta: null,
+      dcrDelta: null,
       showCreateModal: false,
       showImageBrowser: false,
       imageBrowserTarget: 'sheet',
@@ -892,6 +960,8 @@ export default {
         adf: 5,
         mr: 4,
         dcr: 35,
+        max_dcr: 35,
+        current_dcr: 35,
         max_hull_points: 15,
         current_hull_points: 15,
         weapons: [],
@@ -931,6 +1001,19 @@ export default {
     hullColor() {
       if (this.hullPercentage > 50) return '#4caf50';
       if (this.hullPercentage > 25) return '#ff9800';
+      return '#f44336';
+    },
+    dcrPercentage() {
+      if (!this.selectedShip) return 0;
+      const max = this.selectedShip.max_dcr ?? this.selectedShip.dcr ?? 0;
+      if (max <= 0) return 0;
+      const cur = this.selectedShip.current_dcr ?? this.selectedShip.dcr ?? 0;
+      const pct = (cur / max) * 100;
+      return Math.max(0, Math.min(100, pct));
+    },
+    dcrColor() {
+      if (this.dcrPercentage > 50) return '#4caf50';
+      if (this.dcrPercentage > 25) return '#ff9800';
       return '#f44336';
     },
     defenseList() {
@@ -1075,6 +1158,9 @@ export default {
       copy.max_hull_points = copy.hull_points;
       copy.current_hp = copy.current_hp !== undefined ? copy.current_hp : (copy.current_hull_points !== undefined ? copy.current_hull_points : copy.hull_points);
       copy.current_hull_points = copy.current_hp;
+      copy.max_dcr = copy.max_dcr !== undefined ? Number(copy.max_dcr) : (copy.dcr !== undefined ? Number(copy.dcr) : 50);
+      copy.current_dcr = copy.current_dcr !== undefined && copy.current_dcr !== null ? Number(copy.current_dcr) : copy.max_dcr;
+      copy.dcr = copy.max_dcr;
       copy.defenses = this.normalizeDefenses(copy.defenses);
       copy.weapons = this.normalizeWeapons(copy.weapons);
       copy.notes = copy.notes || '';
@@ -1140,6 +1226,8 @@ export default {
       this.newShipForm.adf = preset.adf;
       this.newShipForm.mr = preset.mr;
       this.newShipForm.dcr = preset.dcr;
+      this.newShipForm.max_dcr = preset.dcr;
+      this.newShipForm.current_dcr = preset.dcr;
       this.newShipForm.max_hull_points = preset.hull_points;
       this.newShipForm.current_hull_points = preset.hull_points;
       this.newShipForm.weapons = this.normalizeWeapons(preset.weapons);
@@ -1209,6 +1297,8 @@ export default {
         this.selectedShip.adf = preset.adf;
         this.selectedShip.mr = preset.mr;
         this.selectedShip.dcr = preset.dcr;
+        this.selectedShip.max_dcr = preset.dcr;
+        this.selectedShip.current_dcr = preset.dcr;
         this.selectedShip.max_hull_points = preset.hull_points;
         this.selectedShip.hull_points = preset.hull_points;
         this.selectedShip.current_hull_points = preset.hull_points;
@@ -1242,7 +1332,8 @@ export default {
           user_id: this.newShipForm.user_id !== undefined && this.newShipForm.user_id !== null ? this.newShipForm.user_id : undefined,
           adf: this.newShipForm.adf || 2,
           mr: this.newShipForm.mr || 2,
-          dcr: this.newShipForm.dcr || 50,
+          dcr: this.newShipForm.max_dcr ?? this.newShipForm.dcr ?? 50,
+          current_dcr: this.newShipForm.current_dcr ?? this.newShipForm.max_dcr ?? this.newShipForm.dcr ?? 50,
           hull_points: this.newShipForm.max_hull_points ?? 50,
           current_hp: this.newShipForm.current_hull_points ?? this.newShipForm.max_hull_points ?? 50,
           defenses: this.normalizeDefenses(this.newShipForm.defenses),
@@ -1283,6 +1374,8 @@ export default {
           avatar_url: this.selectedShip.avatar_url || '',
           ship_type: this.selectedShip.type || this.selectedShip.ship_type || 'Fighter',
           user_id: this.selectedShip.user_id !== undefined ? this.selectedShip.user_id : undefined,
+          dcr: this.selectedShip.max_dcr ?? this.selectedShip.dcr ?? 50,
+          current_dcr: this.selectedShip.current_dcr ?? this.selectedShip.dcr ?? 50,
           hull_points: this.selectedShip.max_hull_points ?? this.selectedShip.hull_points ?? 50,
           current_hp: this.selectedShip.current_hull_points ?? this.selectedShip.current_hp ?? 0,
           notes: this.selectedShip.notes || '',
@@ -1388,6 +1481,57 @@ export default {
       this.hullDelta = null;
       this.updateShip();
     },
+    adjustDcr(amount) {
+      if (!this.selectedShip) return;
+      const max = this.selectedShip.max_dcr ?? this.selectedShip.dcr ?? 50;
+      let cur = (this.selectedShip.current_dcr ?? this.selectedShip.dcr ?? 50) + amount;
+      cur = Math.max(0, Math.min(max, cur));
+      this.selectedShip.current_dcr = cur;
+      this.updateShip();
+    },
+    applyDcrDamage() {
+      if (!this.selectedShip) return;
+      const delta = Number(this.dcrDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const cur = this.selectedShip.current_dcr ?? this.selectedShip.dcr ?? 50;
+      const next = Math.max(0, cur - delta);
+      this.selectedShip.current_dcr = next;
+      this.dcrDelta = null;
+      this.updateShip();
+    },
+    applyDcrRepair() {
+      if (!this.selectedShip) return;
+      const delta = Number(this.dcrDelta);
+      if (!Number.isFinite(delta) || delta <= 0) return;
+      const max = this.selectedShip.max_dcr ?? this.selectedShip.dcr ?? 50;
+      const cur = this.selectedShip.current_dcr ?? this.selectedShip.dcr ?? 50;
+      const next = Math.min(max, cur + delta);
+      this.selectedShip.current_dcr = next;
+      this.dcrDelta = null;
+      this.updateShip();
+    },
+    restoreDcr() {
+      if (!this.selectedShip) return;
+      const max = this.selectedShip.max_dcr ?? this.selectedShip.dcr ?? 50;
+      this.selectedShip.current_dcr = max;
+      this.updateShip();
+    },
+    onMaxDcrChange() {
+      if (!this.selectedShip) return;
+      let max = Number(this.selectedShip.max_dcr);
+      if (!Number.isFinite(max) || max < 1) max = 1;
+      this.selectedShip.max_dcr = max;
+      this.selectedShip.dcr = max;
+      const cur = this.selectedShip.current_dcr ?? max;
+      if (cur > max) {
+        this.selectedShip.current_dcr = max;
+      }
+      this.updateShip();
+    },
+    downloadAsciiSheet() {
+      if (!this.selectedShip) return;
+      downloadShipAscii(this.selectedShip);
+    },
     resetShipStats() {
       if (!this.selectedShip) return;
       const doReset = () => {
@@ -1395,11 +1539,16 @@ export default {
         this.selectedShip.current_hull_points = maxHp;
         this.selectedShip.current_hp = maxHp;
 
-        // Reset DCR if matched to a preset
+        // Reset DCR to max (or preset DCR if preset matched)
         const shipType = this.selectedShip.ship_type || this.selectedShip.type;
         const preset = (this.presets || SHIP_PRESETS).find(p => p.type === shipType || p.name === shipType);
         if (preset && preset.dcr !== undefined) {
           this.selectedShip.dcr = preset.dcr;
+          this.selectedShip.max_dcr = preset.dcr;
+          this.selectedShip.current_dcr = preset.dcr;
+        } else {
+          const maxDcr = this.selectedShip.max_dcr ?? this.selectedShip.dcr ?? 50;
+          this.selectedShip.current_dcr = maxDcr;
         }
 
         // Reset all weapon ammo to ammo_max
@@ -2148,12 +2297,54 @@ export default {
 .header-main {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header-top-row {
+  display: flex;
   gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.header-sub-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.header-sub-row label {
+  font-size: 0.9rem;
+}
+
+.btn-action-download {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+.btn-action-download:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
 }
 
 .input-name {
   flex: 1;
+  min-width: 180px;
   background: #0d1117;
   border: 1px solid #30363d;
   color: #cecece;
@@ -2169,6 +2360,7 @@ export default {
   align-items: center;
   gap: 8px;
   font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .input-type-select,
@@ -2182,9 +2374,9 @@ export default {
 .input-type-select {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
-  padding: 8px 28px 8px 12px !important;
+  padding: 6px 28px 6px 10px !important;
   padding-right: 28px !important;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .input-type-select:focus {
@@ -2204,9 +2396,9 @@ export default {
 .select-player {
   border: 1px solid rgba(0, 255, 255, 0.4) !important;
   border-radius: 4px;
-  padding: 8px 28px 8px 12px !important;
+  padding: 6px 28px 6px 10px !important;
   padding-right: 28px !important;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .select-player:focus {
@@ -2230,54 +2422,110 @@ export default {
   font-weight: 600;
 }
 
-/* Hull Section */
-.hull-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+/* Middle Section: Flight Stats (Left) and Trackers (Right) */
+.middle-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
 }
-.hull-header h4 {
-  margin: 0;
-  color: #45acba;
+
+@media (max-width: 820px) {
+  .middle-section-grid {
+    grid-template-columns: 1fr;
+  }
 }
-.hull-header-right {
+
+.panel-header-simple {
+  margin-bottom: 8px;
+}
+
+.tracker-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+  user-select: none;
+}
+
+.flight-stats-stack {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
 }
 
-.hull-values {
-  font-size: 1.1rem;
-  font-weight: 700;
+.flight-stats-stack .stat-box {
+  flex: 1;
 }
 
-.input-max-hp {
-  width: 65px;
+.compact-trackers-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tracker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tracker-item:not(:last-child) {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #21262d;
+}
+
+.tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tracker-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tracker-values {
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input-max-val {
+  width: 48px;
   background: #0d1117;
   border: 1px solid #30363d;
   color: #cecece;
   text-align: center;
   padding: 2px 4px;
   border-radius: 4px;
+  font-size: 0.85rem;
 }
 
-.hull-bar-bg {
-  height: 14px;
+.meter-bar-bg {
+  height: 8px;
   background: #21262d;
-  border-radius: 7px;
+  border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin: 4px 0;
 }
 
-.hull-bar-fill {
+.meter-bar-fill {
   height: 100%;
   transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-.hull-controls {
+.tracker-controls {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
@@ -2317,17 +2565,22 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 
+.btn-action-restore-dcr,
+.btn-action-repair,
 .btn-action-reset {
   background: rgba(56, 189, 248, 0.15);
   border: 1px solid rgba(56, 189, 248, 0.4);
   color: #38bdf8;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
+.btn-action-restore-dcr:hover,
+.btn-action-repair:hover,
 .btn-action-reset:hover {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
@@ -2350,12 +2603,19 @@ export default {
   user-select: none;
 }
 
-.btn-hp {
-  padding: 6px 14px;
+.btn-hp,
+.btn-dcr {
+  padding: 3px 8px;
+  font-size: 0.78rem;
   border: none;
   border-radius: 4px;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+.btn-hp:active,
+.btn-dcr:active {
+  transform: translateY(1px);
 }
 .btn-sub {
   background: #da363322;

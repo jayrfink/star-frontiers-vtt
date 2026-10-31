@@ -854,6 +854,58 @@ describe('Sheets API & Socket.io', () => {
       expect(updateRes.body.dcr).toBe(0);
     });
 
+    it('persists and clamps current_dcr between 0 and max dcr on POST and PUT /api/ships', async () => {
+      const gmAgent = request.agent(app);
+      await gmAgent.post('/api/auth/register').send({ username: 'dcrTester', password: 'password123' });
+      await gmAgent.post('/api/auth/login').send({ username: 'dcrTester', password: 'password123' });
+
+      // Create with default current_dcr (omitted -> defaults to dcr)
+      const res1 = await gmAgent.post('/api/ships').send({
+        name: 'Scout Default DCR',
+        ship_type: 'Assault Scout',
+        dcr: 35,
+      });
+      expect(res1.status).toBe(201);
+      expect(res1.body.dcr).toBe(35);
+      expect(res1.body.current_dcr).toBe(35);
+
+      // Create with explicit current_dcr clamped to dcr
+      const res2 = await gmAgent.post('/api/ships').send({
+        name: 'Scout Damaged DCR',
+        ship_type: 'Assault Scout',
+        dcr: 35,
+        current_dcr: 20,
+      });
+      expect(res2.status).toBe(201);
+      expect(res2.body.dcr).toBe(35);
+      expect(res2.body.current_dcr).toBe(20);
+
+      // Create with current_dcr exceeding dcr -> clamped to dcr
+      const res3 = await gmAgent.post('/api/ships').send({
+        name: 'Scout Overcharged DCR',
+        ship_type: 'Assault Scout',
+        dcr: 35,
+        current_dcr: 999,
+      });
+      expect(res3.status).toBe(201);
+      expect(res3.body.dcr).toBe(35);
+      expect(res3.body.current_dcr).toBe(35);
+
+      // Update current_dcr
+      const updateRes = await gmAgent.put(`/api/ships/${res2.body.id}`).send({
+        current_dcr: 10,
+      });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.current_dcr).toBe(10);
+
+      // Update current_dcr exceeding dcr
+      const updateClamped = await gmAgent.put(`/api/ships/${res2.body.id}`).send({
+        current_dcr: 50,
+      });
+      expect(updateClamped.status).toBe(200);
+      expect(updateClamped.body.current_dcr).toBe(35);
+    });
+
     it('reorders character sheets updates sort_order, returns new order, and emits sheets:reordered', async () => {
       const gmAgent = request.agent(app);
       await gmAgent.post('/api/auth/register').send({ username: 'gmUser', password: 'password123' });

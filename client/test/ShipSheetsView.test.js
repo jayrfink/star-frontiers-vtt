@@ -10,6 +10,7 @@ import ShipSheetsView from '../src/views/ShipSheetsView.vue';
 import { useAuthStore } from '../src/stores/auth.js';
 import ImageBrowserModal from '../src/components/ImageBrowserModal.vue';
 import { SHIP_WEAPONS_CATALOG } from '../src/constants/shipWeapons.js';
+import * as shipExport from '../src/utils/shipExport.js';
 
 describe('ShipSheetsView - ImageBrowserModal Integration', () => {
   it('registers ImageBrowserModal component', () => {
@@ -1451,7 +1452,350 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(icmItem.current).toBe(5);
     });
   });
+
+  describe('ShipSheetsView - Header Reorganization, Download Button, and DCR Meter Tracker', () => {
+    it('renders the header top row with ship name, hull size badge, and download button', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          hull_points: 15,
+          current_hp: 15,
+          adf: 5,
+          mr: 4,
+          dcr: 35,
+          current_dcr: 35,
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const topRow = wrapper.find('.header-top-row');
+        expect(topRow.exists()).toBe(true);
+
+        const nameInput = topRow.find('.input-name');
+        expect(nameInput.exists()).toBe(true);
+        expect(nameInput.element.value).toBe('Starblade');
+
+        const hullBadge = topRow.find('.badge-hull-size');
+        expect(hullBadge.exists()).toBe(true);
+        expect(hullBadge.text()).toBe('Hull Size 3');
+
+        const downloadBtn = topRow.find('.btn-action-download');
+        expect(downloadBtn.exists()).toBe(true);
+        expect(downloadBtn.text()).toContain('Download Sheet (.txt)');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('triggers downloadShipAscii when the download button is clicked', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          hull_points: 15,
+          current_hp: 15,
+          adf: 5,
+          mr: 4,
+          dcr: 35,
+          current_dcr: 35,
+        }]),
+      });
+
+      const spy = vi.spyOn(shipExport, 'downloadShipAscii').mockImplementation(() => {});
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const downloadBtn = wrapper.find('.header-top-row .btn-action-download');
+        expect(downloadBtn.exists()).toBe(true);
+        await downloadBtn.trigger('click');
+
+        expect(spy).toHaveBeenCalled();
+        expect(spy.mock.calls[0][0].name).toBe('Starblade');
+      } finally {
+        spy.mockRestore();
+        global.fetch = origFetch;
+      }
+    });
+
+    it('renders Class Preset and Player underneath in the header sub-row', async () => {
+      setActivePinia(createPinia());
+      const auth = useAuthStore();
+      auth.user = { id: 2, username: 'playerAce', role: 'Player' };
+
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          hull_points: 15,
+          current_hp: 15,
+          owner_username: 'AcePilot',
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const subRow = wrapper.find('.header-sub-row');
+        expect(subRow.exists()).toBe(true);
+
+        const typeSelect = subRow.find('.type-wrap select.input-type-select');
+        expect(typeSelect.exists()).toBe(true);
+        expect(typeSelect.element.value).toBe('Assault Scout');
+
+        const playerBadge = subRow.find('.player-badge-wrap .badge-player');
+        expect(playerBadge.exists()).toBe(true);
+        expect(playerBadge.text()).toContain('AcePilot');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('stacks ADF and MR vertically on the left half below the header', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          hull_points: 15,
+          current_hp: 15,
+          adf: 5,
+          mr: 4,
+          dcr: 35,
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const middleGrid = wrapper.find('.middle-section-grid');
+        expect(middleGrid.exists()).toBe(true);
+
+        const statsSection = middleGrid.find('.stats-section');
+        expect(statsSection.exists()).toBe(true);
+
+        const flightLabel = statsSection.find('.panel-header-simple .tracker-label');
+        expect(flightLabel.exists()).toBe(true);
+        expect(flightLabel.text()).toBe('FLIGHT STATS');
+
+        const stack = statsSection.find('.flight-stats-stack');
+        expect(stack.exists()).toBe(true);
+
+        const statBoxes = stack.findAll('.stat-box');
+        expect(statBoxes.length).toBe(2);
+
+        expect(statBoxes[0].find('.stat-label').text()).toBe('ADF');
+        expect(statBoxes[0].find('.stat-input').element.value).toBe('5');
+
+        expect(statBoxes[1].find('.stat-label').text()).toBe('MR');
+        expect(statBoxes[1].find('.stat-input').element.value).toBe('4');
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('renders the compact Hull Points and DCR meter applets in the right column', async () => {
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ([{
+          id: 1,
+          name: 'Starblade',
+          ship_type: 'Assault Scout',
+          hull_points: 20,
+          current_hp: 15,
+          dcr: 40,
+          current_dcr: 30,
+        }]),
+      });
+
+      try {
+        const wrapper = mount(ShipSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const trackersCard = wrapper.find('.middle-section-grid .compact-trackers-card');
+        expect(trackersCard.exists()).toBe(true);
+
+        // Hull Points Section
+        const hpSection = trackersCard.find('.hull-tracker-section');
+        expect(hpSection.exists()).toBe(true);
+        expect(hpSection.find('.tracker-label').text()).toBe('HULL POINTS (HP)');
+        expect(hpSection.find('.btn-action-repair').text()).toBe('Full Repair');
+        expect(hpSection.find('.current').text()).toBe('15');
+        expect(hpSection.find('.input-max-hp').element.value).toBe('20');
+        expect(hpSection.find('.hull-bar-fill').exists()).toBe(true);
+
+        // DCR Section
+        const dcrSection = trackersCard.find('.dcr-tracker-section');
+        expect(dcrSection.exists()).toBe(true);
+        expect(dcrSection.find('.tracker-label').text()).toBe('DAMAGE CONTROL RATING (DCR)');
+        expect(dcrSection.find('.btn-action-restore-dcr').text()).toBe('Restore DCR');
+        expect(dcrSection.find('.current').text()).toBe('30');
+        expect(dcrSection.find('.input-max-dcr').element.value).toBe('40');
+        expect(dcrSection.find('.dcr-bar-fill').exists()).toBe(true);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('computes DCR percentage and matches the exact color scheme of Hull Points', () => {
+      const vm = {
+        selectedShip: {
+          current_dcr: 80,
+          max_dcr: 100,
+          dcr: 100,
+        },
+        get dcrPercentage() {
+          return ShipSheetsView.computed.dcrPercentage.call(this);
+        },
+      };
+
+      // > 50% => Green (#4caf50)
+      expect(ShipSheetsView.computed.dcrPercentage.call(vm)).toBe(80);
+      expect(ShipSheetsView.computed.dcrColor.call(vm)).toBe('#4caf50');
+
+      // 50% >= pct > 25% => Orange (#ff9800)
+      vm.selectedShip.current_dcr = 40;
+      expect(ShipSheetsView.computed.dcrPercentage.call(vm)).toBe(40);
+      expect(ShipSheetsView.computed.dcrColor.call(vm)).toBe('#ff9800');
+
+      // <= 25% => Red (#f44336)
+      vm.selectedShip.current_dcr = 20;
+      expect(ShipSheetsView.computed.dcrPercentage.call(vm)).toBe(20);
+      expect(ShipSheetsView.computed.dcrColor.call(vm)).toBe('#f44336');
+    });
+
+    it('supports DCR stepper buttons and delta adjustments with proper clamping', () => {
+      let updated = false;
+      const vm = {
+        selectedShip: {
+          current_dcr: 30,
+          max_dcr: 50,
+          dcr: 50,
+        },
+        dcrDelta: 10,
+        updateShip() {
+          updated = true;
+        },
+      };
+
+      // Adjust DCR +5
+      ShipSheetsView.methods.adjustDcr.call(vm, 5);
+      expect(vm.selectedShip.current_dcr).toBe(35);
+      expect(updated).toBe(true);
+
+      // Adjust DCR -5
+      ShipSheetsView.methods.adjustDcr.call(vm, -5);
+      expect(vm.selectedShip.current_dcr).toBe(30);
+
+      // Apply DCR damage (-10)
+      ShipSheetsView.methods.applyDcrDamage.call(vm);
+      expect(vm.selectedShip.current_dcr).toBe(20);
+      expect(vm.dcrDelta).toBe(null);
+
+      // Apply DCR repair (+15)
+      vm.dcrDelta = 15;
+      ShipSheetsView.methods.applyDcrRepair.call(vm);
+      expect(vm.selectedShip.current_dcr).toBe(35);
+      expect(vm.dcrDelta).toBe(null);
+
+      // Clamping to max_dcr
+      ShipSheetsView.methods.adjustDcr.call(vm, 100);
+      expect(vm.selectedShip.current_dcr).toBe(50);
+
+      // Clamping to 0
+      ShipSheetsView.methods.adjustDcr.call(vm, -200);
+      expect(vm.selectedShip.current_dcr).toBe(0);
+
+      // Restore DCR
+      ShipSheetsView.methods.restoreDcr.call(vm);
+      expect(vm.selectedShip.current_dcr).toBe(50);
+    });
+
+    it('resets Hull Points, DCR, and ammo during resetShipStats', () => {
+      let updated = false;
+      const vm = {
+        presets: [{ type: 'Assault Scout', dcr: 35 }],
+        selectedShip: {
+          ship_type: 'Assault Scout',
+          hull_points: 15,
+          max_hull_points: 15,
+          current_hull_points: 4,
+          current_hp: 4,
+          dcr: 20,
+          max_dcr: 35,
+          current_dcr: 20,
+          weapons: [
+            { name: 'Rocket Battery', ammo_max: 4, ammo_current: 1 },
+          ],
+        },
+        openConfirmModal(msg, onConfirm) {
+          onConfirm();
+        },
+        updateShip() {
+          updated = true;
+        },
+      };
+
+      ShipSheetsView.methods.resetShipStats.call(vm);
+
+      expect(updated).toBe(true);
+      expect(vm.selectedShip.current_hull_points).toBe(15);
+      expect(vm.selectedShip.current_hp).toBe(15);
+      expect(vm.selectedShip.current_dcr).toBe(35);
+      expect(vm.selectedShip.weapons[0].ammo_current).toBe(4);
+    });
+  });
 });
+
 
 
 

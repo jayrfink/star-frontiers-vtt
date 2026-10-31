@@ -488,6 +488,7 @@ export function createShipRouter(db, io) {
         adf = 2,
         mr = 2,
         dcr = 50,
+        current_dcr,
         weapons = [],
         defenses = [],
         notes = '',
@@ -515,6 +516,9 @@ export function createShipRouter(db, io) {
       const clampedAdf = clampStat(adf, 2, 0, 1000);
       const clampedMr = clampStat(mr, 2, 0, 1000);
       const clampedDcr = clampStat(dcr, 50, 0, 1000);
+      const clampedCurrentDcr = current_dcr !== undefined && current_dcr !== null
+        ? clampStat(current_dcr, clampedDcr, 0, clampedDcr)
+        : clampedDcr;
 
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
@@ -523,16 +527,16 @@ export function createShipRouter(db, io) {
 
       const stmt = db.prepare(`
         INSERT INTO ship_sheets (
-          user_id, name, ship_type, hull_points, current_hp, adf, mr, dcr,
+          user_id, name, ship_type, hull_points, current_hp, adf, mr, dcr, current_dcr,
           weapons, defenses, notes, avatar_url, sort_order
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?
         )
       `);
 
       const result = stmt.run(
-        ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr,
+        ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp, clampedAdf, clampedMr, clampedDcr, clampedCurrentDcr,
         weaponsStr, defensesStr, notes, req.body.avatar_url || '', nextSortOrder
       );
 
@@ -585,6 +589,7 @@ export function createShipRouter(db, io) {
         adf = existing.adf,
         mr = existing.mr,
         dcr = existing.dcr,
+        current_dcr,
         weapons = safeJsonParse(existing.weapons, []),
         defenses = safeJsonParse(existing.defenses, []),
         notes = existing.notes,
@@ -599,6 +604,9 @@ export function createShipRouter(db, io) {
       const clampedAdf = clampStat(adf, existing.adf, 0, 1000);
       const clampedMr = clampStat(mr, existing.mr, 0, 1000);
       const clampedDcr = clampStat(dcr, existing.dcr, 0, 1000);
+      const clampedCurrentDcr = current_dcr !== undefined && current_dcr !== null
+        ? clampStat(current_dcr, existing.current_dcr ?? clampedDcr, 0, clampedDcr)
+        : clampStat(existing.current_dcr ?? clampedDcr, clampedDcr, 0, clampedDcr);
 
       const weaponsStr = typeof weapons === 'string' ? weapons : JSON.stringify(weapons);
       const defensesStr = typeof defenses === 'string' ? defenses : JSON.stringify(defenses);
@@ -606,14 +614,14 @@ export function createShipRouter(db, io) {
       const stmt = db.prepare(`
         UPDATE ship_sheets SET
           user_id = ?, name = ?, ship_type = ?, hull_points = ?, current_hp = ?,
-          adf = ?, mr = ?, dcr = ?, weapons = ?, defenses = ?, notes = ?, avatar_url = ?,
+          adf = ?, mr = ?, dcr = ?, current_dcr = ?, weapons = ?, defenses = ?, notes = ?, avatar_url = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
 
       stmt.run(
         ownerId, name, ship_type, clampedHullPoints, clampedCurrentHp,
-        clampedAdf, clampedMr, clampedDcr, weaponsStr, defensesStr, notes, avatarUrl,
+        clampedAdf, clampedMr, clampedDcr, clampedCurrentDcr, weaponsStr, defensesStr, notes, avatarUrl,
         req.params.id
       );
 
