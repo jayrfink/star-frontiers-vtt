@@ -2607,10 +2607,10 @@ export default {
   font-weight: 600;
 }
 
-/* Middle Section: Flight Stats (Left - 40%) and Trackers (Right - 60%) */
+/* Middle Section: Flight Stats (Left - 30%) and Trackers (Right - the rest of space) */
 .middle-section-grid {
   display: grid;
-  grid-template-columns: 4fr 6fr;
+  grid-template-columns: 30% 1fr;
   gap: 16px;
   align-items: stretch;
 }
