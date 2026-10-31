@@ -2743,6 +2743,36 @@ export default {
   transition: all 0.15s ease-in-out;
 }
 
+.system-btn:active {
+  transform: translateY(1px);
+}
+
+/* Operational: ~30% paler green text and border */
+.system-btn.is-ok {
+  background: rgba(46, 160, 67, 0.14);
+  color: #7ee787;
+  border: 1px solid rgba(126, 231, 135, 0.45);
+}
+
+.system-btn.is-ok:hover {
+  background: rgba(46, 160, 67, 0.25);
+  border-color: rgba(126, 231, 135, 0.7);
+  color: #9bf0a3;
+}
+
+/* Damaged (clicked): Dark orange text, border, and background */
+.system-btn.is-damaged {
+  background: rgba(219, 109, 40, 0.18);
+  color: #e66a1f;
+  border: 1px solid rgba(230, 106, 31, 0.48);
+}
+
+.system-btn.is-damaged:hover {
+  background: rgba(219, 109, 40, 0.28);
+  border-color: rgba(230, 106, 31, 0.75);
+  color: #f07b32;
+}
+
 .panel-header-simple {
   margin-bottom: 8px;
 }
