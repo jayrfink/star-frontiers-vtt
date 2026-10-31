@@ -276,6 +276,9 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       expect(charContent).toMatch(/\.notes-section\s+h4\s*\{[^}]*margin:\s*0;?[^}]*color:\s*#45acba;?[^}]*\}/);
       expect(shipContent).toMatch(/\.notes-section\s+h4\s*\{[^}]*margin:\s*0;?[^}]*color:\s*#45acba;?[^}]*\}/);
+
+      expect(charContent).toMatch(/\.notes-textarea\s*\{[^}]*background-color:\s*#101010;?[^}]*\}/);
+      expect(shipContent).toMatch(/\.notes-textarea\s*\{[^}]*background-color:\s*#101010;?[^}]*\}/);
     });
   });
 
