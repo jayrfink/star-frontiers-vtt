@@ -534,6 +534,12 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   const cx = px + tokenPx / 2;
   const cy = py + tokenPx / 2;
   const radius = tokenPx / 2 - 3;
+  const isHiddenGm = token.layer === 'gm';
+
+  ctx.save();
+  if (isHiddenGm) {
+    ctx.globalAlpha *= 0.55;
+  }
 
   // Selected Token Glow
   if (isSelected) {
@@ -583,6 +589,24 @@ function renderSingleToken(ctx, token, cellX, cellY, gSize, isSelected) {
   ctx.strokeStyle = token.color || '#666666';
   ctx.lineWidth = 3;
   ctx.stroke();
+  ctx.restore();
+
+  // Hidden (GM Layer) Dashed Outer Ring & Badge
+  if (isHiddenGm) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.arc(cx, cy, radius + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🙈', px + 2, py + 2);
+    ctx.restore();
+  }
 
   // Status & Tactical Condition Badges (⚡ Stunned, 💀 Unconscious, 🩸 Wounded, 🎯 Pinned, 🛡️ In Cover, 👣 Prone, 🧪 Poisoned, 🔥 Burning)
   const conditionIconMap = {

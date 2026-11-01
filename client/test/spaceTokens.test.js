@@ -18,4 +18,11 @@ describe('spaceTokens utility', () => {
   it('identifies celestial tokens if token_type is celestial for fallback', () => {
     expect(isCelestialToken({ token_type: 'celestial' })).toBe(true);
   });
+
+  it('identifies celestial tokens when hidden on GM layer via conditions or vehicle_data', () => {
+    expect(isCelestialToken({ layer: 'gm', conditions: ['celestial'] })).toBe(true);
+    expect(isCelestialToken({ layer: 'gm', conditions: '["celestial"]' })).toBe(true);
+    expect(isCelestialToken({ layer: 'gm', vehicle_data: { token_type: 'celestial' } })).toBe(true);
+    expect(isCelestialToken({ layer: 'gm', conditions: [] })).toBe(false);
+  });
 });

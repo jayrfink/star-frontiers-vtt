@@ -541,6 +541,7 @@ function drawGhostToken(ctx, token, cell) {
 
 function renderSingleToken(ctx, token, q, r, isSelected) {
   const isCelestial = isCelestialToken(token);
+  const isHiddenGm = token.layer === 'gm';
   const center = getCellCenter(q, r);
   const cx = center.x;
   const cy = center.y;
@@ -559,8 +560,11 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     ctx.restore();
   }
 
-  // Save context for rotation
+  // Save context for rotation & hidden opacity
   ctx.save();
+  if (isHiddenGm) {
+    ctx.globalAlpha *= 0.55;
+  }
   ctx.translate(cx, cy);
   const rotation = isCelestial ? 0 : (token.rotation || 0);
   ctx.rotate((rotation * Math.PI) / 180);
@@ -594,6 +598,23 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
   
   // Restore context so badges stay upright
   ctx.restore();
+
+  // Hidden (GM Layer) Dashed Outer Ring & Badge
+  if (isHiddenGm) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.arc(cx, cy, size + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('🙈', cx - size * 0.45, cy + size * 0.9);
+    ctx.restore();
+  }
 
 
   // Speed badge
