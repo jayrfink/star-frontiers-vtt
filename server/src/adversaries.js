@@ -318,12 +318,14 @@ export function createAdversariesRouter(db, io, uploadDir = null) {
         templateObj.token_image_path = `/uploads/tokens/${tokenFileName}`;
       }
 
+      const spawnLayer = (req.body.layer === 'gm' || req.body.options?.layer === 'gm') ? 'gm' : 'character';
       const result = await spawnAdversaries({
         db,
         io,
         mapId: Number(mapId),
         template: templateObj,
         count: Math.min(50, Math.max(1, parseInt(count, 10) || 1)),
+        options: { layer: spawnLayer },
       });
 
       res.status(201).json(result);

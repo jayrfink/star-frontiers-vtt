@@ -1198,5 +1198,74 @@ describe('Maps & Tokens API & Socket.io', () => {
       expect(gmDelRes.status).toBe(200);
       expect(gmDelRes.body.ok).toBe(true);
     });
+
+    it('emits token:deleted to non-GM sockets when hiding a token and token:created to non-GM sockets when revealing a token', async () => {
+      const createRes = await agent.post('/api/tokens').send({
+        map_id: mapId,
+        name: 'Stealth Scout',
+        layer: 'character',
+        x: 3,
+        y: 3,
+      });
+      expect(createRes.status).toBe(201);
+      const tokenId = createRes.body.id;
+
+      const gmRoomEmitter = { emit: vi.fn() };
+      const playerBroadcastEmitter = { emit: vi.fn() };
+      const toSpy = vi.spyOn(io, 'to').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return gmRoomEmitter;
+        return { emit: vi.fn() };
+      });
+      const exceptSpy = vi.spyOn(io, 'except').mockImplementation((room) => {
+        if (room === 'role:GameMaster') return playerBroadcastEmitter;
+        return { emit: vi.fn() };
+      });
+
+      try {
+        // 1. Hide token (character -> gm)
+        const hideRes = await agent.put(`/api/tokens/${tokenId}`).send({ layer: 'gm' });
+        expect(hideRes.status).toBe(200);
+        expect(hideRes.body.layer).toBe('gm');
+        expect(gmRoomEmitter.emit).toHaveBeenCalledWith('token:updated', expect.objectContaining({
+          token: expect.objectContaining({ id: tokenId, layer: 'gm' }),
+        }));
+        expect(playerBroadcastEmitter.emit).toHaveBeenCalledWith('token:deleted', { id: tokenId });
+
+        gmRoomEmitter.emit.mockClear();
+        playerBroadcastEmitter.emit.mockClear();
+
+        // 2. Reveal token (gm -> character)
+        const revealRes = await agent.put(`/api/tokens/${tokenId}`).send({ layer: 'character' });
+        expect(revealRes.status).toBe(200);
+        expect(revealRes.body.layer).toBe('character');
+        expect(gmRoomEmitter.emit).toHaveBeenCalledWith('token:updated', expect.objectContaining({
+          token: expect.objectContaining({ id: tokenId, layer: 'character' }),
+        }));
+        expect(playerBroadcastEmitter.emit).toHaveBeenCalledWith('token:created', expect.objectContaining({
+          token: expect.objectContaining({ id: tokenId, layer: 'character' }),
+        }));
+      } finally {
+        toSpy.mockRestore();
+        exceptSpy.mockRestore();
+      }
+    });
+
+    it('supports spawning adversaries with layer: "gm" via POST /api/adversaries/spawn', async () => {
+      db.prepare(`
+        INSERT INTO adversary_templates (id, name, category, threat_tier, hp_max)
+        VALUES ('tpl_hidden_test', 'Hidden Sathar Agent', 'npc', 2, 40)
+      `).run();
+
+      const spawnRes = await agent.post('/api/adversaries/spawn').send({
+        mapId,
+        templateId: 'tpl_hidden_test',
+        count: 2,
+        layer: 'gm',
+      });
+      expect(spawnRes.status).toBe(201);
+      expect(spawnRes.body.tokens.length).toBe(2);
+      expect(spawnRes.body.tokens[0].layer).toBe('gm');
+      expect(spawnRes.body.tokens[1].layer).toBe('gm');
+    });
   });
 });

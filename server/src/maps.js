@@ -709,7 +709,21 @@ export function createTokenRouter(db, io) {
       const token = formatToken(updated, db);
 
       if (io) {
-        if (token.layer === 'gm') {
+        const wasGm = existing.layer === 'gm';
+        const isNowGm = token.layer === 'gm';
+        if (!wasGm && isNowGm) {
+          if (positionChanged) {
+            io.to('role:GameMaster').emit('token:moved', { token, id: token.id, x: token.x, y: token.y });
+          }
+          io.to('role:GameMaster').emit('token:updated', { token });
+          io.except('role:GameMaster').emit('token:deleted', { id: token.id });
+        } else if (wasGm && !isNowGm) {
+          if (positionChanged) {
+            io.to('role:GameMaster').emit('token:moved', { token, id: token.id, x: token.x, y: token.y });
+          }
+          io.to('role:GameMaster').emit('token:updated', { token });
+          io.except('role:GameMaster').emit('token:created', { token });
+        } else if (isNowGm) {
           if (positionChanged) {
             io.to('role:GameMaster').emit('token:moved', { token, id: token.id, x: token.x, y: token.y });
           }
