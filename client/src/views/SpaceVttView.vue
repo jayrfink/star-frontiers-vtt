@@ -529,6 +529,19 @@
               <span class="value">({{ selectedToken.x }}, {{ selectedToken.y }})</span>
             </div>
 
+            <!-- GM Player Visibility Toggle -->
+            <div v-if="isGm" class="form-group visibility-section">
+              <label>Player Visibility:</label>
+              <button
+                type="button"
+                class="btn-toggle-visibility full-width"
+                :class="{ 'is-hidden': selectedToken.layer === 'gm' }"
+                @click="toggleTokenVisibility(selectedToken)"
+              >
+                {{ selectedToken.layer === 'gm' ? '🙈 Hidden from Players (GM Only)' : '👁️ Visible to Players' }}
+              </button>
+            </div>
+
             <template v-if="!isCelestialToken(selectedToken)">
               <!-- Current Speed Control -->
               <div class="form-group">
@@ -842,12 +855,13 @@
               <li
                 v-for="t in tokens"
                 :key="t.id"
-                :class="{ active: selectedTokenId === t.id }"
+                :class="{ active: selectedTokenId === t.id, 'token-row-hidden': t.layer === 'gm' }"
                 @click="selectedTokenId = t.id"
               >
                 <div class="token-item-left">
                   <span class="token-dot" :style="{ backgroundColor: t.color || '#666666' }"></span>
                   <strong>{{ t.name }}</strong>
+                  <span v-if="t.layer === 'gm'" class="token-hidden-badge" title="Hidden from Players">HIDDEN</span>
                 </div>
                 <div class="token-item-right">
                   <template v-if="!isCelestialToken(t)">
@@ -856,6 +870,16 @@
                   </template>
                   <span v-else class="token-list-celestial" title="Celestial Object">🪐</span>
                   <small>({{ t.x }}, {{ t.y }})</small>
+                  <button
+                    v-if="isGm"
+                    type="button"
+                    class="btn-token-list-visibility"
+                    :class="{ 'is-hidden': t.layer === 'gm' }"
+                    :title="t.layer === 'gm' ? 'Reveal to Players' : 'Hide from Players'"
+                    @click.stop="toggleTokenVisibility(t)"
+                  >
+                    {{ t.layer === 'gm' ? '🙈' : '👁️' }}
+                  </button>
                 </div>
               </li>
             </ul>
@@ -1017,6 +1041,13 @@
               <label>Start Hex R (Y)</label>
               <input type="number" v-model.number="newTokenForm.y" min="0" />
             </div>
+          </div>
+
+          <div v-if="isGm" class="form-group spawn-hidden-row">
+            <label class="spawn-hidden-label">
+              <input type="checkbox" v-model="newTokenForm.is_hidden" class="spawn-hidden-checkbox" />
+              <span>🙈 Start Hidden from Players (GM Layer)</span>
+            </label>
           </div>
 
           <div class="form-group avatar-upload-section">
@@ -1948,6 +1979,7 @@ const newTokenForm = reactive({
   current_speed: 0,
   rotation: 0,
   token_type: 'ship',
+  is_hidden: false,
 });
 
 const selectedTokenForm = reactive({
@@ -3009,6 +3041,7 @@ function openAddTokenModal() {
   newTokenForm.size = 1;
   newTokenForm.current_speed = 0;
   newTokenForm.rotation = 0;
+  newTokenForm.is_hidden = false;
   if (tokenFileInput.value) tokenFileInput.value.value = '';
   showAddTokenModal.value = true;
 }
@@ -3072,23 +3105,30 @@ async function submitAddToken() {
   }
   try {
     const isCelestial = newTokenForm.token_type === 'celestial';
+    const isHidden = isGm.value && Boolean(newTokenForm.is_hidden);
+    const initialLayer = isHidden ? 'gm' : (isCelestial ? 'celestial' : 'character');
+    const initialConditions = (isHidden && isCelestial) ? JSON.stringify(['celestial']) : undefined;
+    const bodyPayload = {
+      map_id: activeMap.value.id,
+      character_id: isCelestial ? null : (selectedShipId.value || null),
+      name: newTokenForm.name,
+      color: isCelestial ? '' : newTokenForm.color,
+      avatar_url: newTokenForm.avatar_url,
+      x: newTokenForm.x,
+      y: newTokenForm.y,
+      size: 1, // Space tokens strictly occupy 1 hex under Star Frontiers rules
+      rotation: isCelestial ? 0 : (newTokenForm.rotation || 0),
+      current_speed: isCelestial ? null : (newTokenForm.current_speed || 0),
+      layer: isHidden ? 'gm' : (isCelestial ? 'celestial' : 'character'),
+    };
+    if (initialConditions !== undefined) {
+      bodyPayload.conditions = initialConditions;
+    }
     const res = await fetch('/api/tokens', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        map_id: activeMap.value.id,
-        character_id: isCelestial ? null : (selectedShipId.value || null),
-        name: newTokenForm.name,
-        color: isCelestial ? '' : newTokenForm.color,
-        avatar_url: newTokenForm.avatar_url,
-        x: newTokenForm.x,
-        y: newTokenForm.y,
-        size: 1, // Space tokens strictly occupy 1 hex under Star Frontiers rules
-        rotation: isCelestial ? 0 : (newTokenForm.rotation || 0),
-        current_speed: isCelestial ? null : (newTokenForm.current_speed || 0),
-        layer: isCelestial ? 'celestial' : 'character',
-      }),
+      body: JSON.stringify(bodyPayload),
     });
     if (res.ok) {
       const created = await res.json();
@@ -3154,6 +3194,63 @@ function onTokenSelected(token) {
     updateSelectedToken();
   }
   selectedTokenId.value = token ? token.id : null;
+}
+
+async function toggleTokenVisibility(token) {
+  if (!isGm.value || !token || !token.id) return;
+  const isCelestial = isCelestialToken(token);
+  let nextLayer;
+  let nextConditions = token.conditions;
+  if (token.layer === 'gm') {
+    nextLayer = isCelestial ? 'celestial' : 'character';
+  } else {
+    nextLayer = 'gm';
+    if (isCelestial) {
+      let conds = [];
+      if (typeof token.conditions === 'string' && token.conditions.trim()) {
+        try {
+          conds = JSON.parse(token.conditions);
+        } catch {
+          conds = [];
+        }
+      } else if (Array.isArray(token.conditions)) {
+        conds = [...token.conditions];
+      }
+      if (!conds.includes('celestial')) {
+        conds.push('celestial');
+      }
+      nextConditions = JSON.stringify(conds);
+    }
+  }
+
+  const idx = tokens.value.findIndex((t) => t.id === token.id);
+  if (idx !== -1) {
+    tokens.value[idx] = { ...tokens.value[idx], layer: nextLayer, conditions: nextConditions };
+    tokens.value = [...tokens.value];
+  }
+
+  try {
+    const payload = { layer: nextLayer };
+    if (nextConditions !== undefined) {
+      payload.conditions = nextConditions;
+    }
+    const res = await fetch(`/api/tokens/${token.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const targetIdx = tokens.value.findIndex((t) => t.id === updated.id);
+      if (targetIdx !== -1) {
+        tokens.value[targetIdx] = updated;
+        tokens.value = [...tokens.value];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle token visibility:', err);
+  }
 }
 
 function onColorInput() {
@@ -6467,5 +6564,78 @@ onBeforeUnmount(() => {
 .slingshot-result-card.critical {
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid #ef4444;
+}
+
+.visibility-section {
+  margin-top: 8px;
+}
+
+.btn-toggle-visibility {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle-visibility:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.btn-toggle-visibility.is-hidden {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+}
+
+.btn-toggle-visibility.is-hidden:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+.token-row-hidden {
+  opacity: 0.72;
+}
+
+.token-hidden-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  letter-spacing: 0.4px;
+}
+
+.btn-token-list-visibility {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.btn-token-list-visibility.is-hidden {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.spawn-hidden-row {
+  margin-top: 4px;
+}
+
+.spawn-hidden-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #fbbf24;
+  cursor: pointer;
 }
 </style>

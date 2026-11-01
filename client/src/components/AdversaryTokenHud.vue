@@ -363,11 +363,12 @@ export default {
 
 .adversary-token-hud {
   position: absolute;
-  top: 70px;
+  top: 16px;
+  bottom: 16px;
   right: 16px;
   width: 360px;
   max-width: 90vw;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100% - 32px);
   background-color: #161b22;
   border: 1px solid #30363d;
   border-radius: 8px;
@@ -447,8 +448,10 @@ export default {
 }
 
 .hud-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 14px;
+  padding: 14px 14px 32px 14px;
   display: flex;
   flex-direction: column;
   gap: 14px;

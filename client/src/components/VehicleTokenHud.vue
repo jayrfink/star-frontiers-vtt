@@ -406,11 +406,12 @@ export default {
 }
 .vehicle-token-hud {
   position: absolute;
-  top: 70px;
+  top: 16px;
+  bottom: 16px;
   right: 16px;
   width: 380px;
   max-width: 90vw;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100% - 32px);
   background-color: #161b22;
   border: 1px solid #30363d;
   border-radius: 8px;
@@ -497,8 +498,10 @@ export default {
 }
 
 .hud-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 12px 12px 32px 12px;
   display: flex;
   flex-direction: column;
   gap: 14px;

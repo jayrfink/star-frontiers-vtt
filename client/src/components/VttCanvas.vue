@@ -8,6 +8,7 @@
     @mouseup="onMouseUp"
     @mouseleave="onMouseUp"
     @wheel.prevent="onWheel"
+    @dblclick="onDoubleClick"
   >
     <canvas ref="canvasRef"></canvas>
   </div>
@@ -64,6 +65,7 @@ const emit = defineEmits([
   'update:panY',
   'token-moved',
   'token-selected',
+  'token-dblclick',
   'tokens-updated',
   'map-updated',
   'ping-update',
@@ -883,6 +885,33 @@ function onMouseDown(e) {
       isMeasuring.value = true;
       requestRender();
     }
+  }
+}
+
+function onDoubleClick(e) {
+  if (props.activeTool !== 'select') return;
+  const worldPos = getWorldFromScreen(e.clientX, e.clientY);
+  const cell = getCellFromWorld(worldPos.x, worldPos.y);
+  if (!cell) return;
+
+  const hitTestOrder = [...props.tokens].sort((a, b) => {
+    const sizeA = Number(a.size) || 1;
+    const sizeB = Number(b.size) || 1;
+    return sizeA - sizeB;
+  });
+  const hitToken = hitTestOrder.find((t) => {
+    const tx = Number(t.x) || 0;
+    const ty = Number(t.y) || 0;
+    const size = Number(t.size) || 1;
+    return (
+      cell.x >= tx &&
+      cell.x < tx + size &&
+      cell.y >= ty &&
+      cell.y < ty + size
+    );
+  });
+  if (hitToken) {
+    emit('token-dblclick', hitToken);
   }
 }
 

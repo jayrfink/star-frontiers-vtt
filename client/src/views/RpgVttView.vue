@@ -327,27 +327,30 @@
           :selected-token-id="selectedTokenId"
           @token-moved="onTokenMoved"
           @token-selected="onTokenSelected"
+          @token-dblclick="onTokenDblClick"
           @tokens-updated="tokens = $event"
           @map-updated="activeMap = $event"
           @ping-update="onPingUpdate"
           @ping-dismiss="onPingDismiss"
         />
 
-        <!-- Click-to-Open Adversary Token HUD -->
+        <!-- Click-to-Open Adversary Token HUD (Double Click) -->
         <AdversaryTokenHud
-          v-if="selectedToken && (selectedToken.template || selectedToken.template_id) && !selectedToken.vehicle_data"
-          :token="selectedToken"
-          @close="selectedTokenId = null"
+          v-if="activeHudToken && (activeHudToken.template || activeHudToken.template_id) && !activeHudToken.vehicle_data"
+          :token="activeHudToken"
+          :is-gm="isGm"
+          @close="openHudTokenId = null"
           @update:token="onAdversaryTokenUpdate"
           @roll-attack="onAdversaryRollAttack"
           @roll-damage="onAdversaryRollDamage"
         />
 
-        <!-- Click-to-Open Vehicle Token HUD -->
+        <!-- Click-to-Open Vehicle Token HUD (Double Click) -->
         <VehicleTokenHud
-          v-if="selectedToken && selectedToken.vehicle_data"
-          :token="selectedToken"
-          @close="selectedTokenId = null"
+          v-if="activeHudToken && activeHudToken.vehicle_data"
+          :token="activeHudToken"
+          :is-gm="isGm"
+          @close="openHudTokenId = null"
           @update:token="onVehicleTokenUpdate"
           @roll-control="onVehicleRollControl"
           @roll-damage="onVehicleRollDamage"
@@ -555,6 +558,19 @@
               <span class="value">({{ selectedToken.x }}, {{ selectedToken.y }})</span>
             </div>
 
+            <!-- GM Player Visibility Toggle -->
+            <div v-if="isGm" class="form-group visibility-section">
+              <label>Player Visibility:</label>
+              <button
+                type="button"
+                class="btn-toggle-visibility full-width"
+                :class="{ 'is-hidden': selectedToken.layer === 'gm' }"
+                @click="toggleTokenVisibility(selectedToken)"
+              >
+                {{ selectedToken.layer === 'gm' ? '🙈 Hidden from Players (GM Only)' : '👁️ Visible to Players' }}
+              </button>
+            </div>
+
             <!-- Status Icons Toggles -->
             <div class="status-section">
               <label>Status Effects:</label>
@@ -602,6 +618,15 @@
 
             <!-- Action Buttons -->
             <div class="inspector-actions">
+              <button
+                v-if="(selectedToken.template || selectedToken.template_id || selectedToken.vehicle_data) && openHudTokenId !== selectedToken.id"
+                type="button"
+                class="secondary full-width btn-open-hud-applet"
+                style="margin-bottom: 8px;"
+                @click="openHudTokenId = selectedToken.id"
+              >
+                📖 Open Tactical HUD (Double-Click)
+              </button>
               <button class="danger full-width btn-delete-token" @click="deleteSelectedToken">Delete Token</button>
             </div>
           </div>
@@ -612,12 +637,24 @@
               <li
                 v-for="t in tokens"
                 :key="t.id"
-                :class="{ active: selectedTokenId === t.id }"
+                :class="{ active: selectedTokenId === t.id, 'token-row-hidden': t.layer === 'gm' }"
                 @click="selectedTokenId = t.id"
+                @dblclick="onTokenListDblClick(t)"
               >
                 <span class="token-dot" :style="{ backgroundColor: t.color || '#666666' }"></span>
                 <strong>{{ t.name }}</strong>
+                <span v-if="t.layer === 'gm'" class="token-hidden-badge" title="Hidden from Players">HIDDEN</span>
                 <small>({{ t.x }}, {{ t.y }})</small>
+                <button
+                  v-if="isGm"
+                  type="button"
+                  class="btn-token-list-visibility"
+                  :class="{ 'is-hidden': t.layer === 'gm' }"
+                  :title="t.layer === 'gm' ? 'Reveal to Players' : 'Hide from Players'"
+                  @click.stop="toggleTokenVisibility(t)"
+                >
+                  {{ t.layer === 'gm' ? '🙈' : '👁️' }}
+                </button>
               </li>
             </ul>
           </div>
@@ -734,6 +771,13 @@
               <label>Start Y</label>
               <input type="number" v-model.number="newTokenForm.y" min="0" />
             </div>
+          </div>
+
+          <div v-if="isGm" class="form-group spawn-hidden-row">
+            <label class="spawn-hidden-label">
+              <input type="checkbox" v-model="newTokenForm.is_hidden" class="spawn-hidden-checkbox" />
+              <span>🙈 Start Hidden from Players (GM Layer)</span>
+            </label>
           </div>
 
           <div class="form-group avatar-upload-section">
@@ -1295,6 +1339,7 @@ const newTokenForm = reactive({
   x: 0,
   y: 0,
   size: 1,
+  is_hidden: false,
 });
 
 const selectedTokenForm = reactive({
@@ -1345,6 +1390,12 @@ function openMapImageBrowser(target) {
   imageBrowserTarget.value = target;
   showImageBrowser.value = true;
 }
+
+const openHudTokenId = ref(null);
+const activeHudToken = computed(() => {
+  if (!openHudTokenId.value) return null;
+  return tokens.value.find((t) => t.id === openHudTokenId.value) || null;
+});
 
 const selectedToken = computed(() => {
   if (!selectedTokenId.value) return null;
@@ -1625,6 +1676,7 @@ function openAddTokenModal() {
   newTokenForm.x = spawn.x;
   newTokenForm.y = spawn.y;
   newTokenForm.size = 1;
+  newTokenForm.is_hidden = false;
   if (tokenFileInput.value) tokenFileInput.value.value = '';
   showAddTokenModal.value = true;
 }
@@ -1701,6 +1753,7 @@ async function submitAddToken() {
         x: newTokenForm.x,
         y: newTokenForm.y,
         size: newTokenForm.size,
+        layer: (isGm.value && newTokenForm.is_hidden) ? 'gm' : 'character',
       }),
     });
     if (res.ok) {
@@ -1766,6 +1819,22 @@ function onTokenSelected(token) {
   selectedTokenId.value = token ? token.id : null;
 }
 
+function onTokenDblClick(token) {
+  if (!token) return;
+  selectedTokenId.value = token.id;
+  if (token.template || token.template_id || token.vehicle_data) {
+    openHudTokenId.value = token.id;
+  }
+}
+
+function onTokenListDblClick(token) {
+  if (!token) return;
+  selectedTokenId.value = token.id;
+  if (token.template || token.template_id || token.vehicle_data) {
+    openHudTokenId.value = token.id;
+  }
+}
+
 function onColorInput() {
   if (selectedToken.value) {
     selectedToken.value.color = selectedTokenForm.color;
@@ -1829,6 +1898,34 @@ function toggleStatus(statusKey) {
   updateSelectedToken();
 }
 
+async function toggleTokenVisibility(token) {
+  if (!isGm.value || !token || !token.id) return;
+  const nextLayer = token.layer === 'gm' ? 'character' : 'gm';
+  const idx = tokens.value.findIndex((t) => t.id === token.id);
+  if (idx !== -1) {
+    tokens.value[idx] = { ...tokens.value[idx], layer: nextLayer };
+    tokens.value = [...tokens.value];
+  }
+  try {
+    const res = await fetch(`/api/tokens/${token.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ layer: nextLayer }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const targetIdx = tokens.value.findIndex((t) => t.id === updated.id);
+      if (targetIdx !== -1) {
+        tokens.value[targetIdx] = updated;
+        tokens.value = [...tokens.value];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle token visibility:', err);
+  }
+}
+
 async function onAdversaryTokenUpdate(updatedToken) {
   if (!updatedToken || !updatedToken.id) return;
   const idx = tokens.value.findIndex((t) => t.id === updatedToken.id);
@@ -1846,6 +1943,7 @@ async function onAdversaryTokenUpdate(updatedToken) {
         max_hp: updatedToken.max_hp,
         seu_current: updatedToken.seu_current,
         conditions: updatedToken.conditions,
+        layer: updatedToken.layer,
       }),
     });
     if (res.ok) {
@@ -2008,6 +2106,7 @@ async function onDeployVehicle(payload) {
         y: payload.y,
         avatar_url: payload.avatar_url,
         vehicle_data: payload.vehicle_data,
+        layer: payload.layer || 'character',
       }),
     });
     if (res.ok) {
@@ -2036,6 +2135,7 @@ async function onVehicleTokenUpdate(updatedToken) {
       credentials: 'include',
       body: JSON.stringify({
         vehicle_data: updatedToken.vehicle_data,
+        layer: updatedToken.layer,
       }),
     });
     if (res.ok) {
@@ -2131,6 +2231,9 @@ async function deleteSelectedToken() {
     if (res.ok) {
       tokens.value = tokens.value.filter((t) => t.id !== tokenId);
       selectedTokenId.value = null;
+      if (openHudTokenId.value === tokenId) {
+        openHudTokenId.value = null;
+      }
     }
   } catch (err) {
     console.error('Failed to delete token:', err);
@@ -2227,6 +2330,9 @@ function setupSocketListeners() {
     tokens.value = tokens.value.filter((t) => t.id !== id);
     if (selectedTokenId.value === id) {
       selectedTokenId.value = null;
+    }
+    if (openHudTokenId.value === id) {
+      openHudTokenId.value = null;
     }
   });
 
@@ -4024,5 +4130,78 @@ onBeforeUnmount(() => {
 
 .grid-dimensions-x {
   color: #8b949e;
+}
+
+.visibility-section {
+  margin-top: 8px;
+}
+
+.btn-toggle-visibility {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle-visibility:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.btn-toggle-visibility.is-hidden {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+}
+
+.btn-toggle-visibility.is-hidden:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+.token-row-hidden {
+  opacity: 0.72;
+}
+
+.token-hidden-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  letter-spacing: 0.4px;
+}
+
+.btn-token-list-visibility {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.btn-token-list-visibility.is-hidden {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.spawn-hidden-row {
+  margin-top: 4px;
+}
+
+.spawn-hidden-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #fbbf24;
+  cursor: pointer;
 }
 </style>
