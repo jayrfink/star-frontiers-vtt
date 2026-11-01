@@ -520,6 +520,19 @@ export function createTokenRouter(db, io) {
         : null;
       let cleanSeu = Number.isFinite(Number(seu_current)) ? Math.round(Number(seu_current)) : null;
 
+      // Seed HP stats from linked ship on space maps if not explicitly supplied
+      if (mapExists.map_type === 'space' && character_id) {
+        const ship = db.prepare('SELECT hull_points, current_hp FROM ship_sheets WHERE id = ?').get(character_id);
+        if (ship) {
+          if (cleanMaxHp === null) {
+            cleanMaxHp = Number.isFinite(Number(ship.hull_points)) ? Number(ship.hull_points) : 50;
+          }
+          if (cleanCurrentHp === null) {
+            cleanCurrentHp = Number.isFinite(Number(ship.current_hp)) ? Number(ship.current_hp) : cleanMaxHp;
+          }
+        }
+      }
+
       // SEC-05: Non-GM token stat manipulation & integrity check
       if (!isGM) {
         if (mapExists.map_type === 'space') {

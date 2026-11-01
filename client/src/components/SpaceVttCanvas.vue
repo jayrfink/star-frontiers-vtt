@@ -18,6 +18,7 @@ import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { socket } from '../services/socket.js';
 import { isCelestialToken } from '../utils/spaceTokens.js';
 import { drawAllPings, isPingDismissHit } from '../utils/pingRenderer.js';
+import { getShipDamageOverlayState, drawShipDamageOverlay } from '../utils/shipDamageOverlay.js';
 
 const props = defineProps({
   map: {
@@ -25,6 +26,10 @@ const props = defineProps({
     default: null,
   },
   tokens: {
+    type: Array,
+    default: () => [],
+  },
+  ships: {
     type: Array,
     default: () => [],
   },
@@ -89,6 +94,9 @@ watch(() => props.zoomLevel, () => {
   requestRender();
 });
 watch(() => props.tokens, () => {
+  requestRender();
+}, { deep: true });
+watch(() => props.ships, () => {
   requestRender();
 }, { deep: true });
 watch(() => props.map, () => {
@@ -587,17 +595,35 @@ function renderSingleToken(ctx, token, q, r, isSelected) {
     drawInitials(ctx, token.name, 0, 0, size);
   }
   
+  // Restore rotation context
+  ctx.restore();
+
+  // Ship Damage Orange Overlay or 0 HP Grey Hulk Overlay
+  if (!isCelestial) {
+    const linkedShip = props.ships?.find((s) => s.id === token.character_id) || null;
+    const damageOverlayState = getShipDamageOverlayState(token, linkedShip);
+    if (damageOverlayState) {
+      let ratio = null;
+      const cur = token.current_hp ?? linkedShip?.current_hp;
+      const max = token.max_hp ?? linkedShip?.hull_points ?? token.hull_points;
+      if (cur !== null && max !== null && Number(max) > 0) {
+        ratio = Number(cur) / Number(max);
+      }
+      drawShipDamageOverlay(ctx, damageOverlayState, cx, cy, size, ratio);
+    }
+  }
+
   // Token Colored Ring Border
   if (!isCelestial) {
+    ctx.save();
+    if (isHiddenGm) ctx.globalAlpha *= 0.55;
     ctx.beginPath();
-    ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.arc(cx, cy, size, 0, Math.PI * 2);
     ctx.strokeStyle = token.color || '#666666';
     ctx.lineWidth = 3.5;
     ctx.stroke();
+    ctx.restore();
   }
-  
-  // Restore context so badges stay upright
-  ctx.restore();
 
   // Hidden (GM Layer) Dashed Outer Ring & Badge
   if (isHiddenGm) {

@@ -310,6 +310,7 @@
         <SpaceVttCanvas
           :map="activeMap"
           :tokens="tokens"
+          :ships="ships"
           :pings="activePingsList"
           :active-tool="activeTool"
           v-model:zoom-level="zoomLevel"
@@ -3353,6 +3354,7 @@ let onSocketTokenCreated = null;
 let onSocketTokenMoved = null;
 let onSocketTokenUpdated = null;
 let onSocketTokenDeleted = null;
+let onSocketSheetUpdated = null;
 let onSocketRollCreated = null;
 let onSocketRollCleared = null;
 let onSocketPingUpdated = null;
@@ -3444,6 +3446,16 @@ function setupSocketListeners() {
     tokens.value = tokens.value.filter((t) => t.id !== id);
     if (selectedTokenId.value === id) {
       selectedTokenId.value = null;
+    }
+  });
+
+  socket.on('sheet:updated', onSocketSheetUpdated = ({ type, sheet }) => {
+    if (type === 'ship' && sheet?.id) {
+      const idx = ships.value.findIndex((s) => s.id === sheet.id);
+      if (idx !== -1) {
+        ships.value[idx] = sheet;
+        ships.value = [...ships.value];
+      }
     }
   });
 
@@ -3562,6 +3574,7 @@ function cleanupSocketListeners() {
   if (onSocketTokenMoved) socket.off('token:moved', onSocketTokenMoved);
   if (onSocketTokenUpdated) socket.off('token:updated', onSocketTokenUpdated);
   if (onSocketTokenDeleted) socket.off('token:deleted', onSocketTokenDeleted);
+  if (onSocketSheetUpdated) socket.off('sheet:updated', onSocketSheetUpdated);
   if (onSocketRollCreated) socket.off('roll:created', onSocketRollCreated);
   if (onSocketRollCleared) socket.off('roll:cleared', onSocketRollCleared);
   if (onSocketPingUpdated) socket.off('ping:updated', onSocketPingUpdated);
