@@ -25,7 +25,13 @@
           GM Map Manager
         </button>
         <!-- Token Inspector Toggle -->
-        <button class="btn-sidebar" @click="showTokenSidebar = !showTokenSidebar">
+        <button
+          type="button"
+          class="btn-sidebar"
+          :class="{ active: showTokenSidebar }"
+          @click="toggleTokenSidebar"
+          :title="showTokenSidebar ? 'Close Token Inspector' : 'Open Token Inspector'"
+        >
           Tokens {{ tokens.length > 0 ? `(${tokens.length})` : '' }}
         </button>
       </div>
@@ -495,7 +501,7 @@
       <aside v-if="showTokenSidebar" class="token-sidebar">
         <div class="sidebar-header">
           <h3>Token Inspector</h3>
-          <button class="close-btn" @click="showTokenSidebar = false">×</button>
+          <button type="button" class="close-btn" @click="closeTokenSidebar" title="Close Token Inspector">×</button>
         </div>
 
         <div class="sidebar-content">
@@ -1503,6 +1509,7 @@ const initialVttState = getUserState(getSafeUserId(), 'spaceVtt', {
   activeTool: 'select',
   selectedTokenId: null,
   isRollLogOpen: false,
+  showTokenSidebar: true,
 });
 
 
@@ -1888,6 +1895,7 @@ function persistVttStateNow() {
     activeTool: activeTool.value,
     selectedTokenId: selectedTokenId.value,
     isRollLogOpen: isRollLogOpen.value,
+    showTokenSidebar: showTokenSidebar.value,
   });
 }
 
@@ -1901,12 +1909,22 @@ function persistVttState() {
   }, 150);
 }
 
-watch([panX, panY, zoomLevel, activeTool, selectedTokenId, isRollLogOpen], () => {
+const showGmDrawer = ref(false);
+const showTokenSidebar = ref(initialVttState.showTokenSidebar ?? true);
+
+function toggleTokenSidebar() {
+  showTokenSidebar.value = !showTokenSidebar.value;
+  persistVttState();
+}
+
+function closeTokenSidebar() {
+  showTokenSidebar.value = false;
+  persistVttState();
+}
+
+watch([panX, panY, zoomLevel, activeTool, selectedTokenId, isRollLogOpen, showTokenSidebar], () => {
   persistVttState();
 });
-
-const showGmDrawer = ref(false);
-const showTokenSidebar = ref(true);
 const showCreateMapModal = ref(false);
 const createMapError = ref('');
 const showAddTokenModal = ref(false);
@@ -3827,6 +3845,8 @@ onBeforeUnmount(() => {
 
 /* Header */
 .vtt-header {
+  position: relative;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3882,16 +3902,31 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
-.btn-gm {
+.btn-gm,
+.btn-sidebar {
   background: #082d33;
   border: 1px solid #2394a6;
   color: #00ffff;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
 }
 
-.btn-gm:hover {
+.btn-gm:hover,
+.btn-sidebar:hover {
   background: #0d3b44;
   border-color: #33b5cb;
   color: #00ffff;
+}
+
+.btn-sidebar.active {
+  background: #0d3b44;
+  border-color: #33b5cb;
+  color: #a8ffea;
+  box-shadow: 0 0 10px rgba(51, 181, 203, 0.4);
 }
 
 .btn-add-token {
