@@ -335,4 +335,27 @@ describe('DeployVehicleModal.vue', () => {
     expect(wrapper.vm.vehicles.some((v) => v.id === 'unwrapped_veh_2')).toBe(true);
     expect(wrapper.vm.vehicles).toHaveLength(initialCount + 2);
   });
+
+  it('supports deploying a vehicle hidden on the GM layer when deployHidden is checked', async () => {
+    const wrapper = mount(DeployVehicleModal, {
+      props: {
+        modelValue: true,
+        isGm: true,
+        defaultX: 4,
+        defaultY: 6,
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 10));
+
+    const hiddenCheckbox = wrapper.find('input.deploy-hidden-checkbox');
+    expect(hiddenCheckbox.exists()).toBe(true);
+    await hiddenCheckbox.setValue(true);
+
+    await wrapper.find('form.deploy-form').trigger('submit.prevent');
+    expect(wrapper.emitted('deploy')).toBeTruthy();
+    const payload = wrapper.emitted('deploy')[0][0];
+    expect(payload.layer).toBe('gm');
+  });
 });

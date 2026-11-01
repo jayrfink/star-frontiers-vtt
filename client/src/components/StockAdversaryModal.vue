@@ -373,6 +373,17 @@
             </div>
           </div>
 
+          <div v-if="isGm" class="spawn-hidden-row">
+            <label class="spawn-hidden-label">
+              <input
+                type="checkbox"
+                v-model="spawnHidden"
+                class="spawn-hidden-checkbox"
+              />
+              <span>🙈 Spawn Hidden from Players (GM Layer)</span>
+            </label>
+          </div>
+
           <div v-if="errorMessage" class="error-banner">
             ⚠️ {{ errorMessage }}
           </div>
@@ -427,6 +438,7 @@ export default {
       loadingTemplates: false,
       selectedTemplateId: null,
       customCount: 1,
+      spawnHidden: false,
       isSpawning: false,
       isGeneratingArt: false,
       isUpdatingToken: false,
@@ -490,12 +502,14 @@ export default {
       return map[tier] || '#3498db';
     },
     buildSpawnPayload(params) {
-      const { mode, selectedTemplateId, customForm, count, mapId } = params;
+      const { mode, selectedTemplateId, customForm, count, mapId, spawnHidden } = params;
+      const layer = spawnHidden ? 'gm' : 'character';
       if (mode === 'existing') {
         return {
           mapId,
           templateId: selectedTemplateId,
           count,
+          layer,
         };
       }
       return {
@@ -515,6 +529,7 @@ export default {
         },
         source_image_url: customForm.source_image_url || null,
         count,
+        layer,
       };
     },
     async fetchTemplates() {
@@ -628,6 +643,7 @@ export default {
           customForm: this.customForm,
           count: this.customCount,
           mapId: this.activeMap.id,
+          spawnHidden: this.spawnHidden,
         });
 
         const res = await fetch('/api/adversaries/spawn', {

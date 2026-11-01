@@ -132,4 +132,39 @@ describe('AdversaryTokenHud Component', () => {
       expect(sfcContent).not.toMatch(/@keyup\.enter="onHpCommit/);
     });
   });
+
+  describe('GM Visibility Toggle', () => {
+    it('toggles token layer between character and gm via toggleVisibility', () => {
+      let emittedPayload = null;
+      const ctxVisible = {
+        isGm: true,
+        token: { id: 10, name: 'Sathar Agent', layer: 'character' },
+        $emit(event, payload) {
+          if (event === 'update:token') emittedPayload = payload;
+        },
+      };
+
+      AdversaryTokenHud.methods.toggleVisibility.call(ctxVisible);
+      expect(emittedPayload).toEqual({
+        id: 10,
+        name: 'Sathar Agent',
+        layer: 'gm',
+      });
+
+      const ctxHidden = {
+        isGm: true,
+        token: { id: 10, name: 'Sathar Agent', layer: 'gm' },
+        $emit(event, payload) {
+          if (event === 'update:token') emittedPayload = payload;
+        },
+      };
+
+      AdversaryTokenHud.methods.toggleVisibility.call(ctxHidden);
+      expect(emittedPayload).toEqual({
+        id: 10,
+        name: 'Sathar Agent',
+        layer: 'character',
+      });
+    });
+  });
 });

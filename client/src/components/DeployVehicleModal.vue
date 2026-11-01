@@ -338,6 +338,17 @@
                   <input v-model.number="deployY" type="number" class="y-input" min="0" />
                 </div>
               </div>
+
+              <div v-if="isGm" class="deploy-hidden-row">
+                <label class="deploy-hidden-label">
+                  <input
+                    v-model="deployHidden"
+                    type="checkbox"
+                    class="deploy-hidden-checkbox"
+                  />
+                  <span>🙈 Deploy Hidden from Players (GM Layer)</span>
+                </label>
+              </div>
             </div>
 
             <!-- Modal Action Buttons -->
@@ -401,6 +412,7 @@ export default {
       deployCargo: '',
       deployX: this.defaultX,
       deployY: this.defaultY,
+      deployHidden: false,
 
       // Custom creation form
       customForm: {
@@ -648,6 +660,7 @@ export default {
         y: Number(this.deployY ?? 0),
         avatar_url: this.selectedVehicle.avatar_url || '',
         vehicle_data: vehicleData,
+        layer: this.deployHidden ? 'gm' : 'character',
       };
 
       this.$emit('deploy', payload);

@@ -423,5 +423,26 @@ describe('StockAdversaryModal Component', () => {
       expect(vm.templates.length).toBe(0);
       expect(vm.selectedTemplateId).toBeNull();
     });
+
+    it('includes layer: "gm" in buildSpawnPayload when spawnHidden is true', () => {
+      const buildPayload = StockAdversaryModal.methods.buildSpawnPayload;
+      const hiddenPayload = buildPayload({
+        mode: 'existing',
+        selectedTemplateId: 'sathar-trooper-t2',
+        count: 2,
+        mapId: 16,
+        spawnHidden: true,
+      });
+      expect(hiddenPayload.layer).toBe('gm');
+
+      const visiblePayload = buildPayload({
+        mode: 'existing',
+        selectedTemplateId: 'sathar-trooper-t2',
+        count: 2,
+        mapId: 16,
+        spawnHidden: false,
+      });
+      expect(visiblePayload.layer).toBe('character');
+    });
   });
 });

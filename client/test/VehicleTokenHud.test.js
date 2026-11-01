@@ -245,4 +245,32 @@ describe('VehicleTokenHud.vue', () => {
     await speedInput.trigger('keyup.enter');
     expect(blurSpy).toHaveBeenCalled();
   });
+
+  it('allows GM to toggle vehicle token visibility between character and gm layer', async () => {
+    const wrapper = mount(VehicleTokenHud, {
+      props: {
+        token: { ...sampleToken, layer: 'character' },
+        isGm: true,
+      },
+    });
+
+    const visBtn = wrapper.find('button.btn-hud-visibility');
+    expect(visBtn.exists()).toBe(true);
+    expect(visBtn.text()).toContain('Visible');
+    await visBtn.trigger('click');
+
+    expect(wrapper.emitted('update:token')).toBeTruthy();
+    expect(wrapper.emitted('update:token')[0][0].layer).toBe('gm');
+
+    const hiddenWrapper = mount(VehicleTokenHud, {
+      props: {
+        token: { ...sampleToken, layer: 'gm' },
+        isGm: true,
+      },
+    });
+    const hiddenBtn = hiddenWrapper.find('button.btn-hud-visibility');
+    expect(hiddenBtn.text()).toContain('Hidden');
+    await hiddenBtn.trigger('click');
+    expect(hiddenWrapper.emitted('update:token')[0][0].layer).toBe('character');
+  });
 });

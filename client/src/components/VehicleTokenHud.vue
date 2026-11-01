@@ -12,7 +12,19 @@
           <span class="hud-type-badge">{{ vehicleData.type || 'Vehicle' }}</span>
         </div>
       </div>
-      <button type="button" class="hud-close-btn" @click="$emit('close')" title="Close HUD">✕</button>
+      <div class="hud-header-actions">
+        <button
+          v-if="isGm"
+          type="button"
+          class="btn-hud-visibility"
+          :class="{ 'is-hidden': token.layer === 'gm' }"
+          :title="token.layer === 'gm' ? 'Hidden from Players (click to reveal)' : 'Visible to Players (click to hide)'"
+          @click="toggleVisibility"
+        >
+          {{ token.layer === 'gm' ? '🙈 Hidden' : '👁️ Visible' }}
+        </button>
+        <button type="button" class="hud-close-btn" @click="$emit('close')" title="Close HUD">✕</button>
+      </div>
     </div>
 
     <!-- Scrollable Body -->
@@ -220,6 +232,10 @@ export default {
       type: Object,
       default: null,
     },
+    isGm: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['close', 'update:token', 'roll-control', 'roll-damage'],
   data() {
@@ -343,11 +359,51 @@ export default {
     onCargoNotesChange(val) {
       this.emitVehicleUpdate({ cargo_notes: val });
     },
+    toggleVisibility() {
+      if (!this.token) return;
+      const nextLayer = this.token.layer === 'gm' ? 'character' : 'gm';
+      this.$emit('update:token', {
+        ...this.token,
+        layer: nextLayer,
+      });
+    },
   },
 };
 </script>
 
 <style scoped>
+.hud-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-hud-visibility {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-hud-visibility:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.btn-hud-visibility.is-hidden {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+}
+
+.btn-hud-visibility.is-hidden:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
 .vehicle-token-hud {
   position: absolute;
   top: 70px;
