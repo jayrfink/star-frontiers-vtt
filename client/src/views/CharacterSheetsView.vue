@@ -2369,15 +2369,15 @@ export default {
 .select-psa option,
 .select-player option {
   background-color: #000000 !important;
-  color: aqua !important;
-  -webkit-text-fill-color: aqua;
+  color: #c0c0c0 !important;
+  -webkit-text-fill-color: #c0c0c0;
   background-image: none !important;
 }
 
 .select-race,
 .select-psa,
 .select-player {
-  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border: 1px solid #30363d !important;
   border-radius: 4px;
   padding: 6px 28px 6px 10px !important;
   padding-right: 28px !important;
@@ -2388,8 +2388,8 @@ export default {
 .select-psa:focus,
 .select-player:focus {
   outline: none;
-  border-color: aqua !important;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+  border-color: #8b949e !important;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 
 .player-badge-wrap {
@@ -2454,7 +2454,7 @@ export default {
 .tactical-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #45acba;
+  color: #c0c0c0;
 }
 
 .encumbrance-stat {
@@ -2786,7 +2786,7 @@ export default {
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
-  color: #45acba;
+  color: #c0c0c0;
   border-radius: 4px;
   padding: 3px 2px;
   color-scheme: dark;
@@ -2815,7 +2815,7 @@ export default {
 .btn-shift {
   background: #000000;
   border: 1px solid #00a8a8;
-  color: aqua;
+  color: #00a8a8;
   font-size: 0.65rem;
   padding: 2px 5px;
   border-radius: 3px;
@@ -2943,7 +2943,7 @@ export default {
 
 .select-official-skill {
   flex: 1;
-  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border: 1px solid #30363d !important;
   border-radius: 4px;
   padding: 6px 24px 6px 8px !important;
   padding-right: 24px !important;
@@ -2952,8 +2952,8 @@ export default {
 
 .select-official-skill:focus {
   outline: none;
-  border-color: aqua !important;
-  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+  border-color: #8b949e !important;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 
 .skill-chance-badge {

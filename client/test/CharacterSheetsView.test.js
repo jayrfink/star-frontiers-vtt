@@ -1813,6 +1813,29 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       // XP / Stamina / SEU values match #cecece
       expect(vueFile).toMatch(/\.xp-values\s*\{[^}]*color:\s*#cecece;/);
     });
+
+    it('styles attributes, tactical values, race/psa/player fields and skill borders with dark theme palette', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      // Skill fields have dark border instead of cyan
+      expect(vueFile).toMatch(/\.select-official-skill\s*\{[^}]*border:\s*1px\s*solid\s*#30363d\s*!important/);
+
+      // Attributes values font color is #c0c0c0
+      expect(vueFile).toMatch(/\.stat-input\s*\{[^}]*color:\s*#c0c0c0;/);
+
+      // Tactical bar (IM, Melee Base Hit, Movement) values font color is #c0c0c0
+      expect(vueFile).toMatch(/\.tactical-value\s*\{[^}]*color:\s*#c0c0c0;/);
+
+      // Species, PSA and Player fields font color is #c0c0c0 with dark border #30363d
+      expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*color:\s*#c0c0c0\s*!important/);
+      expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*border:\s*1px\s*solid\s*#30363d\s*!important/);
+
+      // Left/right attribute shift arrows are darker cyan #00a8a8 matching +Add Skill button
+      expect(vueFile).toMatch(/\.btn-shift\s*\{[^}]*color:\s*#00a8a8;/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#00a8a8\s*!important;/);
+    });
   });
 });
 
