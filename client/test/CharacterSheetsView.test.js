@@ -1791,6 +1791,28 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
       expect(vueFile).toMatch(/<button[^>]*class="[^"]*btn-new-character[^"]*"[^>]*>\s*\+\s*New\s*<\/button>/);
     });
+
+    it('matches skills and experience font colors to inventory items (#cecece) while keeping badges as is', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      // Skills select matches inventory item font color (#cecece)
+      expect(vueFile).toMatch(/\.select-official-skill[^}]*color:\s*#cecece\s*!important/);
+      expect(vueFile).toMatch(/\.select-official-skill[^}]*-webkit-text-fill-color:\s*#cecece/);
+
+      // Inventory items use #cecece
+      expect(vueFile).toMatch(/\.item-name-input\s*\{[^}]*color:\s*#cecece;/);
+
+      // Percentage badge remains #22d3ee
+      expect(vueFile).toMatch(/\.skill-chance-badge\s*\{[^}]*color:\s*#22d3ee;/);
+
+      // Lvl up badge remains #ecfdf5
+      expect(vueFile).toMatch(/\.btn-xp-upgrade\s*\{[^}]*color:\s*#ecfdf5;/);
+
+      // XP / Stamina / SEU values match #cecece
+      expect(vueFile).toMatch(/\.xp-values\s*\{[^}]*color:\s*#cecece;/);
+    });
   });
 });
 

@@ -2557,6 +2557,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 4px;
+  color: #cecece;
 }
 
 .input-max-sta,
@@ -2935,8 +2936,8 @@ export default {
 .select-official-skill,
 .select-official-skill option {
   background-color: #000000 !important;
-  color: aqua !important;
-  -webkit-text-fill-color: aqua;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece;
   background-image: none !important;
 }
 
