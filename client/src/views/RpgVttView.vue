@@ -3297,6 +3297,8 @@ onBeforeUnmount(() => {
 /* Canvas Area */
 .vtt-canvas-wrapper {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   width: 100%;
   height: 100%;
 }
@@ -3359,6 +3361,7 @@ onBeforeUnmount(() => {
 /* Token Sidebar */
 .token-sidebar {
   width: 320px;
+  flex-shrink: 0;
   background: var(--bg-secondary);
   border-left: 1px solid var(--border);
   display: flex;

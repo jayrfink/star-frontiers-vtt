@@ -85,4 +85,33 @@ describe('Token Sidebar / Manager State Persistence & Toggle', () => {
       expect(getUserState(701, 'rpgVtt', { showTokenSidebar: false }).showTokenSidebar).toBe(true);
     });
   });
+
+  describe('Canvas resizing and sidebar flex layout', () => {
+    const rpgCanvasSrc = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/VttCanvas.vue'),
+      'utf8'
+    );
+    const spaceCanvasSrc = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/SpaceVttCanvas.vue'),
+      'utf8'
+    );
+
+    it('ensures VttCanvas calls requestRender in resizeCanvas', () => {
+      expect(rpgCanvasSrc).toMatch(/function resizeCanvas\(\)\s*\{[\s\S]*requestRender\(\);?\s*\}/);
+    });
+
+    it('ensures SpaceVttCanvas calls requestRender in resizeCanvas', () => {
+      expect(spaceCanvasSrc).toMatch(/function resizeCanvas\(\)\s*\{[\s\S]*requestRender\(\);?\s*\}/);
+    });
+
+    it('ensures .vtt-canvas-wrapper has min-width: 0 in both VTT views', () => {
+      expect(rpgViewSrc).toMatch(/\.vtt-canvas-wrapper\s*\{[^}]*min-width:\s*0/);
+      expect(spaceViewSrc).toMatch(/\.vtt-canvas-wrapper\s*\{[^}]*min-width:\s*0/);
+    });
+
+    it('ensures .token-sidebar has flex-shrink: 0 in both VTT views', () => {
+      expect(rpgViewSrc).toMatch(/\.token-sidebar\s*\{[^}]*flex-shrink:\s*0/);
+      expect(spaceViewSrc).toMatch(/\.token-sidebar\s*\{[^}]*flex-shrink:\s*0/);
+    });
+  });
 });

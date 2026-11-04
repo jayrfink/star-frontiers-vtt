@@ -341,6 +341,7 @@ function resizeCanvas() {
   canvasRef.value.height = Math.round(rect.height * dpr);
   canvasRef.value.style.width = `${rect.width}px`;
   canvasRef.value.style.height = `${rect.height}px`;
+  requestRender();
 }
 
 // Animation loop handle & dirty flag
