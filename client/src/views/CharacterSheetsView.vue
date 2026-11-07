@@ -1922,7 +1922,7 @@ export default {
       return this.officialSkills.filter((sk) => sk.psa === category).length;
     },
     isSkillInSheet(skillName) {
-      if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return null;
+      if (!skillName || !this.selectedChar || !Array.isArray(this.selectedChar.skills)) return null;
       return this.selectedChar.skills.find(
         (sk) => sk.name && sk.name.toLowerCase() === skillName.toLowerCase()
       ) || null;
@@ -3192,6 +3192,13 @@ export default {
   color: #8b949e;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.skill-row .item-name-text {
+  cursor: default;
+}
+.skill-row .item-name-text:hover {
+  color: #cecece;
 }
 
 .select-official-skill,
