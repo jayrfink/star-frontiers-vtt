@@ -2508,6 +2508,7 @@ export default {
 }
 
 .ship-name {
+  font-family: 'Orbitron', var(--font-family-header, sans-serif);
   font-weight: 600;
   color: #cecece;
   white-space: nowrap;
@@ -2655,6 +2656,7 @@ export default {
 }
 
 .input-name {
+  font-family: 'Orbitron', var(--font-family-header, sans-serif);
   flex: 1;
   min-width: 180px;
   background: #0d1117;

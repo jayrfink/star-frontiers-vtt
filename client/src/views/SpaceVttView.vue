@@ -5871,6 +5871,7 @@ onBeforeUnmount(() => {
 }
 
 .crew-gcheck-ship-name {
+  font-family: 'Orbitron', var(--font-family-header, sans-serif);
   font-size: 0.8rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -6429,6 +6430,7 @@ onBeforeUnmount(() => {
 }
 
 .slingshot-ship-name {
+  font-family: 'Orbitron', var(--font-family-header, sans-serif);
   font-size: 0.8rem;
   font-weight: 700;
   padding: 2px 8px;

@@ -23,9 +23,28 @@ describe('Sitewide Font Family (D&D Beyond Character Sheet Font - Roboto)', () =
     expect(mainCss).toMatch(/@font-face\s*\{[^}]*font-family:\s*['"]Modesto['"][^}]*src:\s*url\(['"]\/fonts\/Modesto-Bold\.otf['"]\)/);
   });
 
-  it('sets Consolas with fall through to Roboto as font-family on headings in main.css', () => {
-    expect(mainCss).toMatch(/--font-family-header:\s*['"]?Consolas['"]?,\s*['"]?Roboto['"]?/);
+  it('sets Orbitron with fall through to Consolas and Roboto as font-family on headings in main.css', () => {
+    expect(mainCss).toMatch(/--font-family-header:\s*['"]?Orbitron['"]?,\s*['"]?Consolas['"]?,\s*['"]?Roboto['"]?/);
     expect(mainCss).toMatch(/h1,\s*h2,\s*h3,\s*h4,\s*h5,\s*h6[^{]*\{[^}]*font-family:\s*var\(--font-family-header\)/);
+  });
+
+  it('sets Orbitron on Character Names and Ship Names in views', () => {
+    const charViewPath = path.resolve(__dirname, '../src/views/CharacterSheetsView.vue');
+    const shipViewPath = path.resolve(__dirname, '../src/views/ShipSheetsView.vue');
+    const spaceViewPath = path.resolve(__dirname, '../src/views/SpaceVttView.vue');
+
+    const charViewContent = fs.readFileSync(charViewPath, 'utf-8');
+    const shipViewContent = fs.readFileSync(shipViewPath, 'utf-8');
+    const spaceViewContent = fs.readFileSync(spaceViewPath, 'utf-8');
+
+    expect(charViewContent).toMatch(/\.char-name\s*\{[^}]*font-family:\s*['"]Orbitron['"]/);
+    expect(charViewContent).toMatch(/\.input-name\s*\{[^}]*font-family:\s*['"]Orbitron['"]/);
+
+    expect(shipViewContent).toMatch(/\.ship-name\s*\{[^}]*font-family:\s*['"]Orbitron['"]/);
+    expect(shipViewContent).toMatch(/\.input-name\s*\{[^}]*font-family:\s*['"]Orbitron['"]/);
+
+    expect(spaceViewContent).toMatch(/\.crew-gcheck-ship-name\s*\{[^}]*font-family:\s*['"]Orbitron['"]/);
+    expect(spaceViewContent).toMatch(/\.slingshot-ship-name\s*\{[^}]*font-family:\s*['"]Orbitron['"]/);
   });
 
   it('sets Orbitron on SFVTT brand title in NavBar.vue and main.css', () => {
