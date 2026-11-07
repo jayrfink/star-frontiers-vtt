@@ -1836,6 +1836,79 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vueFile).toMatch(/\.btn-shift\s*\{[^}]*color:\s*#00a8a8;/);
       expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#00a8a8\s*!important;/);
     });
+
+    it('renders inventory item name as text, removes Kg input, and retains item attributes/qty', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      // Item name is displayed as text element .item-name-text
+      expect(vueFile).toMatch(/<span[^>]*class="item-name-text"[^>]*>\s*\{\{\s*item\.name\s*\}\}\s*<\/span>/);
+
+      // Item weight Kg wrapper input is removed from inventory row template
+      expect(vueFile).not.toMatch(/class="item-weight-wrap"/);
+      expect(vueFile).not.toMatch(/class="item-weight-input"/);
+
+      // Attributes / capabilities notes input is preserved
+      expect(vueFile).toMatch(/placeholder="Notes \/ Capabilities"/);
+
+      // Quantity input is preserved
+      expect(vueFile).toMatch(/<div class="level-wrap">\s*<label>Qty:<\/label>/);
+
+      // .item-name-text style exists
+      expect(vueFile).toMatch(/\.item-name-text\s*\{[^}]*color:\s*#cecece;/);
+    });
+
+    it('adds custom item with name prompt and allows inline editing on double click', () => {
+      const vm = {
+        selectedChar: { inventory: [] },
+        updateCharacter: vi.fn(),
+        editingItemIndex: null,
+      };
+
+      // Custom item creation prompts for name
+      const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Custom Blaster');
+      CharacterSheetsView.methods.addInventoryItem.call(vm);
+      expect(promptSpy).toHaveBeenCalledWith('Enter item name:', 'Custom Item');
+      expect(vm.selectedChar.inventory.length).toBe(1);
+      expect(vm.selectedChar.inventory[0].name).toBe('Custom Blaster');
+      expect(vm.updateCharacter).toHaveBeenCalled();
+
+      // Inline editing finishEditItemName resets editingItemIndex and updates character
+      vm.editingItemIndex = 0;
+      CharacterSheetsView.methods.finishEditItemName.call(vm);
+      expect(vm.editingItemIndex).toBeNull();
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(2);
+
+      promptSpy.mockRestore();
+    });
+
+    it('applies scrollbars with site theme to inventory and skills lists at 310px max height', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      // Classes on templates
+      expect(vueFile).toMatch(/<ul[^>]*class="[^"]*inventory-items-scroll[^"]*"/);
+      expect(vueFile).toMatch(/<ul[^>]*class="[^"]*skills-items-scroll[^"]*"/);
+
+      // CSS properties
+      expect(vueFile).toMatch(/\.inventory-items-scroll,\s*\.skills-items-scroll\s*\{[^}]*max-height:\s*310px;/);
+      expect(vueFile).toMatch(/\.inventory-items-scroll,\s*\.skills-items-scroll\s*\{[^}]*overflow-y:\s*auto;/);
+      expect(vueFile).toMatch(/\.inventory-items-scroll,\s*\.skills-items-scroll\s*\{[^}]*scrollbar-color:\s*rgba\(0,\s*255,\s*255,\s*0\.3\)\s*#0d1117;/);
+    });
+
+    it('standardizes vertical spacing between cards, species traits banner, and notes section', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      // Species traits banner does not have extra margin-bottom
+      expect(vueFile).not.toMatch(/\.racial-panel\.species-traits-banner\s*\{[^}]*margin-bottom:\s*20px;/);
+
+      // Notes section does not have extra margin-top: 1.5rem
+      expect(vueFile).toMatch(/\.notes-section\s*\{[^}]*margin-top:\s*0;/);
+    });
   });
 });
 

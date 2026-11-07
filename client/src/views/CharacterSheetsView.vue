@@ -477,7 +477,7 @@
             <div v-if="!selectedChar.skills || selectedChar.skills.length === 0" class="empty-list">
               No skills added.
             </div>
-            <ul v-else class="items-list">
+            <ul v-else class="items-list skills-items-scroll">
               <li
                 v-for="(skill, index) in selectedChar.skills"
                 :key="skill.id || index"
@@ -566,7 +566,7 @@
             <div v-if="!filteredInventory || filteredInventory.length === 0" class="empty-list">
               {{ searchInventoryQuery ? 'No matching items in inventory.' : 'No equipment in inventory. Search available equipment or add a custom item!' }}
             </div>
-            <ul v-else class="items-list">
+            <ul v-else class="items-list inventory-items-scroll">
               <li
                 v-for="(item, index) in filteredInventory"
                 :key="item.id || index"
@@ -585,13 +585,24 @@
                   @click.stop
                 >⋮⋮</span>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-                  <input
-                    type="text"
-                    v-model="item.name"
-                    @change="updateCharacter"
-                    placeholder="Item Name"
-                    class="item-name-input"
-                  />
+                  <template v-if="editingItemIndex === index">
+                    <input
+                      ref="itemNameInput"
+                      type="text"
+                      v-model="item.name"
+                      @blur="finishEditItemName"
+                      @keydown.enter.prevent="finishEditItemName"
+                      placeholder="Item Name"
+                      class="item-name-input editing"
+                    />
+                  </template>
+                  <template v-else>
+                    <span
+                      class="item-name-text"
+                      @dblclick="startEditItemName(item, index)"
+                      title="Double-click to rename item"
+                    >{{ item.name }}</span>
+                  </template>
                   <input 
                     type="text"
                     v-model="item.notes"
@@ -599,17 +610,6 @@
                     placeholder="Notes / Capabilities"
                     class="item-name-input"
                     style="font-size: 0.8rem; color: #8b949e; background: transparent; border: 1px dashed #30363d;"
-                  />
-                </div>
-                <div class="item-weight-wrap">
-                  <label>Kg:</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    v-model.number="item.weight"
-                    @change="updateCharacter"
-                    min="0"
-                    class="item-weight-input"
                   />
                 </div>
                 <div class="level-wrap">
@@ -942,6 +942,7 @@ export default {
       dragOverSkillIndex: null,
       draggedInventoryIndex: null,
       dragOverInventoryIndex: null,
+      editingItemIndex: null,
       draggedNotePanelIndex: null,
       dragOverNotePanelIndex: null,
       showCreateModal: false,
@@ -1769,7 +1770,30 @@ export default {
     addInventoryItem() {
       if (!this.selectedChar) return;
       if (!this.selectedChar.inventory) this.selectedChar.inventory = [];
-      this.selectedChar.inventory.push({ name: 'New Item', quantity: 1, weight: 1.0, notes: '' });
+      let name = 'Custom Item';
+      if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+        const input = window.prompt('Enter item name:', 'Custom Item');
+        if (input === null) return;
+        if (input.trim()) name = input.trim();
+      }
+      this.selectedChar.inventory.push({ name, quantity: 1, weight: 1.0, notes: '' });
+      this.updateCharacter();
+    },
+    startEditItemName(item, index) {
+      this.editingItemIndex = index;
+      this.$nextTick(() => {
+        const input = this.$refs.itemNameInput;
+        if (Array.isArray(input) && input.length > 0) {
+          input[0].focus();
+          input[0].select();
+        } else if (input && input.focus) {
+          input.focus();
+          input.select();
+        }
+      });
+    },
+    finishEditItemName() {
+      this.editingItemIndex = null;
       this.updateCharacter();
     },
     removeInventoryItem(itemOrIndex) {
@@ -2834,7 +2858,6 @@ export default {
 
 /* Species Traits Banner (styled after Ship Sheets Standard Flip Capable banner) */
 .racial-panel.species-traits-banner {
-  margin-bottom: 20px;
   padding: 10px 14px;
   border-radius: 6px;
   background: rgba(56, 189, 248, 0.05);
@@ -2904,6 +2927,55 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.inventory-items-scroll,
+.skills-items-scroll {
+  max-height: 310px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 255, 0.3) #0d1117;
+}
+
+.inventory-items-scroll::-webkit-scrollbar,
+.skills-items-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inventory-items-scroll::-webkit-scrollbar-track,
+.skills-items-scroll::-webkit-scrollbar-track {
+  background: #0d1117;
+  border-radius: 3px;
+}
+
+.inventory-items-scroll::-webkit-scrollbar-thumb,
+.skills-items-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.25);
+  border-radius: 3px;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+}
+
+.inventory-items-scroll::-webkit-scrollbar-thumb:hover,
+.skills-items-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
+  border-color: #00ffff;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+}
+
+.item-name-text {
+  color: #cecece;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: text;
+  padding: 2px 0;
+  line-height: 1.2;
+}
+
+.item-name-text:hover {
+  color: #00ffff;
 }
 
 .item-row {
@@ -3574,7 +3646,7 @@ export default {
 }
 
 .notes-section {
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 
 .notes-section .section-header {

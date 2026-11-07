@@ -2187,6 +2187,12 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(vueFile).toMatch(/<button[^>]*class="[^"]*btn-new-ship[^"]*"[^>]*>\s*\+\s*New\s*<\/button>/);
     });
+
+    it('standardizes vertical spacing between cards, flip-burn banner, and notes section', () => {
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).not.toMatch(/\.flip-burn-ship-banner\s*\{[^}]*margin-top:\s*14px;/);
+      expect(vueFile).toMatch(/\.notes-section\s*\{[^}]*margin-top:\s*0;/);
+    });
   });
 });
 

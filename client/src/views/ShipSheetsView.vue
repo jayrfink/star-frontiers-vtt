@@ -3096,7 +3096,6 @@ export default {
 
 /* Flip & Burn Banner */
 .flip-burn-ship-banner {
-  margin-top: 14px;
   padding: 10px 14px;
   border-radius: 6px;
   background: rgba(22, 27, 34, 0.8);
@@ -3923,7 +3922,7 @@ export default {
 }
 
 .notes-section {
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 
 .notes-section .section-header {
