@@ -472,14 +472,23 @@
           <section class="card list-card">
             <div class="list-header">
               <h4>Skills & Experience</h4>
-              <button class="btn-secondary" @click="addSkill">+ Add Skill</button>
+              <button class="btn-secondary" @click="showSkillsModal = true">+ Add Skill</button>
             </div>
-            <div v-if="!selectedChar.skills || selectedChar.skills.length === 0" class="empty-list">
-              No skills added.
+            <div class="skills-search-wrap" style="margin-bottom: 12px;">
+              <input 
+                type="text" 
+                v-model="searchSkillsQuery" 
+                placeholder="Search Skills..." 
+                class="item-name-input" 
+                style="width: 100%; box-sizing: border-box;"
+              />
+            </div>
+            <div v-if="!filteredSkills || filteredSkills.length === 0" class="empty-list">
+              {{ searchSkillsQuery ? 'No matching skills.' : 'No skills added. Click + Add Skill to add from catalog!' }}
             </div>
             <ul v-else class="items-list skills-items-scroll">
               <li
-                v-for="(skill, index) in selectedChar.skills"
+                v-for="(skill, index) in filteredSkills"
                 :key="skill.id || index"
                 class="item-row skill-row"
                 :class="{ 'drag-over': dragOverSkillIndex === index, 'dragging': draggedSkillIndex === index }"
@@ -495,12 +504,9 @@
                   title="Drag to reorder skill"
                   @click.stop
                 >⋮⋮</span>
-                <div class="skill-main-select">
-                  <select v-model="skill.name" @change="updateCharacter" class="select-official-skill">
-                    <option v-for="offSk in officialSkills" :key="offSk.name" :value="offSk.name">
-                      {{ offSk.name }} ({{ offSk.psa }})
-                    </option>
-                  </select>
+                <div style="flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span class="item-name-text">{{ skill.name }}</span>
+                  <span class="skill-psa-tag">[{{ getSkillPSA(skill.name) }}]</span>
                   <span class="skill-chance-badge" title="Calculated Success Chance">
                     {{ getSkillSuccessChance(skill) }}%
                   </span>
@@ -519,7 +525,7 @@
                     v-if="skill.level < 6"
                     class="btn-xp-upgrade"
                     :title="`Upgrade to Level ${skill.level + 1}`"
-                    @click="upgradeSkillLevel(index)"
+                    @click="upgradeSkillLevel(skill)"
                   >
                     +Lvl ({{ getXPCost(skill.name, skill.level + 1, skill.psa) }} XP)
                   </button>
@@ -529,18 +535,18 @@
                     type="button"
                     class="btn-reorder btn-move-up"
                     title="Move Skill Up"
-                    :disabled="index === 0"
-                    @click.stop="moveSkill(index, -1)"
+                    :disabled="isSkillMoveDisabled(skill, -1)"
+                    @click.stop="moveSkill(skill, -1)"
                   >▲</button>
                   <button
                     type="button"
                     class="btn-reorder btn-move-down"
                     title="Move Skill Down"
-                    :disabled="index === (selectedChar.skills ? selectedChar.skills.length - 1 : 0)"
-                    @click.stop="moveSkill(index, 1)"
+                    :disabled="isSkillMoveDisabled(skill, 1)"
+                    @click.stop="moveSkill(skill, 1)"
                   >▼</button>
                 </div>
-                <button class="btn-remove" title="Remove Skill" @click="removeSkill(index)">✕</button>
+                <button class="btn-remove" title="Remove Skill" @click="removeSkill(skill)">✕</button>
               </li>
             </ul>
           </section>
@@ -956,6 +962,8 @@ export default {
       equipmentCategories: ['All', 'Weapon', 'Ammunition', 'Defense', 'Toolkit', 'Medical', 'Gear', 'Power'],
       equipmentSearchQuery: '',
       searchInventoryQuery: '',
+      searchSkillsQuery: '',
+      showSkillsModal: false,
       recentlyAddedMap: {},
       registeredUsers: [],
       newCharForm: {
@@ -1021,6 +1029,17 @@ export default {
         (item.name && item.name.toLowerCase().includes(q)) ||
         (item.notes && item.notes.toLowerCase().includes(q))
       );
+    },
+    filteredSkills() {
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return [];
+      const q = (this.searchSkillsQuery || '').trim().toLowerCase();
+      if (!q) return this.selectedChar.skills;
+      return this.selectedChar.skills.filter((sk) => {
+        const nameMatch = sk.name && sk.name.toLowerCase().includes(q);
+        const psa = this.getSkillPSA(sk.name);
+        const psaMatch = psa && psa.toLowerCase().includes(q);
+        return nameMatch || psaMatch;
+      });
     },
     staminaPercentage() {
       if (!this.selectedChar || !this.selectedChar.max_stamina) return 0;
@@ -1609,12 +1628,39 @@ export default {
       this.selectedChar.skills.push({ name: defaultSkill, level: 1 });
       this.updateCharacter();
     },
-    removeSkill(index) {
-      this.selectedChar.skills.splice(index, 1);
+    getSkillPSA(skillName) {
+      if (!skillName) return 'Custom';
+      const skills = this.officialSkills || OFFICIAL_SKILLS;
+      const found = skills.find((s) => s.name.toLowerCase() === skillName.toLowerCase());
+      return found ? found.psa : 'Custom';
+    },
+    removeSkill(skillOrIndex) {
+      if (!this.selectedChar || !this.selectedChar.skills) return;
+      if (typeof skillOrIndex === 'number') {
+        this.selectedChar.skills.splice(skillOrIndex, 1);
+      } else {
+        const idx = this.selectedChar.skills.indexOf(skillOrIndex);
+        if (idx !== -1) {
+          this.selectedChar.skills.splice(idx, 1);
+        }
+      }
       this.updateCharacter();
     },
-    moveSkill(index, direction) {
+    isSkillMoveDisabled(skillOrIndex, direction) {
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return true;
+      const idx = typeof skillOrIndex === 'number'
+        ? skillOrIndex
+        : this.selectedChar.skills.indexOf(skillOrIndex);
+      if (idx === -1) return true;
+      const targetIndex = idx + direction;
+      return targetIndex < 0 || targetIndex >= this.selectedChar.skills.length;
+    },
+    moveSkill(skillOrIndex, direction) {
       if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return;
+      const index = typeof skillOrIndex === 'number'
+        ? skillOrIndex
+        : this.selectedChar.skills.indexOf(skillOrIndex);
+      if (index === -1) return;
       const targetIndex = index + direction;
       if (targetIndex < 0 || targetIndex >= this.selectedChar.skills.length) return;
       const [moved] = this.selectedChar.skills.splice(index, 1);
@@ -1646,26 +1692,35 @@ export default {
         this.dragOverSkillIndex = null;
       }
     },
-    onSkillDrop(event, targetIndex) {
+    onSkillDrop(event, targetFilteredIndex) {
       event.preventDefault();
-      const fromIndex = this.draggedSkillIndex;
+      const fromFilteredIndex = this.draggedSkillIndex;
       this.draggedSkillIndex = null;
       this.dragOverSkillIndex = null;
-      if (fromIndex === null || fromIndex === undefined || fromIndex === targetIndex) return;
+      if (fromFilteredIndex === null || fromFilteredIndex === undefined || fromFilteredIndex === targetFilteredIndex) return;
       if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return;
-      if (fromIndex < 0 || fromIndex >= this.selectedChar.skills.length) return;
-      if (targetIndex < 0 || targetIndex >= this.selectedChar.skills.length) return;
 
-      const [moved] = this.selectedChar.skills.splice(fromIndex, 1);
-      this.selectedChar.skills.splice(targetIndex, 0, moved);
+      const list = this.filteredSkills || this.selectedChar.skills;
+      const sourceSkill = list[fromFilteredIndex];
+      const targetSkill = list[targetFilteredIndex];
+      if (!sourceSkill || !targetSkill) return;
+
+      const actualFromIndex = this.selectedChar.skills.indexOf(sourceSkill);
+      const actualTargetIndex = this.selectedChar.skills.indexOf(targetSkill);
+      if (actualFromIndex === -1 || actualTargetIndex === -1) return;
+
+      const [moved] = this.selectedChar.skills.splice(actualFromIndex, 1);
+      this.selectedChar.skills.splice(actualTargetIndex, 0, moved);
       this.updateCharacter();
     },
     onSkillDragEnd() {
       this.draggedSkillIndex = null;
       this.dragOverSkillIndex = null;
     },
-    upgradeSkillLevel(index) {
-      const sk = this.selectedChar?.skills?.[index];
+    upgradeSkillLevel(skillOrIndex) {
+      const sk = typeof skillOrIndex === 'number'
+        ? this.selectedChar?.skills?.[skillOrIndex]
+        : skillOrIndex;
       if (sk && sk.level < 6) {
         const cost = this.getXPCost(sk.name, sk.level + 1, sk.psa);
         const currentXP = Number(this.selectedChar.current_xp || 0);
@@ -3011,6 +3066,13 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.skill-psa-tag {
+  font-size: 0.75rem;
+  color: #8b949e;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .select-official-skill,
