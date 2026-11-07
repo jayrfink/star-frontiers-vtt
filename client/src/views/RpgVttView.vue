@@ -1033,7 +1033,7 @@ async function rollInitiative() {
 
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
-      { sides: 10, theme: 'custom-init-player', themeColor: '#70e6b3', qty: 1 },
+      { sides: 10, theme: 'custom-init-player', themeColor: '#97f23d', qty: 1 },
       { sides: 10, theme: 'custom-init-opp', themeColor: '#07221c', qty: 1 }
     ]);
     const initSummary = calculateInitiativeRoll(results);
@@ -2604,10 +2604,10 @@ onBeforeUnmount(() => {
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .init-player-die {
-  background: #70e6b3;
-  border: 2px solid #1d705d;
-  color: #1d705d;
-  box-shadow: 0 0 12px rgba(112, 230, 179, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  background: #97f23d;
+  border: 2px solid #07221c;
+  color: #07221c;
+  box-shadow: 0 0 12px rgba(151, 242, 61, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 .init-player-die .init-val {
   text-shadow: 0 0 10px rgba(181, 238, 255, 0.7);
@@ -2648,13 +2648,13 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 .init-pill-player {
-  background: #70e6b3;
-  color: #1d705d;
-  border: 1px solid #1d705d;
+  background: #97f23d;
+  color: #07221c;
+  border: 1px solid #07221c;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(112, 230, 179, 0.35);
+  box-shadow: 0 0 6px rgba(151, 242, 61, 0.35);
 }
 .init-pill-opp {
   background: #07221c;

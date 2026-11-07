@@ -40,12 +40,10 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #70e6b3, border/text #1d705d
-      expect(spaceContent).toMatch(/#70e6b3/);
-      expect(spaceContent).toMatch(/#1d705d/);
-      // Opposition: body #07221c, numbers #97f23d
-      expect(spaceContent).toMatch(/#07221c/);
+      // Player: body #97f23d, border/text #07221c
       expect(spaceContent).toMatch(/#97f23d/);
+      expect(spaceContent).toMatch(/#07221c/);
+      // Opposition: body #07221c, numbers #97f23d
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -85,12 +83,10 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #70e6b3, border/text #1d705d
-      expect(rpgContent).toMatch(/#70e6b3/);
-      expect(rpgContent).toMatch(/#1d705d/);
-      // Opposition: body #07221c, numbers #97f23d
-      expect(rpgContent).toMatch(/#07221c/);
+      // Player: body #97f23d, border/text #07221c
       expect(rpgContent).toMatch(/#97f23d/);
+      expect(rpgContent).toMatch(/#07221c/);
+      // Opposition: body #07221c, numbers #97f23d
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -116,6 +112,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with inverted theme colors (#97f23d player, #07221c opp)', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#97f23d', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#07221c', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with #70e6b3 and #07221c themeColors', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#70e6b3', value: 8 },

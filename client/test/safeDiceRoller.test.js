@@ -38,7 +38,7 @@ describe('safeDiceRoller with executeQueuedDiceRoll', () => {
 
     it('generates player and opposition dice for initiative notation', () => {
       const notation = [
-        { sides: 10, theme: 'custom-init-player', themeColor: '#70e6b3', qty: 1 },
+        { sides: 10, theme: 'custom-init-player', themeColor: '#97f23d', qty: 1 },
         { sides: 10, theme: 'custom-init-opp', themeColor: '#07221c', qty: 1 }
       ];
       const results = generateSyntheticRoll(notation);
