@@ -2434,6 +2434,7 @@ export default {
 
 .ship-list li.active .ship-name {
   color: #a8ffea;
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 .ship-list li.active .ship-sub {
@@ -2566,6 +2567,7 @@ export default {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 /* Header */
@@ -3105,6 +3107,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 .flip-burn-ship-banner.capable {

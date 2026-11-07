@@ -2381,6 +2381,7 @@ export default {
 
 .character-list li.active .char-name {
   color: #a8ffea;
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 .character-list li.active .char-sub {
@@ -2513,6 +2514,7 @@ export default {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 /* Header */
@@ -2524,6 +2526,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 .header-main {

@@ -1801,6 +1801,15 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vueFile).toMatch(/\.btn-new-character:hover\s*\{[^}]*box-shadow:\s*0\s+0\s+18px\s+rgba\(6,\s*182,\s*212,\s*0\.8\);/);
     });
 
+    it('applies selected title glow to card borders while preserving border color', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*border:\s*1px solid #30363d;[^}]*box-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.4\);/s);
+      expect(vueFile).toMatch(/\.sheet-header\s*\{[^}]*border:\s*1px solid #30363d;[^}]*box-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.4\);/s);
+      expect(vueFile).toMatch(/\.character-list\s+li\.active\s+\.char-name\s*\{[^}]*text-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.4\);/s);
+    });
+
     it('matches skills and experience font colors to inventory items (#cecece) while keeping badges as is', () => {
       const fs = require('fs');
       const path = require('path');
