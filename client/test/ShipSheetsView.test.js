@@ -2208,11 +2208,11 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
 
     it('applies greenish-gray styling to lumbering and snap flip banner and badge while keeping color levels', () => {
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
-      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*border-color:\s*rgba\(105,\s*138,\s*120,\s*0\.35\);/);
-      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*background:\s*rgba\(105,\s*138,\s*120,\s*0\.05\);/);
-      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*background:\s*rgba\(105,\s*138,\s*120,\s*0\.15\);/);
-      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*color:\s*#9ec4af;/);
-      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*border:\s*1px solid rgba\(105,\s*138,\s*120,\s*0\.3\);/);
+      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*border-color:\s*rgba\(86,\s*159,\s*116,\s*0\.35\);/);
+      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*background:\s*rgba\(86,\s*159,\s*116,\s*0\.05\);/);
+      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*background:\s*rgba\(86,\s*159,\s*116,\s*0\.15\);/);
+      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*color:\s*#8ed1a9;/);
+      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*border:\s*1px solid rgba\(86,\s*159,\s*116,\s*0\.3\);/);
     });
   });
 });

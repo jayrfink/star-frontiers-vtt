@@ -3116,9 +3116,9 @@ export default {
 }
 
 .flip-burn-ship-banner.multi-turn {
-  border-color: rgba(105, 138, 120, 0.35);
-  background: rgba(105, 138, 120, 0.05);
-  box-shadow: 0 0 8px rgba(105, 138, 120, 0.4);
+  border-color: rgba(86, 159, 116, 0.35);
+  background: rgba(86, 159, 116, 0.05);
+  box-shadow: 0 0 8px rgba(86, 159, 116, 0.4);
 }
 
 .fb-badge {
@@ -3140,9 +3140,9 @@ export default {
 }
 
 .fb-badge.multi-turn {
-  background: rgba(105, 138, 120, 0.15);
-  color: #9ec4af;
-  border: 1px solid rgba(105, 138, 120, 0.3);
+  background: rgba(86, 159, 116, 0.15);
+  color: #8ed1a9;
+  border: 1px solid rgba(86, 159, 116, 0.3);
 }
 
 .fb-badge.incapable {
