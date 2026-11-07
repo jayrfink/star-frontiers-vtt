@@ -1793,6 +1793,14 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vueFile).toMatch(/<button[^>]*class="[^"]*btn-new-character[^"]*"[^>]*>\s*\+\s*New\s*<\/button>/);
     });
 
+    it('applies vibrant cyan glow to .btn-new-character', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.btn-new-character\s*\{[^}]*box-shadow:\s*0\s+0\s+12px\s+rgba\(6,\s*182,\s*212,\s*0\.5\);/);
+      expect(vueFile).toMatch(/\.btn-new-character:hover\s*\{[^}]*box-shadow:\s*0\s+0\s+18px\s+rgba\(6,\s*182,\s*212,\s*0\.8\);/);
+    });
+
     it('matches skills and experience font colors to inventory items (#cecece) while keeping badges as is', () => {
       const fs = require('fs');
       const path = require('path');

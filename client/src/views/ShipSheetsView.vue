@@ -3598,7 +3598,7 @@ export default {
   border-radius: 4px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(127, 255, 212, 0.25);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
   letter-spacing: 0.3px;
   transition: all 0.15s ease-in-out;
 }
@@ -3608,7 +3608,7 @@ export default {
   border-color: #a8ffea !important;
   color: #a8ffea !important;
   -webkit-text-fill-color: #a8ffea;
-  box-shadow: 0 0 16px rgba(127, 255, 212, 0.5);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.8);
 }
 .btn-new-ship:active {
   transform: translateY(1px);
