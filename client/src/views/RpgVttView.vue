@@ -2825,12 +2825,13 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(22, 27, 34, 0.92);
-  backdrop-filter: blur(8px);
+  background: rgba(5, 18, 24, 0.68);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 8px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 184, 166, 0.2);
 }
 
 .vtt-toolbar button {
@@ -2839,23 +2840,36 @@ onBeforeUnmount(() => {
   gap: 6px;
   padding: 8px 12px;
   font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
   border-radius: 4px;
   text-align: left;
+  background: rgba(13, 59, 68, 0.25);
+  border: 1px solid rgba(45, 212, 191, 0.15);
+  color: #99f6e4;
+  transition: all 0.15s ease-in-out;
+}
+
+.vtt-toolbar button:hover {
+  background: rgba(13, 59, 68, 0.55);
+  border-color: rgba(45, 212, 191, 0.5);
+  color: #ccfbf1;
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.3);
 }
 
 .vtt-toolbar > button.active {
-  background: #082d33;
+  background: rgba(8, 45, 51, 0.85);
   color: #2dd4bf;
   font-weight: 600;
   border: 1px solid #14b8a6;
-  box-shadow: 0 0 8px rgba(20, 184, 166, 0.4);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.5);
 }
 
 .vtt-toolbar > button.active:hover {
-  background: #0d3b44;
+  background: rgba(13, 59, 68, 0.95);
   color: #5eead4;
   border-color: #2dd4bf;
-  box-shadow: 0 0 12px rgba(45, 212, 191, 0.6);
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.7);
 }
 
 .tool-icon {
@@ -2883,19 +2897,21 @@ onBeforeUnmount(() => {
 
 .toolbar-divider {
   height: 1px;
-  background: var(--border);
+  background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.45), transparent);
   margin: 4px 0;
 }
 
 .btn-clear-ping {
   color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .btn-clear-ping:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
   color: #fca5a5;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
 }
 
 .btn-clear-all-pings {
