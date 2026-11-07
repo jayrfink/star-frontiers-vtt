@@ -3206,6 +3206,7 @@ export default {
 
 .skill-row .item-name-text {
   cursor: default;
+  font-size: 0.855rem;
 }
 .skill-row .item-name-text:hover {
   color: #cecece;
