@@ -11,8 +11,8 @@ describe('safeDiceRoller with executeQueuedDiceRoll', () => {
   describe('generateSyntheticRoll', () => {
     it('generates 2 d10 dice for percentile notation with valid formatting', () => {
       const notation = [
-        { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 }
+        { sides: 10, theme: 'custom-tens', themeColor: '#082d33', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#111c25', qty: 1 }
       ];
       const results = generateSyntheticRoll(notation);
       expect(results.length).toBe(2);

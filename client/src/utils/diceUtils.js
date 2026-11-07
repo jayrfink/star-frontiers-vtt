@@ -28,8 +28,8 @@ export function calculateDamageRoll(results) {
 
 /**
  * Processes settled die objects from @3d-dice/dice-box for percentile (d%) rolls.
- * The tens die is the lighter colored die (#77d19e, group 0).
- * The ones die is the darker colored die (#182734, legacy #22384a, group 1).
+ * The tens die uses the GM Map Manager button background (#082d33, numbers #00ffff, legacy #77d19e, group 0).
+ * The ones die is 50% darker (#111c25, legacy #182734/#22384a, numbers #77d19e, group 1).
  * On a d10 face showing 0 (raw value 0 or 10), the digit value is 0.
  * In Star Frontiers, rolling 00 (tens 0 and ones 0) is 100.
  * All other rolls are tensDigit * 10 + onesDigit.
@@ -47,10 +47,10 @@ export function calculatePercentileRoll(results) {
     return { total: 0, tens: 0, ones: 0, valid: false };
   }
 
-  // Find tens die (lighter colored die #77d19e, theme 'custom-tens', or group 0)
-  const tensDie = flatResults.find(d => d?.theme === 'custom-tens' || d?.themeColor === '#77d19e' || d?.groupId === 0) || flatResults[0];
-  // Find ones die (darker colored die #182734, legacy #22384a, theme 'custom-ones', or group 1)
-  const onesDie = flatResults.find(d => d !== tensDie && (d?.theme === 'custom-ones' || d?.themeColor === '#182734' || d?.themeColor === '#22384a' || d?.groupId === 1)) ||
+  // Find tens die (GM Map manager color #082d33, legacy #77d19e, theme 'custom-tens', or group 0)
+  const tensDie = flatResults.find(d => d?.theme === 'custom-tens' || d?.themeColor === '#082d33' || d?.themeColor === '#77d19e' || d?.groupId === 0) || flatResults[0];
+  // Find ones die (50% darker die #111c25, #0c141a, legacy #182734/#22384a, theme 'custom-ones', or group 1)
+  const onesDie = flatResults.find(d => d !== tensDie && (d?.theme === 'custom-ones' || d?.themeColor === '#111c25' || d?.themeColor === '#0c141a' || d?.themeColor === '#182734' || d?.themeColor === '#22384a' || d?.groupId === 1)) ||
     flatResults.find(d => d !== tensDie) ||
     flatResults[1];
 

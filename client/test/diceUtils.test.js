@@ -66,8 +66,8 @@ describe('calculatePercentileRoll', () => {
 
   it('calculates standard two-digit roll', () => {
     const raw = [
-      { value: 4, themeColor: '#77d19e' },
-      { value: 7, themeColor: '#182734' }
+      { value: 4, themeColor: '#082d33' },
+      { value: 7, themeColor: '#111c25' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -80,8 +80,8 @@ describe('calculatePercentileRoll', () => {
 
   it('calculates single-digit roll when tens die is 0 or 10', () => {
     const raw = [
-      { value: 10, themeColor: '#77d19e' },
-      { value: 6, themeColor: '#182734' }
+      { value: 10, themeColor: '#082d33' },
+      { value: 6, themeColor: '#111c25' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -94,8 +94,8 @@ describe('calculatePercentileRoll', () => {
 
   it('calculates round tens when ones die is 0 or 10', () => {
     const raw = [
-      { value: 8, themeColor: '#77d19e' },
-      { value: 0, themeColor: '#182734' }
+      { value: 8, themeColor: '#082d33' },
+      { value: 0, themeColor: '#111c25' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -108,8 +108,8 @@ describe('calculatePercentileRoll', () => {
 
   it('calculates 100 for double zeros (00)', () => {
     const raw = [
-      { value: 0, themeColor: '#77d19e' },
-      { value: 10, themeColor: '#182734' }
+      { value: 0, themeColor: '#082d33' },
+      { value: 10, themeColor: '#111c25' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -121,10 +121,10 @@ describe('calculatePercentileRoll', () => {
   });
 
   it('identifies tens and ones regardless of array order using themeColor', () => {
-    // Ones die first (#182734), Tens die second (#77d19e)
+    // Ones die first (#111c25), Tens die second (#082d33)
     const raw = [
-      { value: 3, themeColor: '#182734' },
-      { value: 5, themeColor: '#77d19e' }
+      { value: 3, themeColor: '#111c25' },
+      { value: 5, themeColor: '#082d33' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -134,12 +134,23 @@ describe('calculatePercentileRoll', () => {
       valid: true
     });
 
-    // Also supports legacy ones color #22384a
-    const legacyRaw = [
+    // Also supports legacy ones colors #182734 and #22384a with tens #77d19e
+    const legacyRaw1 = [
+      { value: 3, themeColor: '#182734' },
+      { value: 5, themeColor: '#77d19e' }
+    ];
+    expect(calculatePercentileRoll(legacyRaw1)).toEqual({
+      total: 53,
+      tens: 5,
+      ones: 3,
+      valid: true
+    });
+
+    const legacyRaw2 = [
       { value: 3, themeColor: '#22384a' },
       { value: 5, themeColor: '#77d19e' }
     ];
-    expect(calculatePercentileRoll(legacyRaw)).toEqual({
+    expect(calculatePercentileRoll(legacyRaw2)).toEqual({
       total: 53,
       tens: 5,
       ones: 3,

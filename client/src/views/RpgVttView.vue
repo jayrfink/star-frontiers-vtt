@@ -1073,8 +1073,8 @@ async function rollPercentile() {
 
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
-      { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
-      { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 }  // Ones (darker colored die)
+      { sides: 10, theme: 'custom-tens', themeColor: '#082d33', qty: 1 }, // Tens (GM Map manager color)
+      { sides: 10, theme: 'custom-ones', themeColor: '#111c25', qty: 1 }  // Ones (50% darker die)
     ]);
     const rollSummary = calculatePercentileRoll(results);
     if (rollSummary.valid) {
@@ -1982,8 +1982,8 @@ async function onAdversaryRollAttack({ action, token }) {
 
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
-      { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-      { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 }
+      { sides: 10, theme: 'custom-tens', themeColor: '#082d33', qty: 1 },
+      { sides: 10, theme: 'custom-ones', themeColor: '#111c25', qty: 1 }
     ]);
     const rollSummary = calculatePercentileRoll(results);
     if (rollSummary.valid) {
@@ -3256,7 +3256,7 @@ onBeforeUnmount(() => {
 }
 
 .percentile-hud-banner .hud-tens-val {
-  color: #77d19e;
+  color: #00ffff;
   font-weight: 700;
 }
 

@@ -128,21 +128,21 @@ async function main() {
       .toBuffer();
   }
 
-  const tensDiffuseBuffer = await makeDiffuse(0x77, 0xd1, 0x9e); // #77d19e
-  const onesDiffuseBuffer = await makeDiffuse(0x22, 0x38, 0x4a); // #22384a
+  const tensDiffuseBuffer = await makeDiffuse(0x00, 0xff, 0xff); // #00ffff (matches GM Map manager font)
+  const onesDiffuseBuffer = await makeDiffuse(0x77, 0xd1, 0x9e); // #77d19e (numbers left as is)
 
   // --- 5. Write to both custom-tens and custom-ones ---
   const tensDir = path.join(root, 'public/assets/dice-box/themes/custom-tens');
   fs.writeFileSync(path.join(tensDir, 'diffuse-light.png'), tensDiffuseBuffer);
   fs.writeFileSync(path.join(tensDir, 'diffuse-dark.png'), tensDiffuseBuffer);
   fs.writeFileSync(path.join(tensDir, 'normal.png'), normBuffer);
-  console.log('Saved updated textures to custom-tens (#77d19e)');
+  console.log('Saved updated textures to custom-tens (#00ffff)');
 
   const onesDir = path.join(root, 'public/assets/dice-box/themes/custom-ones');
   fs.writeFileSync(path.join(onesDir, 'diffuse-light.png'), onesDiffuseBuffer);
   fs.writeFileSync(path.join(onesDir, 'diffuse-dark.png'), onesDiffuseBuffer);
   fs.writeFileSync(path.join(onesDir, 'normal.png'), normBuffer);
-  console.log('Saved updated textures to custom-ones (#22384a)');
+  console.log('Saved updated textures to custom-ones (#77d19e)');
 
   // --- 6. Write custom-dmg theme (#f29249 numbers) ---
   const dmgDiffuseBuffer = await makeDiffuse(0xf2, 0x92, 0x49); // #f29249
