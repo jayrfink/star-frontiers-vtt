@@ -228,10 +228,10 @@ describe('calculateInitiativeRoll', () => {
   });
 
   it('identifies dice by themeColor when theme name is not present', () => {
-    // Reverse order input with new green site motif initiative colors (#97f23d and #07221c)
+    // Reverse order input with new desaturated green initiative colors (#97e847 and #09201b)
     const raw = [
-      { value: 6, themeColor: '#07221c' },
-      { value: 9, themeColor: '#97f23d' },
+      { value: 6, themeColor: '#09201b' },
+      { value: 9, themeColor: '#97e847' },
     ];
     const result = calculateInitiativeRoll(raw);
     expect(result).toEqual({

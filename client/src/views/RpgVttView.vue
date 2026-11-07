@@ -1033,8 +1033,8 @@ async function rollInitiative() {
 
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
-      { sides: 10, theme: 'custom-init-player', themeColor: '#97f23d', qty: 1 },
-      { sides: 10, theme: 'custom-init-opp', themeColor: '#07221c', qty: 1 }
+      { sides: 10, theme: 'custom-init-player', themeColor: '#97e847', qty: 1 },
+      { sides: 10, theme: 'custom-init-opp', themeColor: '#09201b', qty: 1 }
     ]);
     const initSummary = calculateInitiativeRoll(results);
     if (initSummary.valid) {
@@ -2604,22 +2604,22 @@ onBeforeUnmount(() => {
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .init-player-die {
-  background: #97f23d;
-  border: 2px solid #07221c;
-  color: #07221c;
-  box-shadow: 0 0 12px rgba(151, 242, 61, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  background: #97e847;
+  border: 2px solid #09201b;
+  color: #09201b;
+  box-shadow: 0 0 12px rgba(151, 232, 71, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 .init-player-die .init-val {
   text-shadow: 0 0 10px rgba(181, 238, 255, 0.7);
 }
 .init-opp-die {
-  background: #07221c;
-  border: 2px solid #97f23d;
-  color: #97f23d;
-  box-shadow: 0 0 12px rgba(151, 242, 61, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  background: #09201b;
+  border: 2px solid #97e847;
+  color: #97e847;
+  box-shadow: 0 0 12px rgba(151, 232, 71, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
 }
 .init-opp-die .init-val {
-  text-shadow: 0 0 10px rgba(151, 242, 61, 0.7);
+  text-shadow: 0 0 10px rgba(151, 232, 71, 0.7);
 }
 .init-label {
   font-size: 9px;
@@ -2648,22 +2648,22 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 .init-pill-player {
-  background: #97f23d;
-  color: #07221c;
-  border: 1px solid #07221c;
+  background: #97e847;
+  color: #09201b;
+  border: 1px solid #09201b;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(151, 242, 61, 0.35);
+  box-shadow: 0 0 6px rgba(151, 232, 71, 0.35);
 }
 .init-pill-opp {
-  background: #07221c;
-  color: #97f23d;
-  border: 1px solid #97f23d;
+  background: #09201b;
+  color: #97e847;
+  border: 1px solid #97e847;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(151, 242, 61, 0.25);
+  box-shadow: 0 0 6px rgba(151, 232, 71, 0.25);
 }
 
 .modal-error-banner {
@@ -4099,10 +4099,10 @@ onBeforeUnmount(() => {
 }
 
 .roll-log-item.initiative .roll-item-badge {
-  background: #1d705d;
-  color: #70e6b3;
-  border-color: rgba(112, 230, 179, 0.5);
-  box-shadow: 0 0 6px rgba(112, 230, 179, 0.35);
+  background: #09201b;
+  color: #97e847;
+  border-color: rgba(151, 232, 71, 0.5);
+  box-shadow: 0 0 6px rgba(151, 232, 71, 0.35);
 }
 
 .roll-item-result {

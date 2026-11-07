@@ -77,8 +77,8 @@ export function calculatePercentileRoll(results) {
 
 /**
  * Processes settled die objects from @3d-dice/dice-box for combat initiative.
- * Die #1 (Players): theme 'custom-init-player', themeColor '#97f23d' (legacy: '#70e6b3', '#12415a', '#0b222e').
- * Die #2 (Opposition): theme 'custom-init-opp', themeColor '#07221c' (legacy: '#124a3d', '#1d705d', '#6f0e39', '#400a22').
+ * Die #1 (Players): theme 'custom-init-player', themeColor '#97e847' (legacy: '#97f23d', '#70e6b3', '#12415a', '#0b222e').
+ * Die #2 (Opposition): theme 'custom-init-opp', themeColor '#09201b' (legacy: '#07221c', '#124a3d', '#1d705d', '#6f0e39', '#400a22').
  * On a d10 face showing 0 (raw value 0 or 10), the roll value is 10 (range 1-10).
  *
  * @param {Array} results
@@ -94,9 +94,10 @@ export function calculateInitiativeRoll(results) {
     return { playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false };
   }
 
-  // Find player die: theme 'custom-init-player', themeColor '#97f23d' / '#70e6b3' / '#12415a' / '#0b222e' / '#17304a', or groupId 0
+  // Find player die: theme 'custom-init-player', themeColor '#97e847' / '#97f23d' / '#70e6b3' / '#12415a' / '#0b222e' / '#17304a', or groupId 0
   const playerDie = flat.find(d =>
     d?.theme === 'custom-init-player' ||
+    d?.themeColor?.toLowerCase() === '#97e847' ||
     d?.themeColor?.toLowerCase() === '#97f23d' ||
     d?.themeColor?.toLowerCase() === '#70e6b3' ||
     d?.themeColor?.toLowerCase() === '#12415a' ||
@@ -105,10 +106,11 @@ export function calculateInitiativeRoll(results) {
     d?.groupId === 0
   ) || flat[0];
 
-  // Find opposition die: theme 'custom-init-opp', themeColor '#07221c' / '#124a3d' / '#1d705d' / '#6f0e39' / '#400a22', or groupId 1
+  // Find opposition die: theme 'custom-init-opp', themeColor '#09201b' / '#07221c' / '#124a3d' / '#1d705d' / '#6f0e39' / '#400a22', or groupId 1
   const oppDie = flat.find(d =>
     d !== playerDie && (
       d?.theme === 'custom-init-opp' ||
+      d?.themeColor?.toLowerCase() === '#09201b' ||
       d?.themeColor?.toLowerCase() === '#07221c' ||
       d?.themeColor?.toLowerCase() === '#124a3d' ||
       d?.themeColor?.toLowerCase() === '#1d705d' ||

@@ -40,10 +40,10 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #97f23d, border/text #07221c
-      expect(spaceContent).toMatch(/#97f23d/);
-      expect(spaceContent).toMatch(/#07221c/);
-      // Opposition: body #07221c, numbers #97f23d
+      // Player: body #97e847, border/text #09201b
+      expect(spaceContent).toMatch(/#97e847/);
+      expect(spaceContent).toMatch(/#09201b/);
+      // Opposition: body #09201b, numbers #97e847
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -83,10 +83,10 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #97f23d, border/text #07221c
-      expect(rpgContent).toMatch(/#97f23d/);
-      expect(rpgContent).toMatch(/#07221c/);
-      // Opposition: body #07221c, numbers #97f23d
+      // Player: body #97e847, border/text #09201b
+      expect(rpgContent).toMatch(/#97e847/);
+      expect(rpgContent).toMatch(/#09201b/);
+      // Opposition: body #09201b, numbers #97e847
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -112,6 +112,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with desaturated inverted theme colors (#97e847 player, #09201b opp)', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#97e847', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#09201b', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with inverted theme colors (#97f23d player, #07221c opp)', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#97f23d', value: 8 },
