@@ -2758,7 +2758,27 @@ export default {
 }
 
 .input-type-select,
-.input-type-select option,
+.input-type-select option {
+  background-color: #000000 !important;
+  color: #c0c0c0 !important;
+  -webkit-text-fill-color: #c0c0c0;
+  background-image: none !important;
+}
+
+.input-type-select {
+  border: 1px solid #30363d !important;
+  border-radius: 4px;
+  padding: 6px 28px 6px 10px !important;
+  padding-right: 28px !important;
+  font-size: 0.9rem;
+}
+
+.input-type-select:focus {
+  outline: none;
+  border-color: #8b949e !important;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
+}
+
 .select-player,
 .select-player option {
   background-color: #000000 !important;
@@ -2767,7 +2787,6 @@ export default {
   background-image: none !important;
 }
 
-.input-type-select,
 .select-player {
   border: 1px solid #30363d !important;
   border-radius: 4px;
@@ -2776,7 +2795,6 @@ export default {
   font-size: 0.9rem;
 }
 
-.input-type-select:focus,
 .select-player:focus {
   outline: none;
   border-color: #8b949e !important;

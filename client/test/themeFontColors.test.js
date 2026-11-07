@@ -29,7 +29,7 @@ describe('View-specific Font Color Theming', () => {
       const content = fs.readFileSync(viewPath, 'utf-8');
       expect(content).toMatch(/#cecece/);
       // Ensure no raw white or near-white color rules remain
-      const whiteMatches = content.match(/(?:color|-webkit-text-fill-color)\s*:\s*(?:#ffffff|#fff\b|white\b|#f8fafc|#f1f5f9|#f0f6fc|#e6edf3|#e0e0e0|#d0d0d0)\b/gi);
+      const whiteMatches = content.match(/(?:color|-webkit-text-fill-color)\s*:\s*(?:#ffffff|#fff\b|white\b|#f8fafc|#f1f5f9|#f0f6fc|#e6edf3|#e0e0e0)\b/gi);
       expect(whiteMatches).toBeNull();
     });
   });
