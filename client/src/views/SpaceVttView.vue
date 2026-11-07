@@ -3854,6 +3854,7 @@ onBeforeUnmount(() => {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   height: 50px;
+  box-shadow: 0 2px 10px rgba(6, 182, 212, 0.2);
 }
 
 .header-left {
@@ -3867,6 +3868,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .map-meta {

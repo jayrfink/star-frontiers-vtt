@@ -134,7 +134,7 @@ async function handleLogout() {
   font-weight: 800;
   letter-spacing: 1.5px;
   color: #cecece;
-  text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.9), 0 0 16px rgba(6, 182, 212, 0.7), 0 0 24px rgba(6, 182, 212, 0.5);
   white-space: nowrap;
   flex-shrink: 0;
 }

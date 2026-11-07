@@ -2206,13 +2206,19 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(vueFile).toMatch(/\.notes-section\s*\{[^}]*margin-top:\s*0;/);
     });
 
-    it('applies greenish-gray styling to lumbering and snap flip banner and badge while keeping color levels', () => {
+    it('applies saturated green styling to lumbering and snap flip banner and badge matching capable blue levels', () => {
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
-      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*border-color:\s*rgba\(86,\s*159,\s*116,\s*0\.35\);/);
-      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*background:\s*rgba\(86,\s*159,\s*116,\s*0\.05\);/);
-      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*background:\s*rgba\(86,\s*159,\s*116,\s*0\.15\);/);
-      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*color:\s*#8ed1a9;/);
-      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*border:\s*1px solid rgba\(86,\s*159,\s*116,\s*0\.3\);/);
+      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*border-color:\s*rgba\(52,\s*211,\s*153,\s*0\.35\);/);
+      expect(vueFile).toMatch(/\.flip-burn-ship-banner\.multi-turn\s*\{[^}]*background:\s*rgba\(52,\s*211,\s*153,\s*0\.05\);/);
+      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*background:\s*rgba\(52,\s*211,\s*153,\s*0\.15\);/);
+      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*color:\s*#34d399;/);
+      expect(vueFile).toMatch(/\.fb-badge\.multi-turn\s*\{[^}]*border:\s*1px solid rgba\(52,\s*211,\s*153,\s*0\.3\);/);
+    });
+
+    it('applies backlight glow to the navigation panel sidebar and header title', () => {
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*box-shadow:\s*2px\s+0\s+12px\s+rgba\(6,\s*182,\s*212,\s*0\.25\);/);
+      expect(vueFile).toMatch(/\.sidebar-header\s+h3\s*\{[^}]*text-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.5\);/);
     });
   });
 });

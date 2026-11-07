@@ -50,4 +50,14 @@ describe('Muted Steel-Cyan Theme Migration (#3a859c -> #45acba)', () => {
       expect(content).toMatch(/#45acba/i);
     });
   });
+
+  it('ensures VTT map title headers have backlight glow text-shadow', () => {
+    const rpgPath = path.resolve(__dirname, '../src/views/RpgVttView.vue');
+    const spacePath = path.resolve(__dirname, '../src/views/SpaceVttView.vue');
+    const rpgContent = fs.readFileSync(rpgPath, 'utf-8');
+    const spaceContent = fs.readFileSync(spacePath, 'utf-8');
+
+    expect(rpgContent).toMatch(/\.map-title\s*\{[^}]*text-shadow:\s*0\s+0\s+10px\s+rgba\(6,\s*182,\s*212,\s*0\.6\),\s*0\s+0\s+20px\s+rgba\(6,\s*182,\s*212,\s*0\.35\);/);
+    expect(spaceContent).toMatch(/\.map-title\s*\{[^}]*text-shadow:\s*0\s+0\s+10px\s+rgba\(6,\s*182,\s*212,\s*0\.6\),\s*0\s+0\s+20px\s+rgba\(6,\s*182,\s*212,\s*0\.35\);/);
+  });
 });

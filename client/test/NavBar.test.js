@@ -152,4 +152,11 @@ describe('NavBar.vue', () => {
     exposed.openPasswordModal();
     expect(exposed.showPasswordModal.value).toBe(true);
   });
+
+  it('renders pronounced sci-fi backlight glow on SFVTT brand', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/components/NavBar.vue'), 'utf-8');
+    expect(vueFile).toMatch(/\.navbar-brand\s*\{[^}]*text-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.9\),\s*0\s+0\s+16px\s+rgba\(6,\s*182,\s*212,\s*0\.7\),\s*0\s+0\s+24px\s+rgba\(6,\s*182,\s*212,\s*0\.5\);/);
+  });
 });

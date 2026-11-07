@@ -2312,6 +2312,9 @@ export default {
   border-right: 1px solid #30363d;
   display: flex;
   flex-direction: column;
+  box-shadow: 2px 0 12px rgba(6, 182, 212, 0.25);
+  position: relative;
+  z-index: 10;
 }
 
 .sidebar-header {
@@ -2326,6 +2329,7 @@ export default {
   margin: 0;
   font-size: 1.21rem;
   color: #45acba;
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
 }
 
 .sidebar-loading,
@@ -2373,6 +2377,7 @@ export default {
 .character-list li.active {
   background: #05282e;
   border-left: 4px solid aquamarine;
+  box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.25);
 }
 
 .character-list li.active:hover {
