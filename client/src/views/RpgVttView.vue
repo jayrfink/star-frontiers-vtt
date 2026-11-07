@@ -2551,7 +2551,7 @@ onBeforeUnmount(() => {
   top: 70px;
   left: 50%;
   transform: translateX(-50%);
-  background: #303030;
+  background: #121212;
   border: 2px solid #b5eeff;
   box-shadow: 0 0 20px rgba(181, 238, 255, 0.45), 0 8px 32px rgba(0, 0, 0, 0.8);
   border-radius: 8px;

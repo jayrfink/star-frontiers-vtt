@@ -45,7 +45,7 @@ describe('Initiative Dice & HUD System', () => {
       expect(spaceContent).toMatch(/aquamarine/);
       expect(spaceContent).toMatch(/#202020/);
       expect(spaceContent).toMatch(/#33b8bd/);
-      expect(spaceContent).toMatch(/background:\s*#303030/);
+      expect(spaceContent).toMatch(/background:\s*#121212/);
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -90,7 +90,7 @@ describe('Initiative Dice & HUD System', () => {
       expect(rpgContent).toMatch(/aquamarine/);
       expect(rpgContent).toMatch(/#202020/);
       expect(rpgContent).toMatch(/#33b8bd/);
-      expect(rpgContent).toMatch(/background:\s*#303030/);
+      expect(rpgContent).toMatch(/background:\s*#121212/);
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
