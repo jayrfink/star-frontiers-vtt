@@ -66,6 +66,12 @@ Refine the layout, spacing, and inventory / skills presentation across the Chara
 - Remove `margin-top: 1.5rem;` from `.notes-section`.
 - All top-level cards and banners in `ShipSheetsView.vue` now maintain consistent 20px spacing.
 
+### 2.5 Character Header Tactical Sub-Stats Integration
+- Move tactical sub-stats (`IM`, `Melee Base Hit`, `Movement`, and `Encumbrance`) inside `<header class="sheet-header">` at the bottom of the header card.
+- `.tactical-bar` uses the header card's background (`background: transparent;`), removing the standalone card container, border, and the extra 20px flex gap.
+- No horizontal rule or border above IM; items are cleanly positioned at the bottom of the card with `margin-top: 14px;`.
+
+
 ---
 
 ## 3. Verification & Testing

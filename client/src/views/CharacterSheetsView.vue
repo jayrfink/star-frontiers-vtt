@@ -145,37 +145,37 @@
               </div>
             </div>
           </div>
-        </header>
 
-        <!-- Derived Tactical Sub-Stats Bar -->
-        <section class="tactical-bar card">
-          <div class="tactical-stat">
-            <span class="tactical-label">IM</span>
-            <span class="tactical-value">+{{ derivedIM }}</span>
-          </div>
-          <div class="tactical-stat">
-            <span class="tactical-label">Melee Base Hit</span>
-            <span class="tactical-value">{{ derivedMeleeHit }}%</span>
-          </div>
-          <div class="tactical-stat">
-            <span class="tactical-label">Movement (Walk/Run/Glide)</span>
-            <span class="tactical-value">
-              {{ movementRates.walk }} / {{ movementRates.run }} / {{ movementRates.glide }} m/s
-            </span>
-          </div>
-          <div class="tactical-stat encumbrance-stat">
-            <span class="tactical-label">Encumbrance ({{ totalInventoryWeight }} / {{ unencumberedMaxWeight }} kg)</span>
-            <div class="encumbrance-bar-bg">
-              <div
-                class="encumbrance-bar-fill"
-                :style="{ width: encumbrancePct + '%', backgroundColor: encumbranceColor }"
-              ></div>
+          <!-- Derived Tactical Sub-Stats Bar -->
+          <div class="tactical-bar">
+            <div class="tactical-stat">
+              <span class="tactical-label">IM</span>
+              <span class="tactical-value">+{{ derivedIM }}</span>
             </div>
-            <span class="encumbrance-sub" :class="{ 'over-limit': isOverloaded }">
-              Max Carry: {{ maxCarryWeight }} kg
-            </span>
+            <div class="tactical-stat">
+              <span class="tactical-label">Melee Base Hit</span>
+              <span class="tactical-value">{{ derivedMeleeHit }}%</span>
+            </div>
+            <div class="tactical-stat">
+              <span class="tactical-label">Movement (Walk/Run/Glide)</span>
+              <span class="tactical-value">
+                {{ movementRates.walk }} / {{ movementRates.run }} / {{ movementRates.glide }} m/s
+              </span>
+            </div>
+            <div class="tactical-stat encumbrance-stat">
+              <span class="tactical-label">Encumbrance ({{ totalInventoryWeight }} / {{ unencumberedMaxWeight }} kg)</span>
+              <div class="encumbrance-bar-bg">
+                <div
+                  class="encumbrance-bar-fill"
+                  :style="{ width: encumbrancePct + '%', backgroundColor: encumbranceColor }"
+                ></div>
+              </div>
+              <span class="encumbrance-sub" :class="{ 'over-limit': isOverloaded }">
+                Max Carry: {{ maxCarryWeight }} kg
+              </span>
+            </div>
           </div>
-        </section>
+        </header>
 
         <!-- Middle Section: Primary Attributes (Left) and Compact Trackers (Right) -->
         <div class="middle-section-grid">
@@ -2329,6 +2329,9 @@ export default {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .header-main {
@@ -2459,7 +2462,8 @@ export default {
   grid-template-columns: repeat(3, 1fr) 2fr;
   gap: 12px;
   align-items: center;
-  background: #0d1117;
+  background: transparent;
+  padding: 0;
 }
 
 .tactical-stat {

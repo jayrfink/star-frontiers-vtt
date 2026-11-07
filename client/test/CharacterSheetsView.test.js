@@ -1909,6 +1909,21 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       // Notes section does not have extra margin-top: 1.5rem
       expect(vueFile).toMatch(/\.notes-section\s*\{[^}]*margin-top:\s*0;/);
     });
+
+    it('positions tactical bar (IM, Melee Base Hit, Movement, Encumbrance) at bottom of sheet-header with transparent background', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      // Tactical bar is nested inside header.sheet-header before </header>
+      expect(vueFile).toMatch(/<header class="sheet-header">[\s\S]*<div class="tactical-bar">[\s\S]*<\/header>/);
+
+      // Standalone section.tactical-bar.card no longer exists
+      expect(vueFile).not.toMatch(/<section class="tactical-bar card">/);
+
+      // Uses transparent background to adopt header card background color
+      expect(vueFile).toMatch(/\.tactical-bar\s*\{[^}]*background:\s*transparent;/);
+    });
   });
 });
 
