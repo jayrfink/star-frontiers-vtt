@@ -874,6 +874,80 @@
       </div>
     </div>
 
+    <!-- Skills Catalog Modal -->
+    <div v-if="showSkillsModal" class="modal-backdrop" @click.self="showSkillsModal = false">
+      <div class="modal-card equipment-modal">
+        <div class="equipment-modal-header">
+          <h3>Available Skills Catalog</h3>
+          <button class="btn-close-modal" title="Close" @click="showSkillsModal = false">✕</button>
+        </div>
+        <p class="equipment-modal-desc">
+          Browse official Star Frontiers skills. Click <strong>+ Add</strong> to add a skill to your character sheet.
+        </p>
+
+        <!-- Category Filter Tabs -->
+        <div class="equipment-category-tabs" role="tablist" aria-label="Skill Categories">
+          <button
+            v-for="cat in skillCategories"
+            :key="cat"
+            type="button"
+            role="tab"
+            class="cat-tab"
+            :class="{ active: (activeSkillCategory || 'All') === cat }"
+            :aria-selected="(activeSkillCategory || 'All') === cat"
+            @click="activeSkillCategory = cat"
+          >
+            {{ cat }} <span class="cat-count">({{ getSkillCategoryCount(cat) }})</span>
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="equipment-search-wrap">
+          <input
+            type="text"
+            v-model="skillsCatalogSearchQuery"
+            placeholder="Search skills by name, PSA, or base attribute..."
+            class="equipment-search-input"
+          />
+        </div>
+
+        <!-- Skills List -->
+        <div class="equipment-catalog-list">
+          <div v-if="filteredSkillsCatalog.length === 0" class="empty-list">
+            No skills found matching your filter criteria.
+          </div>
+          <div v-for="skill in filteredSkillsCatalog" :key="skill.name" class="equipment-card">
+            <div class="eq-header">
+              <span class="eq-name">{{ skill.name }}</span>
+              <button
+                class="btn-secondary eq-add-btn"
+                :class="{
+                  'btn-added': recentlyAddedSkillMap[skill.name] || isSkillInSheet(skill.name)
+                }"
+                :disabled="!!isSkillInSheet(skill.name)"
+                @click="addSkillFromCatalog(skill)"
+              >
+                {{
+                  recentlyAddedSkillMap[skill.name]
+                    ? '✓ Added'
+                    : isSkillInSheet(skill.name)
+                    ? `In Sheet (Lvl ${isSkillInSheet(skill.name).level})`
+                    : '+ Add'
+                }}
+              </button>
+            </div>
+            <div class="eq-details">
+              <span class="eq-tag">{{ skill.psa }}</span>
+              <span class="eq-cost">Base: {{ skill.baseChance }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" @click="showSkillsModal = false">Done</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Image Browser Modal -->
     <ImageBrowserModal
       v-model="showImageBrowser"
@@ -964,6 +1038,10 @@ export default {
       searchInventoryQuery: '',
       searchSkillsQuery: '',
       showSkillsModal: false,
+      activeSkillCategory: 'All',
+      skillsCatalogSearchQuery: '',
+      recentlyAddedSkillMap: {},
+      skillCategories: ['All', 'Military', 'Technological', 'Biosocial', 'Spaceship'],
       recentlyAddedMap: {},
       registeredUsers: [],
       newCharForm: {
@@ -1040,6 +1118,22 @@ export default {
         const psaMatch = psa && psa.toLowerCase().includes(q);
         return nameMatch || psaMatch;
       });
+    },
+    filteredSkillsCatalog() {
+      let list = this.officialSkills || [];
+      const cat = this.activeSkillCategory || 'All';
+      if (cat !== 'All') {
+        list = list.filter((sk) => sk.psa === cat);
+      }
+      const q = (this.skillsCatalogSearchQuery || '').trim().toLowerCase();
+      if (q) {
+        list = list.filter((sk) =>
+          sk.name.toLowerCase().includes(q) ||
+          (sk.psa && sk.psa.toLowerCase().includes(q)) ||
+          (sk.baseChance && sk.baseChance.toLowerCase().includes(q))
+        );
+      }
+      return list;
     },
     staminaPercentage() {
       if (!this.selectedChar || !this.selectedChar.max_stamina) return 0;
@@ -1820,6 +1914,31 @@ export default {
         const copy = { ...this.recentlyAddedMap };
         delete copy[item.name];
         this.recentlyAddedMap = copy;
+      }, 1500);
+    },
+    getSkillCategoryCount(category) {
+      if (!this.officialSkills) return 0;
+      if (!category || category === 'All') return this.officialSkills.length;
+      return this.officialSkills.filter((sk) => sk.psa === category).length;
+    },
+    isSkillInSheet(skillName) {
+      if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return null;
+      return this.selectedChar.skills.find(
+        (sk) => sk.name && sk.name.toLowerCase() === skillName.toLowerCase()
+      ) || null;
+    },
+    addSkillFromCatalog(offSkill) {
+      if (!this.selectedChar) return;
+      if (!Array.isArray(this.selectedChar.skills)) this.selectedChar.skills = [];
+      const existing = this.isSkillInSheet(offSkill.name);
+      if (existing) {
+        return;
+      }
+      this.selectedChar.skills.push({ name: offSkill.name, level: 1 });
+      this.updateCharacter();
+      this.recentlyAddedSkillMap = { ...this.recentlyAddedSkillMap, [offSkill.name]: true };
+      setTimeout(() => {
+        this.recentlyAddedSkillMap = { ...this.recentlyAddedSkillMap, [offSkill.name]: false };
       }, 1500);
     },
     addInventoryItem() {
@@ -3510,7 +3629,8 @@ export default {
   opacity: 0.8;
 }
 
-.modal-search {
+.modal-search,
+.equipment-search-input {
   margin-bottom: 14px;
   padding: 8px 12px;
   background-color: #000000 !important;
@@ -3522,13 +3642,15 @@ export default {
   box-sizing: border-box;
 }
 
-.modal-search:focus {
+.modal-search:focus,
+.equipment-search-input:focus {
   outline: none;
   border-color: aqua !important;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
-.equipment-list {
+.equipment-list,
+.equipment-catalog-list {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
