@@ -2731,13 +2731,21 @@ export default {
   font-family: 'Orbitron', var(--font-family-header, sans-serif);
   flex: 1;
   min-width: 180px;
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: transparent;
+  border: 1px solid transparent;
   color: #cecece;
   font-size: 1.4rem;
   font-weight: 700;
   padding: 8px 12px;
   border-radius: 4px;
+  text-shadow: 0 0 8px rgba(6, 150, 230, 0.9), 0 0 16px rgba(6, 150, 230, 0.7), 0 0 24px rgba(6, 150, 230, 0.5);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.input-name:focus {
+  outline: none;
+  background: rgba(13, 17, 23, 0.4);
+  border-color: rgba(6, 150, 230, 0.4);
 }
 
 .type-wrap,
@@ -2750,47 +2758,29 @@ export default {
 }
 
 .input-type-select,
-.input-type-select option {
-  background-color: #000000 !important;
-  color: aqua !important;
-  -webkit-text-fill-color: aqua;
-  background-image: none !important;
-}
-
-.input-type-select {
-  border: 1px solid rgba(0, 255, 255, 0.4) !important;
-  border-radius: 4px;
-  padding: 6px 28px 6px 10px !important;
-  padding-right: 28px !important;
-  font-size: 0.9rem;
-}
-
-.input-type-select:focus {
-  outline: none;
-  border-color: aqua !important;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
-}
-
+.input-type-select option,
 .select-player,
 .select-player option {
   background-color: #000000 !important;
-  color: aqua !important;
-  -webkit-text-fill-color: aqua;
+  color: #c0c0c0 !important;
+  -webkit-text-fill-color: #c0c0c0;
   background-image: none !important;
 }
 
+.input-type-select,
 .select-player {
-  border: 1px solid rgba(0, 255, 255, 0.4) !important;
+  border: 1px solid #30363d !important;
   border-radius: 4px;
   padding: 6px 28px 6px 10px !important;
   padding-right: 28px !important;
   font-size: 0.9rem;
 }
 
+.input-type-select:focus,
 .select-player:focus {
   outline: none;
-  border-color: aqua !important;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+  border-color: #8b949e !important;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 
 .player-badge-wrap {
@@ -3154,7 +3144,7 @@ export default {
   text-align: center;
   background: #161b22;
   border: 1px solid #30363d;
-  color: #45acba;
+  color: #d0d0d0;
   border-radius: 4px;
   padding: 4px;
   margin-top: 4px;

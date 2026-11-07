@@ -2238,6 +2238,26 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*border:\s*1px\s+solid\s+aquamarine/);
       expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#a8ffea/);
     });
+
+    it('blends ship sheet title text box into card background and adds 20% bluer SFVTT glow', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.input-name\s*\{[^}]*background:\s*transparent;/);
+      expect(vueFile).toMatch(/\.input-name\s*\{[^}]*border:\s*1px\s+solid\s+transparent;/);
+      expect(vueFile).toMatch(/\.input-name\s*\{[^}]*text-shadow:[^}]*rgba\(6,\s*150,\s*230,\s*0\.9\)/);
+    });
+
+    it('matches Class Preset and Player fields color to Character Species/Player fields (#c0c0c0) and ADF/MR values to #d0d0d0', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.input-type-select[^}]*color:\s*#c0c0c0\s*!important/);
+      expect(vueFile).toMatch(/\.input-type-select[^}]*border:\s*1px\s+solid\s+#30363d\s*!important/);
+      expect(vueFile).toMatch(/\.select-player[^}]*color:\s*#c0c0c0\s*!important/);
+      expect(vueFile).toMatch(/\.select-player[^}]*border:\s*1px\s+solid\s+#30363d\s*!important/);
+      expect(vueFile).toMatch(/\.stat-input\s*\{[^}]*color:\s*#d0d0d0;/);
+    });
   });
 
   describe('ShipSheetsView - Collapsible Sliding Navigation Panel', () => {
