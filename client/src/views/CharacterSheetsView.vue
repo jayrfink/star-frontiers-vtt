@@ -504,9 +504,11 @@
                   title="Drag to reorder skill"
                   @click.stop
                 >⋮⋮</span>
-                <div style="flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <div class="skill-name-col">
                   <span class="item-name-text">{{ skill.name }}</span>
                   <span class="skill-psa-tag">[{{ getSkillPSA(skill.name) }}]</span>
+                </div>
+                <div class="skill-chance-col">
                   <span class="skill-chance-badge" title="Calculated Success Chance">
                     {{ getSkillSuccessChance(skill) }}%
                   </span>
@@ -3159,7 +3161,7 @@ export default {
 .item-name-text {
   color: #cecece;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.855rem;
   cursor: pointer;
   user-select: text;
   padding: 2px 0;
@@ -3197,6 +3199,27 @@ export default {
   gap: 6px;
 }
 
+.skill-name-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.skill-chance-col {
+  width: 52px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.skill-row .level-wrap {
+  min-width: 145px;
+  flex-shrink: 0;
+}
+
 .skill-psa-tag {
   font-size: 0.75rem;
   color: #8b949e;
@@ -3206,7 +3229,6 @@ export default {
 
 .skill-row .item-name-text {
   cursor: default;
-  font-size: 0.855rem;
 }
 .skill-row .item-name-text:hover {
   color: #cecece;
