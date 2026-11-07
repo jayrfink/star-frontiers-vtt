@@ -472,7 +472,7 @@
           <section class="card list-card">
             <div class="list-header">
               <h4>Skills & Experience</h4>
-              <button class="btn-secondary" @click="showSkillsModal = true">+ Add Skill</button>
+              <button class="btn-secondary" @click="showSkillsModal = true">+ Skill</button>
             </div>
             <div class="skills-search-wrap" style="margin-bottom: 12px;">
               <input 
@@ -484,7 +484,7 @@
               />
             </div>
             <div v-if="!filteredSkills || filteredSkills.length === 0" class="empty-list">
-              {{ searchSkillsQuery ? 'No matching skills.' : 'No skills added. Click + Add Skill to add from catalog!' }}
+              {{ searchSkillsQuery ? 'No matching skills.' : 'No skills added. Click + Skill to add from catalog!' }}
             </div>
             <ul v-else class="items-list skills-items-scroll">
               <li
@@ -556,7 +556,7 @@
             <div class="list-header">
               <h4>Inventory & Mass</h4>
               <div class="list-header-actions">
-                <button class="btn-secondary" @click="showEquipmentModal = true">+ Add Equipment</button>
+                <button class="btn-secondary" @click="showEquipmentModal = true">+ Equipment</button>
                 <button class="btn-secondary" @click="addInventoryItem">+ Custom Item</button>
               </div>
             </div>
@@ -1112,10 +1112,13 @@ export default {
       if (!this.selectedChar || !Array.isArray(this.selectedChar.skills)) return [];
       const q = (this.searchSkillsQuery || '').trim().toLowerCase();
       if (!q) return this.selectedChar.skills;
+      const skills = this.officialSkills || OFFICIAL_SKILLS;
       return this.selectedChar.skills.filter((sk) => {
         const nameMatch = sk.name && sk.name.toLowerCase().includes(q);
-        const psa = this.getSkillPSA(sk.name);
-        const psaMatch = psa && psa.toLowerCase().includes(q);
+        const shortPsa = this.getSkillPSA(sk.name);
+        const found = skills.find((s) => s.name.toLowerCase() === (sk.name || '').toLowerCase());
+        const fullPsa = found ? found.psa : 'Custom';
+        const psaMatch = (shortPsa && shortPsa.toLowerCase().includes(q)) || (fullPsa && fullPsa.toLowerCase().includes(q));
         return nameMatch || psaMatch;
       });
     },
@@ -1724,9 +1727,16 @@ export default {
     },
     getSkillPSA(skillName) {
       if (!skillName) return 'Custom';
-      const skills = this.officialSkills || OFFICIAL_SKILLS;
+      const skills = this?.officialSkills || OFFICIAL_SKILLS;
       const found = skills.find((s) => s.name.toLowerCase() === skillName.toLowerCase());
-      return found ? found.psa : 'Custom';
+      const rawPSA = found ? found.psa : 'Custom';
+      const map = {
+        Military: 'Mil',
+        Biosocial: 'Bio',
+        Technological: 'Tech',
+        Spaceship: 'Space',
+      };
+      return map[rawPSA] || rawPSA;
     },
     removeSkill(skillOrIndex) {
       if (!this.selectedChar || !this.selectedChar.skills) return;

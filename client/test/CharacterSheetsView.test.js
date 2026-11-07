@@ -1937,7 +1937,14 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
   });
 
   describe('Skills Card Inventory Formatting & Catalog Modal', () => {
-    it('renders skill name as text element (.item-name-text) and does not render <select class="select-official-skill">', async () => {
+    it('renders skill name as text element (.item-name-text) and maps PSA categories to abbreviations', async () => {
+      // Test getSkillPSA mapping directly
+      const vmMethod = CharacterSheetsView.methods.getSkillPSA;
+      expect(vmMethod('Beam Weapons')).toBe('Mil');
+      expect(vmMethod('Medical')).toBe('Bio');
+      expect(vmMethod('Technician')).toBe('Tech');
+      expect(vmMethod('Piloting')).toBe('Space');
+
       setActivePinia(createPinia());
       const origFetch = global.fetch;
       global.fetch = vi.fn().mockImplementation((url) => {
@@ -1982,10 +1989,10 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
         expect(secondSkillName.exists()).toBe(true);
         expect(secondSkillName.text()).toBe('Technician');
 
-        // PSA category tag is rendered
+        // PSA category tag is rendered with abbreviation (e.g., Mil, Tech, Bio, Space)
         const firstPsaTag = skillRows[0].find('.skill-psa-tag');
         expect(firstPsaTag.exists()).toBe(true);
-        expect(firstPsaTag.text()).toContain('Military');
+        expect(firstPsaTag.text()).toContain('Mil');
 
         // <select class="select-official-skill"> must NOT be rendered
         expect(wrapper.find('.select-official-skill').exists()).toBe(false);
@@ -2082,7 +2089,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       }
     });
 
-    it('opens the Available Skills Catalog modal when + Add Skill is clicked (showSkillsModal = true)', async () => {
+    it('opens the Available Skills Catalog modal when + Skill is clicked (showSkillsModal = true)', async () => {
       setActivePinia(createPinia());
       const origFetch = global.fetch;
       global.fetch = vi.fn().mockImplementation((url) => {
@@ -2115,7 +2122,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
         expect(wrapper.vm.showSkillsModal).toBe(false);
 
-        // Find the "+ Add Skill" button in Skills card header
+        // Find the "+ Skill" button in Skills card header
         const listCards = wrapper.findAll('.list-card');
         const skillsCard = listCards.find((card) => {
           const h4 = card.find('h4');
@@ -2125,7 +2132,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
         const addSkillBtn = skillsCard.find('.list-header button');
         expect(addSkillBtn.exists()).toBe(true);
-        expect(addSkillBtn.text()).toContain('+ Add Skill');
+        expect(addSkillBtn.text()).toContain('+ Skill');
 
         await addSkillBtn.trigger('click');
         expect(wrapper.vm.showSkillsModal).toBe(true);
