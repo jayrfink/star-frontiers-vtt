@@ -139,8 +139,8 @@ async function main() {
   fs.writeFileSync(path.join(playerDir, 'normal.png'), normBuffer);
   console.log('Generated custom-init-player theme (#1d705d)');
 
-  // Opposition theme numbers: #dbe8b3 (pale celery on #124a3d die)
-  const oppDiffuse = await makeDiffuse(0xdb, 0xe8, 0xb3);
+  // Opposition theme numbers: #b8f57a (chartreuse on #124a3d die)
+  const oppDiffuse = await makeDiffuse(0xb8, 0xf5, 0x7a);
   const oppDir = path.join(root, 'public/assets/dice-box/themes/custom-init-opp');
   if (!fs.existsSync(oppDir)) fs.mkdirSync(oppDir, { recursive: true });
   for (const f of filesToCopy) {
@@ -149,7 +149,7 @@ async function main() {
   fs.writeFileSync(path.join(oppDir, 'diffuse-light.png'), oppDiffuse);
   fs.writeFileSync(path.join(oppDir, 'diffuse-dark.png'), oppDiffuse);
   fs.writeFileSync(path.join(oppDir, 'normal.png'), normBuffer);
-  console.log('Generated custom-init-opp theme (#dbe8b3)');
+  console.log('Generated custom-init-opp theme (#b8f57a)');
 }
 
 main().catch(console.error);
