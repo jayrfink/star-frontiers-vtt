@@ -1695,7 +1695,7 @@ async function rollPercentile() {
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
       { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 }, // Tens (lighter colored die)
-      { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 }  // Ones (darker colored die)
+      { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 }  // Ones (darker colored die)
     ]);
     const rollSummary = calculatePercentileRoll(results);
     if (rollSummary.valid) {
@@ -2377,7 +2377,7 @@ async function executeSnapFlip(options = {}) {
     try {
       const results = await executeQueuedDiceRoll(diceBox, [
         { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 },
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) roll = rollSummary.total;
@@ -2537,7 +2537,7 @@ async function executeSlingshot(options = {}) {
       try {
         const results = await executeQueuedDiceRoll(diceBox, [
           { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-          { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+          { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 },
         ]);
         const rollSummary = calculatePercentileRoll(results);
         if (rollSummary.valid) {
@@ -2668,7 +2668,7 @@ async function rollCrewGCheck() {
     try {
       const results = await executeQueuedDiceRoll(diceBox, [
         { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 },
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {
@@ -2729,7 +2729,7 @@ async function rollFlipAndBurnStaCheck() {
     try {
       const results = await executeQueuedDiceRoll(diceBox, [
         { sides: 10, theme: 'custom-tens', themeColor: '#77d19e', qty: 1 },
-        { sides: 10, theme: 'custom-ones', themeColor: '#22384a', qty: 1 },
+        { sides: 10, theme: 'custom-ones', themeColor: '#182734', qty: 1 },
       ]);
       const rollSummary = calculatePercentileRoll(results);
       if (rollSummary.valid) {

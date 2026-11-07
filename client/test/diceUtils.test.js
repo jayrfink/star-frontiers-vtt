@@ -67,7 +67,7 @@ describe('calculatePercentileRoll', () => {
   it('calculates standard two-digit roll', () => {
     const raw = [
       { value: 4, themeColor: '#77d19e' },
-      { value: 7, themeColor: '#22384a' }
+      { value: 7, themeColor: '#182734' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -81,7 +81,7 @@ describe('calculatePercentileRoll', () => {
   it('calculates single-digit roll when tens die is 0 or 10', () => {
     const raw = [
       { value: 10, themeColor: '#77d19e' },
-      { value: 6, themeColor: '#22384a' }
+      { value: 6, themeColor: '#182734' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -95,7 +95,7 @@ describe('calculatePercentileRoll', () => {
   it('calculates round tens when ones die is 0 or 10', () => {
     const raw = [
       { value: 8, themeColor: '#77d19e' },
-      { value: 0, themeColor: '#22384a' }
+      { value: 0, themeColor: '#182734' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -109,7 +109,7 @@ describe('calculatePercentileRoll', () => {
   it('calculates 100 for double zeros (00)', () => {
     const raw = [
       { value: 0, themeColor: '#77d19e' },
-      { value: 10, themeColor: '#22384a' }
+      { value: 10, themeColor: '#182734' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
@@ -121,13 +121,25 @@ describe('calculatePercentileRoll', () => {
   });
 
   it('identifies tens and ones regardless of array order using themeColor', () => {
-    // Ones die first, Tens die second
+    // Ones die first (#182734), Tens die second (#77d19e)
     const raw = [
-      { value: 3, themeColor: '#22384a' },
+      { value: 3, themeColor: '#182734' },
       { value: 5, themeColor: '#77d19e' }
     ];
     const result = calculatePercentileRoll(raw);
     expect(result).toEqual({
+      total: 53,
+      tens: 5,
+      ones: 3,
+      valid: true
+    });
+
+    // Also supports legacy ones color #22384a
+    const legacyRaw = [
+      { value: 3, themeColor: '#22384a' },
+      { value: 5, themeColor: '#77d19e' }
+    ];
+    expect(calculatePercentileRoll(legacyRaw)).toEqual({
       total: 53,
       tens: 5,
       ones: 3,
