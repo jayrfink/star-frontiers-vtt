@@ -40,11 +40,11 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #0b222e, numbers #b5eeff
-      expect(spaceContent).toMatch(/#0b222e/);
+      // Player: body #12415a, numbers #b5eeff
+      expect(spaceContent).toMatch(/#12415a/);
       expect(spaceContent).toMatch(/#b5eeff/);
-      // Opposition: body #400a22, numbers #c9abb9
-      expect(spaceContent).toMatch(/#400a22/);
+      // Opposition: body #6f0e39, numbers #c9abb9
+      expect(spaceContent).toMatch(/#6f0e39/);
       expect(spaceContent).toMatch(/#c9abb9/);
     });
 
@@ -85,10 +85,10 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #0b222e, numbers #b5eeff
-      expect(rpgContent).toMatch(/#0b222e/);
+      // Player: body #12415a, numbers #b5eeff
+      expect(rpgContent).toMatch(/#12415a/);
       expect(rpgContent).toMatch(/#b5eeff/);
-      expect(rpgContent).toMatch(/#400a22/);
+      expect(rpgContent).toMatch(/#6f0e39/);
       expect(rpgContent).toMatch(/#c9abb9/);
     });
 
@@ -115,7 +115,17 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
-    it('correctly parses dice rolls with new #0b222e themeColor', () => {
+    it('correctly parses dice rolls with lightened/saturated #12415a and #6f0e39 themeColors', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#12415a', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#6f0e39', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
+    it('correctly parses dice rolls with legacy #0b222e themeColor', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#0b222e', value: 8 },
         { theme: 'custom-init-opp', themeColor: '#400a22', value: 4 }
