@@ -9,6 +9,7 @@ import path from 'path';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
 import { useAuthStore } from '../src/stores/auth.js';
 import * as characterExport from '../src/utils/characterExport.js';
+import { OFFICIAL_SKILLS } from '../src/constants/characterRules.js';
 
 describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
   it('filters equipment list by name, category, or capability', () => {
@@ -1932,6 +1933,270 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       expect(vueFile).toMatch(/\.input-custom-race\s*\{[^}]*background:\s*#000000\s*!important;/);
       expect(vueFile).toMatch(/\.input-custom-race\s*\{[^}]*background-color:\s*#000000\s*!important;/);
+    });
+  });
+
+  describe('Skills Card Inventory Formatting & Catalog Modal', () => {
+    it('renders skill name as text element (.item-name-text) and does not render <select class="select-official-skill">', async () => {
+      setActivePinia(createPinia());
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Enforcer',
+              race: 'Human',
+              psa: 'Military',
+              skills: [
+                { name: 'Beam Weapons', level: 2 },
+                { name: 'Technician', level: 1 },
+              ],
+              inventory: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const skillRows = wrapper.findAll('.skill-row');
+        expect(skillRows.length).toBe(2);
+
+        // Skill name is rendered as .item-name-text
+        const firstSkillName = skillRows[0].find('.item-name-text');
+        expect(firstSkillName.exists()).toBe(true);
+        expect(firstSkillName.text()).toBe('Beam Weapons');
+
+        const secondSkillName = skillRows[1].find('.item-name-text');
+        expect(secondSkillName.exists()).toBe(true);
+        expect(secondSkillName.text()).toBe('Technician');
+
+        // PSA category tag is rendered
+        const firstPsaTag = skillRows[0].find('.skill-psa-tag');
+        expect(firstPsaTag.exists()).toBe(true);
+        expect(firstPsaTag.text()).toContain('Military');
+
+        // <select class="select-official-skill"> must NOT be rendered
+        expect(wrapper.find('.select-official-skill').exists()).toBe(false);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('includes a search input for skills (.skills-search-wrap / searchSkillsQuery) and filters character skills by name and PSA', async () => {
+      // 1. Test computed property logic
+      const vm = {
+        selectedChar: {
+          skills: [
+            { name: 'Beam Weapons', level: 2 },
+            { name: 'Technician', level: 1 },
+            { name: 'Medical', level: 1 },
+          ],
+        },
+        searchSkillsQuery: '',
+        getSkillPSA(skillName) {
+          if (CharacterSheetsView.methods?.getSkillPSA) {
+            return CharacterSheetsView.methods.getSkillPSA.call(this, skillName);
+          }
+          const found = OFFICIAL_SKILLS.find((s) => s.name.toLowerCase() === (skillName || '').toLowerCase());
+          return found ? found.psa : 'Custom';
+        },
+      };
+
+      // Empty query returns all skills
+      let filtered = CharacterSheetsView.computed.filteredSkills.call(vm);
+      expect(filtered.length).toBe(3);
+
+      // Search by skill name
+      vm.searchSkillsQuery = 'Beam';
+      filtered = CharacterSheetsView.computed.filteredSkills.call(vm);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Beam Weapons');
+
+      // Search by PSA category
+      vm.searchSkillsQuery = 'Technological';
+      filtered = CharacterSheetsView.computed.filteredSkills.call(vm);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Technician');
+
+      // Search by PSA substring (case-insensitive)
+      vm.searchSkillsQuery = 'bio';
+      filtered = CharacterSheetsView.computed.filteredSkills.call(vm);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Medical');
+
+      // Search with no matches
+      vm.searchSkillsQuery = 'NonExistentSkill';
+      filtered = CharacterSheetsView.computed.filteredSkills.call(vm);
+      expect(filtered.length).toBe(0);
+
+      // 2. Test template search input presence in mounted component
+      setActivePinia(createPinia());
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Enforcer',
+              race: 'Human',
+              skills: [
+                { name: 'Beam Weapons', level: 2 },
+                { name: 'Technician', level: 1 },
+              ],
+              inventory: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        const searchWrap = wrapper.find('.skills-search-wrap');
+        expect(searchWrap.exists()).toBe(true);
+        const searchInput = searchWrap.find('input');
+        expect(searchInput.exists()).toBe(true);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('opens the Available Skills Catalog modal when + Add Skill is clicked (showSkillsModal = true)', async () => {
+      setActivePinia(createPinia());
+      const origFetch = global.fetch;
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/characters') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{
+              id: 1,
+              name: 'Enforcer',
+              race: 'Human',
+              skills: [
+                { name: 'Beam Weapons', level: 2 },
+              ],
+              inventory: [],
+            }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      });
+
+      try {
+        const wrapper = mount(CharacterSheetsView, {
+          global: {
+            stubs: {
+              ImageBrowserModal: true,
+            },
+          },
+        });
+        await flushPromises();
+
+        expect(wrapper.vm.showSkillsModal).toBe(false);
+
+        // Find the "+ Add Skill" button in Skills card header
+        const listCards = wrapper.findAll('.list-card');
+        const skillsCard = listCards.find((card) => {
+          const h4 = card.find('h4');
+          return h4.exists() && h4.text().includes('Skills & Experience');
+        });
+        expect(skillsCard).toBeDefined();
+
+        const addSkillBtn = skillsCard.find('.list-header button');
+        expect(addSkillBtn.exists()).toBe(true);
+        expect(addSkillBtn.text()).toContain('+ Add Skill');
+
+        await addSkillBtn.trigger('click');
+        expect(wrapper.vm.showSkillsModal).toBe(true);
+      } finally {
+        global.fetch = origFetch;
+      }
+    });
+
+    it('adds an official skill from the catalog into selectedChar.skills at Level 1 and marks it as added', () => {
+      const vm = {
+        selectedChar: {
+          skills: [
+            { name: 'Beam Weapons', level: 2 },
+          ],
+        },
+        recentlyAddedSkillMap: {},
+        updateCharacter: vi.fn(),
+        isSkillInSheet: CharacterSheetsView.methods.isSkillInSheet,
+      };
+
+      // Helper check
+      expect(CharacterSheetsView.methods.isSkillInSheet.call(vm, 'Beam Weapons')).toBeTruthy();
+      expect(CharacterSheetsView.methods.isSkillInSheet.call(vm, 'Technician')).toBeNull();
+
+      // Add skill from catalog
+      const offSkill = { name: 'Technician', psa: 'Technological', baseChance: 'Logic' };
+      CharacterSheetsView.methods.addSkillFromCatalog.call(vm, offSkill);
+
+      expect(vm.selectedChar.skills.length).toBe(2);
+      expect(vm.selectedChar.skills[1]).toEqual({ name: 'Technician', level: 1 });
+      expect(vm.recentlyAddedSkillMap['Technician']).toBe(true);
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+
+      // Attempting to add the same skill again should be a no-op (no duplicate)
+      CharacterSheetsView.methods.addSkillFromCatalog.call(vm, offSkill);
+      expect(vm.selectedChar.skills.length).toBe(2);
+      expect(vm.updateCharacter).toHaveBeenCalledTimes(1);
+    });
+
+    it('filters skills catalog by category tab and search query', () => {
+      const vm = {
+        officialSkills: OFFICIAL_SKILLS,
+        activeSkillCategory: 'All',
+        skillsCatalogSearchQuery: '',
+      };
+
+      // Category count helper
+      expect(CharacterSheetsView.methods.getSkillCategoryCount.call(vm, 'All')).toBe(OFFICIAL_SKILLS.length);
+      expect(CharacterSheetsView.methods.getSkillCategoryCount.call(vm, 'Military')).toBe(7);
+      expect(CharacterSheetsView.methods.getSkillCategoryCount.call(vm, 'Technological')).toBe(3);
+
+      // All category
+      let catalog = CharacterSheetsView.computed.filteredSkillsCatalog.call(vm);
+      expect(catalog.length).toBe(OFFICIAL_SKILLS.length);
+
+      // Filter by Technological category tab
+      vm.activeSkillCategory = 'Technological';
+      catalog = CharacterSheetsView.computed.filteredSkillsCatalog.call(vm);
+      expect(catalog.length).toBe(3);
+      expect(catalog.map((s) => s.name)).toEqual(['Computer', 'Robotics', 'Technician']);
+
+      // Filter by search query within category
+      vm.skillsCatalogSearchQuery = 'Robotics';
+      catalog = CharacterSheetsView.computed.filteredSkillsCatalog.call(vm);
+      expect(catalog.length).toBe(1);
+      expect(catalog[0].name).toBe('Robotics');
+
+      // Clear search and switch to non-matching query
+      vm.skillsCatalogSearchQuery = 'NonExistent';
+      catalog = CharacterSheetsView.computed.filteredSkillsCatalog.call(vm);
+      expect(catalog.length).toBe(0);
     });
   });
 });
