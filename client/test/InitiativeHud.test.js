@@ -43,9 +43,9 @@ describe('Initiative Dice & HUD System', () => {
       // Player: body #70e6b3, border/text #1d705d
       expect(spaceContent).toMatch(/#70e6b3/);
       expect(spaceContent).toMatch(/#1d705d/);
-      // Opposition: body #124a3d, numbers #b8f57a
+      // Opposition: body #124a3d, numbers #97f23d
       expect(spaceContent).toMatch(/#124a3d/);
-      expect(spaceContent).toMatch(/#b8f57a/);
+      expect(spaceContent).toMatch(/#97f23d/);
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -88,9 +88,9 @@ describe('Initiative Dice & HUD System', () => {
       // Player: body #70e6b3, border/text #1d705d
       expect(rpgContent).toMatch(/#70e6b3/);
       expect(rpgContent).toMatch(/#1d705d/);
-      // Opposition: body #124a3d, numbers #b8f57a
+      // Opposition: body #124a3d, numbers #97f23d
       expect(rpgContent).toMatch(/#124a3d/);
-      expect(rpgContent).toMatch(/#b8f57a/);
+      expect(rpgContent).toMatch(/#97f23d/);
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {

@@ -3741,12 +3741,12 @@ onBeforeUnmount(() => {
 }
 .init-opp-die {
   background: #124a3d;
-  border: 2px solid #b8f57a;
-  color: #b8f57a;
-  box-shadow: 0 0 12px rgba(184, 245, 122, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  border: 2px solid #97f23d;
+  color: #97f23d;
+  box-shadow: 0 0 12px rgba(151, 242, 61, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
 }
 .init-opp-die .init-val {
-  text-shadow: 0 0 10px rgba(184, 245, 122, 0.7);
+  text-shadow: 0 0 10px rgba(151, 242, 61, 0.7);
 }
 .init-label {
   font-size: 9px;
@@ -3785,12 +3785,12 @@ onBeforeUnmount(() => {
 }
 .init-pill-opp {
   background: #124a3d;
-  color: #b8f57a;
-  border: 1px solid #b8f57a;
+  color: #97f23d;
+  border: 1px solid #97f23d;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(184, 245, 122, 0.25);
+  box-shadow: 0 0 6px rgba(151, 242, 61, 0.25);
 }
 
 /* Multi-Turn Flip & Burn */
