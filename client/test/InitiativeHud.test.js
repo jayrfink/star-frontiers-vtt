@@ -43,8 +43,8 @@ describe('Initiative Dice & HUD System', () => {
       // Player: body #70e6b3, border/text #1d705d
       expect(spaceContent).toMatch(/#70e6b3/);
       expect(spaceContent).toMatch(/#1d705d/);
-      // Opposition: body #124a3d, numbers #97f23d
-      expect(spaceContent).toMatch(/#124a3d/);
+      // Opposition: body #07221c, numbers #97f23d
+      expect(spaceContent).toMatch(/#07221c/);
       expect(spaceContent).toMatch(/#97f23d/);
     });
 
@@ -88,8 +88,8 @@ describe('Initiative Dice & HUD System', () => {
       // Player: body #70e6b3, border/text #1d705d
       expect(rpgContent).toMatch(/#70e6b3/);
       expect(rpgContent).toMatch(/#1d705d/);
-      // Opposition: body #124a3d, numbers #97f23d
-      expect(rpgContent).toMatch(/#124a3d/);
+      // Opposition: body #07221c, numbers #97f23d
+      expect(rpgContent).toMatch(/#07221c/);
       expect(rpgContent).toMatch(/#97f23d/);
     });
 
@@ -116,6 +116,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with #70e6b3 and #07221c themeColors', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#70e6b3', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#07221c', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with #70e6b3 and #124a3d themeColors', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#70e6b3', value: 8 },

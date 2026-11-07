@@ -1655,7 +1655,7 @@ async function rollInitiative() {
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
       { sides: 10, theme: 'custom-init-player', themeColor: '#70e6b3', qty: 1 },
-      { sides: 10, theme: 'custom-init-opp', themeColor: '#124a3d', qty: 1 }
+      { sides: 10, theme: 'custom-init-opp', themeColor: '#07221c', qty: 1 }
     ]);
     const initSummary = calculateInitiativeRoll(results);
     if (initSummary.valid) {
@@ -3740,7 +3740,7 @@ onBeforeUnmount(() => {
   text-shadow: 0 0 10px rgba(181, 238, 255, 0.7);
 }
 .init-opp-die {
-  background: #124a3d;
+  background: #07221c;
   border: 2px solid #97f23d;
   color: #97f23d;
   box-shadow: 0 0 12px rgba(151, 242, 61, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
@@ -3784,7 +3784,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 6px rgba(112, 230, 179, 0.35);
 }
 .init-pill-opp {
-  background: #124a3d;
+  background: #07221c;
   color: #97f23d;
   border: 1px solid #97f23d;
   padding: 1px 6px;
