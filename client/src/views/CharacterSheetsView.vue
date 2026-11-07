@@ -2438,9 +2438,10 @@ export default {
 }
 
 .input-custom-race {
-  background: var(--bg-surface-2, #1f293d);
-  color: #cecece;
-  border: 1px solid var(--border-color, #2b3954);
+  background: #000000 !important;
+  background-color: #000000 !important;
+  color: #c0c0c0;
+  border: 1px solid #30363d;
   padding: 5px 8px;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -2449,8 +2450,9 @@ export default {
   box-sizing: border-box;
 }
 .input-custom-race:focus {
-  border-color: var(--accent-cyan, #00d2ff);
+  border-color: #8b949e;
   outline: none;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 .custom-race-input-group {
   margin-top: 8px;

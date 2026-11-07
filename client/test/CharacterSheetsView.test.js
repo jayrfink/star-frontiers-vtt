@@ -1924,6 +1924,15 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       // Uses transparent background to adopt header card background color
       expect(vueFile).toMatch(/\.tactical-bar\s*\{[^}]*background:\s*transparent;/);
     });
+
+    it('styles custom species name freeform field with black background', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+
+      expect(vueFile).toMatch(/\.input-custom-race\s*\{[^}]*background:\s*#000000\s*!important;/);
+      expect(vueFile).toMatch(/\.input-custom-race\s*\{[^}]*background-color:\s*#000000\s*!important;/);
+    });
   });
 });
 
