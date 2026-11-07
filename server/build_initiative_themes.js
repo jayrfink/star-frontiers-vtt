@@ -127,8 +127,8 @@ async function main() {
 
   const filesToCopy = ['default.json', 'package.json', 'specular.jpg', 'theme.config.json'];
 
-  // Player theme: #b5eeff
-  const playerDiffuse = await makeDiffuse(0xb5, 0xee, 0xff);
+  // Player theme numbers: #1d705d (dark green on #70e6b3 die)
+  const playerDiffuse = await makeDiffuse(0x1d, 0x70, 0x5d);
   const playerDir = path.join(root, 'public/assets/dice-box/themes/custom-init-player');
   if (!fs.existsSync(playerDir)) fs.mkdirSync(playerDir, { recursive: true });
   for (const f of filesToCopy) {
@@ -137,10 +137,10 @@ async function main() {
   fs.writeFileSync(path.join(playerDir, 'diffuse-light.png'), playerDiffuse);
   fs.writeFileSync(path.join(playerDir, 'diffuse-dark.png'), playerDiffuse);
   fs.writeFileSync(path.join(playerDir, 'normal.png'), normBuffer);
-  console.log('Generated custom-init-player theme (#b5eeff)');
+  console.log('Generated custom-init-player theme (#1d705d)');
 
-  // Opposition theme: #c9abb9
-  const oppDiffuse = await makeDiffuse(0xc9, 0xab, 0xb9);
+  // Opposition theme numbers: #70e6b3 (mint green on #1d705d die)
+  const oppDiffuse = await makeDiffuse(0x70, 0xe6, 0xb3);
   const oppDir = path.join(root, 'public/assets/dice-box/themes/custom-init-opp');
   if (!fs.existsSync(oppDir)) fs.mkdirSync(oppDir, { recursive: true });
   for (const f of filesToCopy) {
@@ -149,7 +149,7 @@ async function main() {
   fs.writeFileSync(path.join(oppDir, 'diffuse-light.png'), oppDiffuse);
   fs.writeFileSync(path.join(oppDir, 'diffuse-dark.png'), oppDiffuse);
   fs.writeFileSync(path.join(oppDir, 'normal.png'), normBuffer);
-  console.log('Generated custom-init-opp theme (#c9abb9)');
+  console.log('Generated custom-init-opp theme (#70e6b3)');
 }
 
 main().catch(console.error);

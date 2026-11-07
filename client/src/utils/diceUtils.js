@@ -77,8 +77,8 @@ export function calculatePercentileRoll(results) {
 
 /**
  * Processes settled die objects from @3d-dice/dice-box for combat initiative.
- * Die #1 (Players): theme 'custom-init-player', themeColor '#12415a' (legacy: '#0b222e').
- * Die #2 (Opposition): theme 'custom-init-opp', themeColor '#6f0e39' (legacy: '#400a22').
+ * Die #1 (Players): theme 'custom-init-player', themeColor '#70e6b3' (legacy: '#12415a', '#0b222e').
+ * Die #2 (Opposition): theme 'custom-init-opp', themeColor '#1d705d' (legacy: '#6f0e39', '#400a22').
  * On a d10 face showing 0 (raw value 0 or 10), the roll value is 10 (range 1-10).
  *
  * @param {Array} results
@@ -94,19 +94,21 @@ export function calculateInitiativeRoll(results) {
     return { playerRoll: 0, oppRoll: 0, winner: 'tie', valid: false };
   }
 
-  // Find player die: theme 'custom-init-player', themeColor '#12415a' / '#0b222e' / '#17304a', or groupId 0
+  // Find player die: theme 'custom-init-player', themeColor '#70e6b3' / '#12415a' / '#0b222e' / '#17304a', or groupId 0
   const playerDie = flat.find(d =>
     d?.theme === 'custom-init-player' ||
+    d?.themeColor?.toLowerCase() === '#70e6b3' ||
     d?.themeColor?.toLowerCase() === '#12415a' ||
     d?.themeColor?.toLowerCase() === '#0b222e' ||
     d?.themeColor?.toLowerCase() === '#17304a' ||
     d?.groupId === 0
   ) || flat[0];
 
-  // Find opposition die: theme 'custom-init-opp', themeColor '#6f0e39' / '#400a22', or groupId 1
+  // Find opposition die: theme 'custom-init-opp', themeColor '#1d705d' / '#6f0e39' / '#400a22', or groupId 1
   const oppDie = flat.find(d =>
     d !== playerDie && (
       d?.theme === 'custom-init-opp' ||
+      d?.themeColor?.toLowerCase() === '#1d705d' ||
       d?.themeColor?.toLowerCase() === '#6f0e39' ||
       d?.themeColor?.toLowerCase() === '#400a22' ||
       d?.groupId === 1

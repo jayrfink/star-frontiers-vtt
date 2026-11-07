@@ -40,12 +40,9 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #12415a, numbers #b5eeff
-      expect(spaceContent).toMatch(/#12415a/);
-      expect(spaceContent).toMatch(/#b5eeff/);
-      // Opposition: body #6f0e39, numbers #c9abb9
-      expect(spaceContent).toMatch(/#6f0e39/);
-      expect(spaceContent).toMatch(/#c9abb9/);
+      // Player: body #70e6b3, border/text #1d705d
+      expect(spaceContent).toMatch(/#70e6b3/);
+      expect(spaceContent).toMatch(/#1d705d/);
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -85,11 +82,9 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #12415a, numbers #b5eeff
-      expect(rpgContent).toMatch(/#12415a/);
-      expect(rpgContent).toMatch(/#b5eeff/);
-      expect(rpgContent).toMatch(/#6f0e39/);
-      expect(rpgContent).toMatch(/#c9abb9/);
+      // Player: body #70e6b3, border/text #1d705d
+      expect(rpgContent).toMatch(/#70e6b3/);
+      expect(rpgContent).toMatch(/#1d705d/);
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -115,6 +110,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with #70e6b3 and #1d705d themeColors', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#70e6b3', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#1d705d', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with lightened/saturated #12415a and #6f0e39 themeColors', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#12415a', value: 8 },
