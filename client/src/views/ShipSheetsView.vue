@@ -1,7 +1,16 @@
 <template>
-  <div class="sheets-layout">
+  <div class="sheets-layout" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
     <!-- Sidebar -->
     <aside class="sidebar">
+      <button
+        type="button"
+        class="sidebar-toggle-btn"
+        :title="isSidebarCollapsed ? 'Show Navigation Panel' : 'Hide Navigation Panel'"
+        :aria-label="isSidebarCollapsed ? 'Show Navigation Panel' : 'Hide Navigation Panel'"
+        @click="toggleSidebar"
+      >
+        <span class="toggle-icon">{{ isSidebarCollapsed ? '▶' : '◀' }}</span>
+      </button>
       <div class="sidebar-header">
         <h3>Ships</h3>
         <button class="btn-primary btn-new-ship" @click="openCreateModal">+ New</button>
@@ -1049,7 +1058,15 @@ export default {
     ImageBrowserModal,
   },
   data() {
+    let collapsed = false;
+    try {
+      const stored = localStorage.getItem('sf_ships_sidebar_collapsed');
+      if (stored !== null) collapsed = JSON.parse(stored);
+    } catch (e) {
+      // ignore
+    }
     return {
+      isSidebarCollapsed: collapsed,
       SAFE_COMPENSATOR_DELTA_V,
       presets: SHIP_PRESETS,
       selectedPresetType: 'Assault Scout',
@@ -1214,6 +1231,14 @@ export default {
     }
   },
   methods: {
+    toggleSidebar() {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+      try {
+        localStorage.setItem('sf_ships_sidebar_collapsed', JSON.stringify(this.isSidebarCollapsed));
+      } catch (e) {
+        // ignore
+      }
+    },
     getShipHullSize(ship) {
       if (!ship) return 1;
       if (ship.hull_size != null && !isNaN(ship.hull_size)) return Number(ship.hull_size);
@@ -2356,6 +2381,7 @@ export default {
   background: var(--bg-dark, #0d1117);
   color: var(--text-primary, #cecece);
   overflow: hidden;
+  position: relative;
 }
 
 /* Sidebar */
@@ -2368,6 +2394,45 @@ export default {
   box-shadow: 2px 0 12px rgba(6, 182, 212, 0.25);
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sheets-layout.sidebar-collapsed .sidebar {
+  margin-left: -280px;
+}
+
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 14px;
+  right: -24px;
+  width: 24px;
+  height: 38px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  color: #00ffff;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  padding: 0;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.sidebar-toggle-btn:hover {
+  background: #05282e;
+  color: #a8ffea;
+  box-shadow: 2px 0 10px rgba(6, 182, 212, 0.4);
+}
+
+.sidebar-toggle-btn .toggle-icon {
+  line-height: 1;
+  user-select: none;
 }
 
 .sidebar-header {

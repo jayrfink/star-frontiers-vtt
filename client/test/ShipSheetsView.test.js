@@ -2230,6 +2230,52 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#a8ffea/);
     });
   });
+
+  describe('ShipSheetsView - Collapsible Sliding Navigation Panel', () => {
+    it('initializes isSidebarCollapsed to false and toggles it with toggleSidebar', () => {
+      const data = ShipSheetsView.data();
+      expect(data.isSidebarCollapsed).toBe(false);
+
+      const vm = { isSidebarCollapsed: false };
+      ShipSheetsView.methods.toggleSidebar.call(vm);
+      expect(vm.isSidebarCollapsed).toBe(true);
+      ShipSheetsView.methods.toggleSidebar.call(vm);
+      expect(vm.isSidebarCollapsed).toBe(false);
+    });
+
+    it('renders sidebar toggle button with chevron and applies sidebar-collapsed class', async () => {
+      const wrapper = mount(ShipSheetsView, {
+        global: {
+          stubs: {
+            ImageBrowserModal: true,
+          },
+        },
+      });
+      await flushPromises();
+
+      const toggleBtn = wrapper.find('.sidebar-toggle-btn');
+      expect(toggleBtn.exists()).toBe(true);
+      expect(toggleBtn.text()).toContain('◀');
+      expect(wrapper.classes()).not.toContain('sidebar-collapsed');
+
+      await toggleBtn.trigger('click');
+      expect(wrapper.classes()).toContain('sidebar-collapsed');
+      expect(toggleBtn.text()).toContain('▶');
+
+      await toggleBtn.trigger('click');
+      expect(wrapper.classes()).not.toContain('sidebar-collapsed');
+      expect(toggleBtn.text()).toContain('◀');
+    });
+
+    it('contains CSS rules for sliding sidebar off-screen and floating edge button', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.sheets-layout\.sidebar-collapsed\s+\.sidebar\s*\{[^}]*margin-left:\s*-280px;/);
+      expect(vueFile).toMatch(/\.sidebar-toggle-btn\s*\{[^}]*position:\s*absolute;/);
+      expect(vueFile).toMatch(/\.sidebar-toggle-btn\s*\{[^}]*right:\s*-24px;/);
+    });
+  });
 });
 
 
