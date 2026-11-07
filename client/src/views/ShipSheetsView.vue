@@ -2886,13 +2886,15 @@ export default {
   background: #000000;
   color: #f85149;
   border: 1px solid #f8514988;
+  box-shadow: 0 0 8px rgba(248, 81, 73, 0.5), inset 0 0 6px rgba(248, 81, 73, 0.25);
+  text-shadow: 0 0 6px rgba(248, 81, 73, 0.5);
 }
 
 .system-btn.is-damaged:hover {
   background: #0d1117;
   border-color: #f85149;
   color: #ff7b72;
-  box-shadow: 0 0 6px rgba(248, 81, 73, 0.35);
+  box-shadow: 0 0 12px rgba(248, 81, 73, 0.7), inset 0 0 8px rgba(248, 81, 73, 0.35);
 }
 
 .panel-header-simple {
@@ -4091,7 +4093,7 @@ export default {
   flex: 1;
   background: #0d1117;
   border: 1px solid #334155;
-  color: #00ffff;
+  color: #c3c3c3;
   font-size: 1rem;
   font-weight: 700;
   padding: 6px 10px;
