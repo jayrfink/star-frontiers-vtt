@@ -964,7 +964,8 @@ defineExpose({
 .admin-header h2 {
   font-size: 24px;
   margin-bottom: 4px;
-  color: #00ffff;
+  color: var(--text-primary, #cecece);
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .subtitle {
@@ -1158,6 +1159,36 @@ defineExpose({
 .form-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.form-actions button.primary,
+.btn-create-user {
+  background: #021a1e !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  border: 1px solid #a8ffea !important;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease-in-out;
+}
+
+.form-actions button.primary:hover:not(:disabled),
+.btn-create-user:hover:not(:disabled) {
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.8);
+}
+
+.form-actions button.primary:active:not(:disabled),
+.btn-create-user:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .loading-state,

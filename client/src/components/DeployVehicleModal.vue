@@ -707,6 +707,7 @@ export default {
   padding: 14px 18px;
   background-color: #21262d;
   border-bottom: 1px solid #30363d;
+  box-shadow: 0 1px 8px rgba(6, 182, 212, 0.2);
 }
 
 .header-title-row {
@@ -722,9 +723,10 @@ export default {
 .modal-header h3 {
   margin: 0;
   font-size: 1.32rem;
-  color: #00ffff;
+  color: var(--text-primary, #cecece);
   font-weight: 600;
   letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .close-btn {

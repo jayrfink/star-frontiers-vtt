@@ -3356,6 +3356,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 8px rgba(6, 182, 212, 0.2);
+}
+
+.drawer-header h3,
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .close-btn {

@@ -425,6 +425,9 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  box-shadow: 2px 0 12px rgba(6, 182, 212, 0.25);
+  position: relative;
+  z-index: 10;
 }
 
 .sidebar-header {
@@ -438,25 +441,35 @@ onMounted(() => {
 .sidebar-header h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: #00ffff;
+  color: var(--text-primary, #cecece);
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .btn-new-session {
-  background: #082d33;
-  color: #00ffff;
-  border: 1px solid #2394a6;
-  padding: 6px 10px;
-  border-radius: 6px;
+  background: #021a1e !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  border: 1px solid #a8ffea !important;
+  padding: 4px 10px;
+  border-radius: 4px;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+  letter-spacing: 0.3px;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-new-session:hover {
-  background: #0d3b44;
-  border-color: #33b5cb;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
+  background: #04272d !important;
+  border-color: #a8ffea !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.8);
+}
+
+.btn-new-session:active {
+  transform: translateY(1px);
 }
 
 .session-list {
@@ -581,20 +594,29 @@ onMounted(() => {
 }
 
 .btn-add-panel {
-  background: #082d33;
-  border: 1px solid #2394a6;
-  color: #00ffff;
-  font-weight: 600;
-  padding: 8px 14px;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-add-panel:hover {
-  background: #0d3b44;
-  border-color: #33b5cb;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.btn-add-panel:active {
+  transform: translateY(1px);
 }
 
 .preset-chips {

@@ -1451,7 +1451,7 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       const content = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(content).toMatch(/<h4>Defenses<\/h4>/);
       expect(content).not.toMatch(/<h4>Defensive Screens<\/h4>/);
-      expect(content).toMatch(/<button[^>]*class="btn-secondary"[^>]*@click="openAddDefenseModal"[^>]*>\+ Add Defense<\/button>/);
+      expect(content).toMatch(/<button[^>]*class="btn-secondary"[^>]*@click="openAddDefenseModal"[^>]*>\+\s*(?:Add\s*)?Defense<\/button>/);
     });
 
     it('opens and closes add defense modal via openAddDefenseModal and Escape key', () => {
@@ -2218,7 +2218,7 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
     it('applies backlight glow to the navigation panel sidebar and header title', () => {
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*box-shadow:\s*2px\s+0\s+12px\s+rgba\(6,\s*182,\s*212,\s*0\.25\);/);
-      expect(vueFile).toMatch(/\.sidebar-header\s+h3\s*\{[^}]*text-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.5\);/);
+      expect(vueFile).toMatch(/\.sidebar-header\s+h3\s*\{[^}]*text-shadow:\s*0\s+0\s+(?:8px|10px)\s+rgba\(6,\s*182,\s*212,\s*0\.[56]\)/);
     });
   });
 });

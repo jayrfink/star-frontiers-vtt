@@ -217,40 +217,56 @@ async function handleLogout() {
 }
 
 .change-password-btn {
-  padding: 4px 12px;
-  font-size: 12px;
-  background-color: #000000;
-  border: 1px solid #00a8a8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 168, 168, 0.15);
+  border: 1px solid rgba(0, 168, 168, 0.4);
   color: #00a8a8;
-  font-weight: 600;
-  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
 }
 
 .change-password-btn:hover {
-  background-color: #082020;
+  background: rgba(0, 218, 218, 0.25);
   border-color: #00dada;
   color: #00dada;
   box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
 }
 
+.change-password-btn:active {
+  transform: translateY(1px);
+}
+
 .logout-btn {
-  padding: 4px 12px;
-  font-size: 12px;
-  background-color: #000000;
-  border: 1px solid #00a8a8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 168, 168, 0.15);
+  border: 1px solid rgba(0, 168, 168, 0.4);
   color: #00a8a8;
-  font-weight: 600;
-  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
 }
 
 .logout-btn:hover {
-  background-color: #082020;
+  background: rgba(0, 218, 218, 0.25);
   border-color: #00dada;
   color: #00dada;
   box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
+}
+
+.logout-btn:active {
+  transform: translateY(1px);
 }
 </style>

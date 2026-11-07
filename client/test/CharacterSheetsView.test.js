@@ -1815,7 +1815,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       const path = require('path');
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*box-shadow:\s*2px\s+0\s+12px\s+rgba\(6,\s*182,\s*212,\s*0\.25\);/);
-      expect(vueFile).toMatch(/\.sidebar-header\s+h3\s*\{[^}]*text-shadow:\s*0\s+0\s+8px\s+rgba\(6,\s*182,\s*212,\s*0\.5\);/);
+      expect(vueFile).toMatch(/\.sidebar-header\s+h3\s*\{[^}]*text-shadow:\s*0\s+0\s+(?:8px|10px)\s+rgba\(6,\s*182,\s*212,\s*0\.[56]\)/);
     });
 
     it('matches skills and experience font colors to inventory items (#cecece) while keeping badges as is', () => {
@@ -1860,7 +1860,7 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       // Left/right attribute shift arrows are darker cyan #00a8a8 matching +Add Skill button
       expect(vueFile).toMatch(/\.btn-shift\s*\{[^}]*color:\s*#00a8a8;/);
-      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#00a8a8\s*!important;/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*(?:#00a8a8|#38bdf8)/);
     });
 
     it('renders inventory item name as text, removes Kg input, and retains item attributes/qty', () => {

@@ -2328,8 +2328,8 @@ export default {
 .sidebar-header h3 {
   margin: 0;
   font-size: 1.21rem;
-  color: #45acba;
-  text-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .sidebar-loading,
@@ -3453,29 +3453,38 @@ export default {
 }
 
 .btn-secondary {
-  background-color: #000000 !important;
-  background: #000000 !important;
-  color: #00a8a8 !important;
-  -webkit-text-fill-color: #00a8a8;
-  border: 1px solid #00a8a8 !important;
-  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(56, 189, 248, 0.15) !important;
+  background-color: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+  -webkit-text-fill-color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   letter-spacing: 0.3px;
   transition: all 0.15s ease-in-out;
 }
 .btn-secondary:hover:not(:disabled) {
-  background-color: #082020 !important;
-  border-color: #00dada !important;
-  color: #00dada !important;
-  -webkit-text-fill-color: #00dada;
-  box-shadow: 0 0 8px rgba(0, 218, 218, 0.4);
+  background: rgba(56, 189, 248, 0.25) !important;
+  background-color: rgba(56, 189, 248, 0.25) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+  -webkit-text-fill-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
 }
 .btn-secondary:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 0 6px rgba(0, 128, 128, 0.6);
+}
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Modal */
