@@ -97,17 +97,17 @@ describe('VttToolbarIcons Wireframe Lined Shapes', () => {
 
   describe('Holo-HUD Glass Toolbar Styling', () => {
     it('applies translucent cyan-glass background and backdrop blur to .vtt-toolbar in RpgVttView', () => {
-      expect(rpgContent).toMatch(/background:\s*rgba\(5,\s*16,\s*26,\s*0\.68\)/);
+      expect(rpgContent).toMatch(/background:\s*rgba\(5,\s*14,\s*28,\s*0\.68\)/);
       expect(rpgContent).toMatch(/backdrop-filter:\s*blur\(12px\)/);
-      expect(rpgContent).toMatch(/border:\s*1px\s+solid\s+rgba\(45,\s*212,\s*210,\s*0\.35\)/);
-      expect(rpgContent).toMatch(/linear-gradient\(90deg,\s*transparent,\s*rgba\(45,\s*212,\s*210,\s*0\.45\),\s*transparent\)/);
+      expect(rpgContent).toMatch(/border:\s*1px\s+solid\s+rgba\(45,\s*197,\s*212,\s*0\.35\)/);
+      expect(rpgContent).toMatch(/linear-gradient\(90deg,\s*transparent,\s*rgba\(45,\s*197,\s*212,\s*0\.45\),\s*transparent\)/);
     });
 
     it('applies translucent cyan-glass background and backdrop blur to .vtt-toolbar in SpaceVttView', () => {
-      expect(spaceContent).toMatch(/background:\s*rgba\(5,\s*16,\s*26,\s*0\.68\)/);
+      expect(spaceContent).toMatch(/background:\s*rgba\(5,\s*14,\s*28,\s*0\.68\)/);
       expect(spaceContent).toMatch(/backdrop-filter:\s*blur\(12px\)/);
-      expect(spaceContent).toMatch(/border:\s*1px\s+solid\s+rgba\(45,\s*212,\s*210,\s*0\.35\)/);
-      expect(spaceContent).toMatch(/linear-gradient\(90deg,\s*transparent,\s*rgba\(45,\s*212,\s*210,\s*0\.45\),\s*transparent\)/);
+      expect(spaceContent).toMatch(/border:\s*1px\s+solid\s+rgba\(45,\s*197,\s*212,\s*0\.35\)/);
+      expect(spaceContent).toMatch(/linear-gradient\(90deg,\s*transparent,\s*rgba\(45,\s*197,\s*212,\s*0\.45\),\s*transparent\)/);
     });
   });
 });

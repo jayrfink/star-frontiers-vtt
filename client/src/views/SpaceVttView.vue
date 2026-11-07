@@ -3973,13 +3973,13 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(5, 16, 26, 0.68);
+  background: rgba(5, 14, 28, 0.68);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding: 8px;
   border-radius: var(--radius);
-  border: 1px solid rgba(45, 212, 210, 0.35);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 184, 184, 0.2);
+  border: 1px solid rgba(45, 197, 212, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 168, 184, 0.2);
 }
 
 .vtt-toolbar button {
@@ -3992,32 +3992,32 @@ onBeforeUnmount(() => {
   letter-spacing: 0.3px;
   border-radius: 4px;
   text-align: left;
-  background: rgba(13, 54, 68, 0.25);
-  border: 1px solid rgba(45, 212, 210, 0.15);
-  color: #99f6ef;
+  background: rgba(13, 50, 68, 0.25);
+  border: 1px solid rgba(45, 197, 212, 0.15);
+  color: #99f3f6;
   transition: all 0.15s ease-in-out;
 }
 
 .vtt-toolbar button:hover {
-  background: rgba(13, 54, 68, 0.55);
-  border-color: rgba(45, 212, 210, 0.5);
-  color: #ccfbf7;
-  box-shadow: 0 0 10px rgba(45, 212, 210, 0.3);
+  background: rgba(13, 50, 68, 0.55);
+  border-color: rgba(45, 197, 212, 0.5);
+  color: #ccfafb;
+  box-shadow: 0 0 10px rgba(45, 197, 212, 0.3);
 }
 
 .vtt-toolbar > button.active {
-  background: rgba(8, 41, 51, 0.85);
-  color: #2dd4d2;
+  background: rgba(8, 38, 51, 0.85);
+  color: #2dc5d4;
   font-weight: 600;
-  border: 1px solid #14b8b8;
-  box-shadow: 0 0 12px rgba(20, 184, 184, 0.5);
+  border: 1px solid #14a8b8;
+  box-shadow: 0 0 12px rgba(20, 168, 184, 0.5);
 }
 
 .vtt-toolbar > button.active:hover {
-  background: rgba(13, 54, 68, 0.95);
-  color: #5eeae4;
-  border-color: #2dd4d2;
-  box-shadow: 0 0 16px rgba(45, 212, 210, 0.7);
+  background: rgba(13, 50, 68, 0.95);
+  color: #5ee1ea;
+  border-color: #2dc5d4;
+  box-shadow: 0 0 16px rgba(45, 197, 212, 0.7);
 }
 
 .tool-icon {
@@ -4045,7 +4045,7 @@ onBeforeUnmount(() => {
 
 .toolbar-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(45, 212, 210, 0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(45, 197, 212, 0.45), transparent);
   margin: 4px 0;
 }
 
