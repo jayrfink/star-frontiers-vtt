@@ -1033,8 +1033,8 @@ async function rollInitiative() {
 
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
-      { sides: 10, theme: 'custom-init-player', themeColor: '#97c966', qty: 1 },
-      { sides: 10, theme: 'custom-init-opp', themeColor: '#0f1a18', qty: 1 }
+      { sides: 10, theme: 'custom-init-player', themeColor: '#021a1e', qty: 1 },
+      { sides: 10, theme: 'custom-init-opp', themeColor: '#202020', qty: 1 }
     ]);
     const initSummary = calculateInitiativeRoll(results);
     if (initSummary.valid) {
@@ -2604,22 +2604,22 @@ onBeforeUnmount(() => {
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .init-player-die {
-  background: #97c966;
-  border: 2px solid #0f1a18;
-  color: #0f1a18;
-  box-shadow: 0 0 12px rgba(151, 201, 102, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  background: #021a1e;
+  border: 2px solid aquamarine;
+  color: aquamarine;
+  box-shadow: 0 0 12px rgba(127, 255, 212, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 .init-player-die .init-val {
   text-shadow: 0 0 10px rgba(181, 238, 255, 0.7);
 }
 .init-opp-die {
-  background: #0f1a18;
-  border: 2px solid #97c966;
-  color: #97c966;
-  box-shadow: 0 0 12px rgba(151, 201, 102, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  background: #202020;
+  border: 2px solid #33b8bd;
+  color: #33b8bd;
+  box-shadow: 0 0 12px rgba(51, 184, 189, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
 }
 .init-opp-die .init-val {
-  text-shadow: 0 0 10px rgba(151, 201, 102, 0.7);
+  text-shadow: 0 0 10px rgba(51, 184, 189, 0.7);
 }
 .init-label {
   font-size: 9px;
@@ -2648,22 +2648,22 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 .init-pill-player {
-  background: #97c966;
-  color: #0f1a18;
-  border: 1px solid #0f1a18;
+  background: #021a1e;
+  color: aquamarine;
+  border: 1px solid aquamarine;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(151, 201, 102, 0.35);
+  box-shadow: 0 0 6px rgba(127, 255, 212, 0.35);
 }
 .init-pill-opp {
-  background: #0f1a18;
-  color: #97c966;
-  border: 1px solid #97c966;
+  background: #202020;
+  color: #33b8bd;
+  border: 1px solid #33b8bd;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  box-shadow: 0 0 6px rgba(151, 201, 102, 0.25);
+  box-shadow: 0 0 6px rgba(51, 184, 189, 0.25);
 }
 
 .modal-error-banner {
@@ -4099,10 +4099,10 @@ onBeforeUnmount(() => {
 }
 
 .roll-log-item.initiative .roll-item-badge {
-  background: #0f1a18;
-  color: #97c966;
-  border-color: rgba(151, 201, 102, 0.5);
-  box-shadow: 0 0 6px rgba(151, 201, 102, 0.35);
+  background: #202020;
+  color: #33b8bd;
+  border-color: rgba(51, 184, 189, 0.5);
+  box-shadow: 0 0 6px rgba(51, 184, 189, 0.35);
 }
 
 .roll-item-result {

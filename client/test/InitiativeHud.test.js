@@ -40,11 +40,12 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #97c966, border/text #0f1a18
-      expect(spaceContent).toMatch(/#97c966/);
-      expect(spaceContent).toMatch(/#0f1a18/);
+      // Player: body #021a1e, border/text aquamarine
+      expect(spaceContent).toMatch(/#021a1e/);
+      expect(spaceContent).toMatch(/aquamarine/);
+      expect(spaceContent).toMatch(/#202020/);
+      expect(spaceContent).toMatch(/#33b8bd/);
       expect(spaceContent).toMatch(/background:\s*#303030/);
-      // Opposition: body #0f1a18, numbers #97c966
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -84,11 +85,12 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #97c966, border/text #0f1a18
-      expect(rpgContent).toMatch(/#97c966/);
-      expect(rpgContent).toMatch(/#0f1a18/);
+      // Player: body #021a1e, border/text aquamarine
+      expect(rpgContent).toMatch(/#021a1e/);
+      expect(rpgContent).toMatch(/aquamarine/);
+      expect(rpgContent).toMatch(/#202020/);
+      expect(rpgContent).toMatch(/#33b8bd/);
       expect(rpgContent).toMatch(/background:\s*#303030/);
-      // Opposition: body #0f1a18, numbers #97c966
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -114,6 +116,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with token button and dark gray theme colors (#021a1e player, #202020 opp)', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#021a1e', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#202020', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with 30% desaturated inverted theme colors (#97c966 player, #0f1a18 opp)', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#97c966', value: 8 },
