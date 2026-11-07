@@ -40,10 +40,11 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #97e847, border/text #09201b
-      expect(spaceContent).toMatch(/#97e847/);
-      expect(spaceContent).toMatch(/#09201b/);
-      // Opposition: body #09201b, numbers #97e847
+      // Player: body #97c966, border/text #0f1a18
+      expect(spaceContent).toMatch(/#97c966/);
+      expect(spaceContent).toMatch(/#0f1a18/);
+      expect(spaceContent).toMatch(/background:\s*#303030/);
+      // Opposition: body #0f1a18, numbers #97c966
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -83,10 +84,11 @@ describe('Initiative Dice & HUD System', () => {
     });
 
     it('defines CSS colors matching user specifications', () => {
-      // Player: body #97e847, border/text #09201b
-      expect(rpgContent).toMatch(/#97e847/);
-      expect(rpgContent).toMatch(/#09201b/);
-      // Opposition: body #09201b, numbers #97e847
+      // Player: body #97c966, border/text #0f1a18
+      expect(rpgContent).toMatch(/#97c966/);
+      expect(rpgContent).toMatch(/#0f1a18/);
+      expect(rpgContent).toMatch(/background:\s*#303030/);
+      // Opposition: body #0f1a18, numbers #97c966
     });
 
     it('defines glow effect box-shadow and text-shadow on initiative HUD banner', () => {
@@ -112,6 +114,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with 30% desaturated inverted theme colors (#97c966 player, #0f1a18 opp)', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#97c966', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#0f1a18', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with desaturated inverted theme colors (#97e847 player, #09201b opp)', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#97e847', value: 8 },

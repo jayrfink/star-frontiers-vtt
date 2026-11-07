@@ -228,10 +228,10 @@ describe('calculateInitiativeRoll', () => {
   });
 
   it('identifies dice by themeColor when theme name is not present', () => {
-    // Reverse order input with new desaturated green initiative colors (#97e847 and #09201b)
+    // Reverse order input with new desaturated green initiative colors (#97c966 and #0f1a18)
     const raw = [
-      { value: 6, themeColor: '#09201b' },
-      { value: 9, themeColor: '#97e847' },
+      { value: 6, themeColor: '#0f1a18' },
+      { value: 9, themeColor: '#97c966' },
     ];
     const result = calculateInitiativeRoll(raw);
     expect(result).toEqual({
@@ -243,10 +243,21 @@ describe('calculateInitiativeRoll', () => {
 
     // Also supports legacy colors
     const legacyRaw = [
+      { value: 6, themeColor: '#09201b' },
+      { value: 9, themeColor: '#97e847' },
+    ];
+    expect(calculateInitiativeRoll(legacyRaw)).toEqual({
+      playerRoll: 9,
+      oppRoll: 6,
+      winner: 'players',
+      valid: true,
+    });
+
+    const olderLegacyRaw = [
       { value: 6, themeColor: '#400a22' },
       { value: 9, themeColor: '#0b222e' },
     ];
-    expect(calculateInitiativeRoll(legacyRaw)).toEqual({
+    expect(calculateInitiativeRoll(olderLegacyRaw)).toEqual({
       playerRoll: 9,
       oppRoll: 6,
       winner: 'players',
