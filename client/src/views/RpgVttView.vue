@@ -1034,7 +1034,7 @@ async function rollInitiative() {
   try {
     const results = await executeQueuedDiceRoll(diceBox, [
       { sides: 10, theme: 'custom-init-player', themeColor: '#021a1e', qty: 1 },
-      { sides: 10, theme: 'custom-init-opp', themeColor: '#202020', qty: 1 }
+      { sides: 10, theme: 'custom-init-opp', themeColor: '#080d0d', qty: 1 }
     ]);
     const initSummary = calculateInitiativeRoll(results);
     if (initSummary.valid) {
@@ -2613,7 +2613,7 @@ onBeforeUnmount(() => {
   text-shadow: 0 0 10px rgba(181, 238, 255, 0.7);
 }
 .init-opp-die {
-  background: #202020;
+  background: #080d0d;
   border: 2px solid #33b8bd;
   color: #33b8bd;
   box-shadow: 0 0 12px rgba(51, 184, 189, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1);
@@ -2657,7 +2657,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 6px rgba(127, 255, 212, 0.35);
 }
 .init-pill-opp {
-  background: #202020;
+  background: #080d0d;
   color: #33b8bd;
   border: 1px solid #33b8bd;
   padding: 1px 6px;
@@ -4099,7 +4099,7 @@ onBeforeUnmount(() => {
 }
 
 .roll-log-item.initiative .roll-item-badge {
-  background: #202020;
+  background: #080d0d;
   color: #33b8bd;
   border-color: rgba(51, 184, 189, 0.5);
   box-shadow: 0 0 6px rgba(51, 184, 189, 0.35);

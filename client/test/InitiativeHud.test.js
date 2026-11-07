@@ -43,7 +43,7 @@ describe('Initiative Dice & HUD System', () => {
       // Player: body #021a1e, border/text aquamarine
       expect(spaceContent).toMatch(/#021a1e/);
       expect(spaceContent).toMatch(/aquamarine/);
-      expect(spaceContent).toMatch(/#202020/);
+      expect(spaceContent).toMatch(/#080d0d/);
       expect(spaceContent).toMatch(/#33b8bd/);
       expect(spaceContent).toMatch(/background:\s*#121212/);
     });
@@ -88,7 +88,7 @@ describe('Initiative Dice & HUD System', () => {
       // Player: body #021a1e, border/text aquamarine
       expect(rpgContent).toMatch(/#021a1e/);
       expect(rpgContent).toMatch(/aquamarine/);
-      expect(rpgContent).toMatch(/#202020/);
+      expect(rpgContent).toMatch(/#080d0d/);
       expect(rpgContent).toMatch(/#33b8bd/);
       expect(rpgContent).toMatch(/background:\s*#121212/);
     });
@@ -116,6 +116,16 @@ describe('Initiative Dice & HUD System', () => {
   });
 
   describe('Initiative Roll Winner Determination', () => {
+    it('correctly parses dice rolls with token button and very dark opposition theme colors (#021a1e player, #080d0d opp)', () => {
+      const res = calculateInitiativeRoll([
+        { theme: 'custom-init-player', themeColor: '#021a1e', value: 8 },
+        { theme: 'custom-init-opp', themeColor: '#080d0d', value: 4 }
+      ]);
+      expect(res.playerRoll).toBe(8);
+      expect(res.oppRoll).toBe(4);
+      expect(res.valid).toBe(true);
+    });
+
     it('correctly parses dice rolls with token button and dark gray theme colors (#021a1e player, #202020 opp)', () => {
       const res = calculateInitiativeRoll([
         { theme: 'custom-init-player', themeColor: '#021a1e', value: 8 },

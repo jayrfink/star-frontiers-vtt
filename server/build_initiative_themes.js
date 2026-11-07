@@ -139,7 +139,7 @@ async function main() {
   fs.writeFileSync(path.join(playerDir, 'normal.png'), normBuffer);
   console.log('Generated custom-init-player theme (#7fffd4)');
 
-  // Opposition theme numbers: #33b8bd on #202020 die
+  // Opposition theme numbers: #33b8bd on #080d0d die
   const oppDiffuse = await makeDiffuse(0x33, 0xb8, 0xbd);
   const oppDir = path.join(root, 'public/assets/dice-box/themes/custom-init-opp');
   if (!fs.existsSync(oppDir)) fs.mkdirSync(oppDir, { recursive: true });
