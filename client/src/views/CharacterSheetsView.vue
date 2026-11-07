@@ -504,7 +504,7 @@
                   title="Drag to reorder skill"
                   @click.stop
                 >⋮⋮</span>
-                <div style="flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div style="flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                   <span class="item-name-text">{{ skill.name }}</span>
                   <span class="skill-psa-tag">[{{ getSkillPSA(skill.name) }}]</span>
                   <span class="skill-chance-badge" title="Calculated Success Chance">
@@ -3238,13 +3238,14 @@ export default {
   background: rgba(6, 182, 212, 0.12);
   color: #22d3ee;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-family: monospace;
-  padding: 4px 6px;
+  padding: 3px 5px;
   border-radius: 4px;
   border: 1px solid rgba(6, 182, 212, 0.4);
   box-shadow: 0 0 6px rgba(6, 182, 212, 0.25);
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .btn-xp-upgrade {
