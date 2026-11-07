@@ -531,6 +531,11 @@
                   >
                     +Lvl ({{ getXPCost(skill.name, skill.level + 1, skill.psa) }} XP)
                   </button>
+                  <span
+                    v-else
+                    class="btn-xp-upgrade btn-xp-placeholder"
+                    aria-hidden="true"
+                  ></span>
                 </div>
                 <div class="reorder-actions">
                   <button
@@ -3216,8 +3221,12 @@ export default {
 }
 
 .skill-row .level-wrap {
-  min-width: 145px;
+  width: 170px;
+  min-width: 170px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .skill-psa-tag {
@@ -3275,15 +3284,30 @@ export default {
   background: linear-gradient(135deg, #065f46 0%, #059669 100%);
   border: 1px solid #10b981;
   color: #ecfdf5;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 4px 6px;
+  padding: 3px 4px;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
   box-shadow: var(--sci-glow-green);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   transition: all 0.15s ease-in-out;
+  width: 96px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.btn-xp-upgrade.btn-xp-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 .btn-xp-upgrade:hover {
   box-shadow: var(--sci-glow-green-hover);
