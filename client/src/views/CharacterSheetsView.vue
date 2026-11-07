@@ -2636,13 +2636,21 @@ export default {
   font-family: 'Orbitron', var(--font-family-header, sans-serif);
   flex: 1;
   min-width: 180px;
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: transparent;
+  border: 1px solid transparent;
   color: #cecece;
   font-size: 1.4rem;
   font-weight: 700;
   padding: 8px 12px;
   border-radius: 4px;
+  text-shadow: 0 0 8px rgba(6, 150, 230, 0.9), 0 0 16px rgba(6, 150, 230, 0.7), 0 0 24px rgba(6, 150, 230, 0.5);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.input-name:focus {
+  outline: none;
+  background: rgba(13, 17, 23, 0.4);
+  border-color: rgba(6, 150, 230, 0.4);
 }
 
 .race-select-wrap,

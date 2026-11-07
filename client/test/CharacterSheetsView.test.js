@@ -1875,6 +1875,15 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#a8ffea/);
     });
 
+    it('blends character sheet title text box into card background and adds 20% bluer SFVTT glow', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.input-name\s*\{[^}]*background:\s*transparent;/);
+      expect(vueFile).toMatch(/\.input-name\s*\{[^}]*border:\s*1px\s+solid\s+transparent;/);
+      expect(vueFile).toMatch(/\.input-name\s*\{[^}]*text-shadow:[^}]*rgba\(6,\s*150,\s*230,\s*0\.9\)/);
+    });
+
     it('renders inventory item name as text, removes Kg input, and retains item attributes/qty', () => {
       const fs = require('fs');
       const path = require('path');
