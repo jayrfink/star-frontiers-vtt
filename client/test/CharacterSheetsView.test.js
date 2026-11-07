@@ -1858,9 +1858,18 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*color:\s*#c0c0c0\s*!important/);
       expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*border:\s*1px\s*solid\s*#30363d\s*!important/);
 
-      // Left/right attribute shift arrows are darker cyan #00a8a8 matching +Add Skill button
+      // Left/right attribute shift arrows are darker cyan #00a8a8
       expect(vueFile).toMatch(/\.btn-shift\s*\{[^}]*color:\s*#00a8a8;/);
-      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*(?:#00a8a8|#38bdf8)/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*(?:#00a8a8|#38bdf8|#a8ffea)/);
+    });
+
+    it('styles action buttons (+ Skill, + Equipment, + Custom Item, + Add Note Panel) with active sheet card palette', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*background(-color)?:\s*#05282e/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*border:\s*1px\s+solid\s+aquamarine/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#a8ffea/);
     });
 
     it('renders inventory item name as text, removes Kg input, and retains item attributes/qty', () => {

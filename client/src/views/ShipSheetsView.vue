@@ -3640,26 +3640,29 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(56, 189, 248, 0.15) !important;
-  background-color: rgba(56, 189, 248, 0.15) !important;
-  color: #38bdf8 !important;
-  -webkit-text-fill-color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  background: #05282e !important;
+  background-color: #05282e !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  border: 1px solid aquamarine !important;
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  letter-spacing: 0.3px;
+  box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.25), 0 0 8px rgba(6, 182, 212, 0.2);
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
   transition: all 0.15s ease-in-out;
 }
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(56, 189, 248, 0.25) !important;
-  background-color: rgba(56, 189, 248, 0.25) !important;
-  border-color: #38bdf8 !important;
-  color: #38bdf8 !important;
-  -webkit-text-fill-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+  background: #083841 !important;
+  background-color: #083841 !important;
+  border-color: aquamarine !important;
+  color: #a8ffea !important;
+  -webkit-text-fill-color: #a8ffea;
+  box-shadow: inset 0 0 12px rgba(6, 182, 212, 0.4), 0 0 12px rgba(127, 255, 212, 0.4);
 }
 .btn-secondary:active:not(:disabled) {
   transform: translateY(1px);

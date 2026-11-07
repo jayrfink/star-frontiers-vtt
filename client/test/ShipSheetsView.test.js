@@ -2220,6 +2220,15 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*box-shadow:\s*2px\s+0\s+12px\s+rgba\(6,\s*182,\s*212,\s*0\.25\);/);
       expect(vueFile).toMatch(/\.sidebar-header\s+h3\s*\{[^}]*text-shadow:\s*0\s+0\s+(?:8px|10px)\s+rgba\(6,\s*182,\s*212,\s*0\.[56]\)/);
     });
+
+    it('styles action buttons (+ Defense, + Weapon, + Add Note Panel) with active sheet card palette', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*background(-color)?:\s*#05282e/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*border:\s*1px\s+solid\s+aquamarine/);
+      expect(vueFile).toMatch(/\.btn-secondary\s*\{[^}]*color:\s*#a8ffea/);
+    });
   });
 });
 
