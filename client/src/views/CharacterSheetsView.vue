@@ -2830,6 +2830,7 @@ export default {
   display: flex;
   gap: 4px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .input-delta {
@@ -2842,16 +2843,36 @@ export default {
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .btn-delta {
-  padding: 3px 8px;
+  padding: 3px 6px;
   font-size: 0.78rem;
   font-weight: 700;
   border-radius: 4px;
   cursor: pointer;
   border: none;
   transition: all 0.15s ease-in-out;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.freeform-delta-group .btn-sub {
+  width: 60px;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.freeform-delta-group .btn-add {
+  width: 66px;
+  min-width: 66px;
+  flex-shrink: 0;
 }
 
 .btn-action-reset,
