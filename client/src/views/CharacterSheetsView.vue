@@ -4080,7 +4080,7 @@ export default {
   flex: 1;
   background: #0d1117;
   border: 1px solid #334155;
-  color: #00ffff;
+  color: #c3c3c3;
   font-size: 1rem;
   font-weight: 700;
   padding: 6px 10px;

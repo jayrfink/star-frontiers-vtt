@@ -214,6 +214,13 @@ describe('GmNotesView Component', () => {
     expect(source).toMatch(/\.btn-add-panel\s*\{[^}]*border:\s*1px\s+solid\s+(?:#2394a6|rgba\(56,\s*189,\s*248,\s*0\.4\))/);
   });
 
+  it('styles individual note panel titles with color #c3c3c3', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../src/views/GmNotesView.vue'), 'utf-8');
+    expect(source).toMatch(/\.panel-title-input\s*\{[^}]*color:\s*#c3c3c3;/);
+  });
+
   it('allows reordering note panels via up/down buttons and persists order to API', async () => {
     const originalFetch = global.fetch;
     const reorderCalls = [];

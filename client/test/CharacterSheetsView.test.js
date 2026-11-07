@@ -280,6 +280,9 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
 
       expect(charContent).toMatch(/\.notes-textarea\s*\{[^}]*background:\s*#0d1117;?[^}]*border:\s*1px solid #30363d;?[^}]*\}/);
       expect(shipContent).toMatch(/\.notes-textarea\s*\{[^}]*background:\s*#0d1117;?[^}]*border:\s*1px solid #30363d;?[^}]*\}/);
+
+      // Individual note panel titles use #c3c3c3
+      expect(charContent).toMatch(/\.panel-title-input\s*\{[^}]*color:\s*#c3c3c3;/);
     });
 
     it('defaults character note panels to empty array when no notes exist', () => {
