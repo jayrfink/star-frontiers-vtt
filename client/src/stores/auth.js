@@ -47,8 +47,8 @@ export const useAuthStore = defineStore('auth', () => {
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Login failed');
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Login failed (HTTP ${res.status})`);
     }
     user.value = await res.json();
     if (socket) {
@@ -69,8 +69,8 @@ export const useAuthStore = defineStore('auth', () => {
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Registration failed');
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Registration failed (HTTP ${res.status})`);
     }
     await login(username, password);
   }
@@ -91,9 +91,9 @@ export const useAuthStore = defineStore('auth', () => {
       body: JSON.stringify({ currentPassword, newPassword }),
       credentials: 'include',
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to update password');
+      throw new Error(data.error || `Failed to update password (HTTP ${res.status})`);
     }
     return data;
   }
