@@ -251,7 +251,14 @@
 
                 <div class="form-group">
                   <label>Avatar / Image URL</label>
-                  <input v-model="customForm.avatar_url" type="text" placeholder="e.g. /uploads/buggy.png" />
+                  <div class="vehicle-token-edit-row">
+                    <input v-model="customForm.avatar_url" type="text" class="flex-1" placeholder="e.g. /uploads/tokens/buggy.png" />
+                    <button type="button" class="btn-browse-veh-token" @click="browseTemplateImage('custom')">📁 Browse</button>
+                    <label class="btn-upload-veh-token">
+                      ⬆️ Upload
+                      <input type="file" accept="image/*" style="display: none;" @change="handleCustomVehicleTokenUpload" />
+                    </label>
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -280,6 +287,52 @@
                 <span v-if="selectedVehicle" class="active-veh-tag">
                   Deploying: <strong>{{ deployName || selectedVehicle.name }}</strong> (Size {{ deploySize || selectedVehicle.token_size }})
                 </span>
+              </div>
+
+              <!-- Template Token Art Editor (GM) -->
+              <div v-if="selectedVehicle && isGm" class="template-token-editor">
+                <div class="veh-token-preview-circle">
+                  <img v-if="selectedVehicle.avatar_url" :src="selectedVehicle.avatar_url" :alt="selectedVehicle.name" />
+                  <span v-else>🚀</span>
+                </div>
+                <div class="veh-token-controls">
+                  <label class="veh-token-label">Template Token Art ({{ selectedVehicle.name }})</label>
+                  <div class="vehicle-token-edit-row">
+                    <input
+                      v-model="templateTokenUrlInput"
+                      type="text"
+                      class="flex-1 veh-token-url-input"
+                      placeholder="/uploads/... or leave empty"
+                      :disabled="updatingVehicleToken"
+                    />
+                    <button
+                      type="button"
+                      class="btn-browse-veh-token"
+                      :disabled="updatingVehicleToken"
+                      @click="browseTemplateImage('existing')"
+                    >
+                      📁 Browse
+                    </button>
+                    <label class="btn-upload-veh-token" :class="{ disabled: updatingVehicleToken }">
+                      ⬆️ Upload
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style="display: none;"
+                        :disabled="updatingVehicleToken"
+                        @change="handleExistingVehicleTokenUpload"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="btn-save-veh-token"
+                      :disabled="updatingVehicleToken || templateTokenUrlInput === (selectedVehicle.avatar_url || '')"
+                      @click="updateSelectedVehicleToken(templateTokenUrlInput)"
+                    >
+                      {{ updatingVehicleToken ? 'Saving...' : 'Save Token' }}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div class="form-row">
@@ -393,16 +446,23 @@ export default {
       type: Number,
       default: 0,
     },
+    selectedImageUrl: {
+      type: String,
+      default: '',
+    },
   },
-  emits: ['update:modelValue', 'deploy'],
+  emits: ['update:modelValue', 'deploy', 'browse-image'],
   data() {
     return {
       activeTab: 'standard',
       vehicles: [],
       loadingVehicles: false,
       creatingCustom: false,
+      updatingVehicleToken: false,
       errorMessage: null,
       selectedVehicleId: null,
+      templateTokenUrlInput: '',
+      browseImageTargetMode: 'existing',
 
       // Deployment options
       deployName: '',
@@ -474,6 +534,19 @@ export default {
         if (newVeh.token_size) {
           this.deploySize = newVeh.token_size;
         }
+        this.templateTokenUrlInput = newVeh.avatar_url || '';
+      } else {
+        this.templateTokenUrlInput = '';
+      }
+    },
+    selectedImageUrl(newUrl) {
+      if (newUrl) {
+        if (this.browseImageTargetMode === 'custom') {
+          this.customForm.avatar_url = newUrl;
+        } else if (this.selectedVehicleId) {
+          this.templateTokenUrlInput = newUrl;
+          this.updateSelectedVehicleToken(newUrl);
+        }
       }
     },
   },
@@ -483,6 +556,7 @@ export default {
     }
     if (socket) {
       socket.on('vehicle:created', this.onVehicleCreated);
+      socket.on('vehicle:updated', this.onVehicleCreated);
       socket.on('vehicle:deleted', this.onVehicleDeleted);
     }
   },
@@ -492,10 +566,100 @@ export default {
     }
     if (socket) {
       socket.off('vehicle:created', this.onVehicleCreated);
+      socket.off('vehicle:updated', this.onVehicleCreated);
       socket.off('vehicle:deleted', this.onVehicleDeleted);
     }
   },
   methods: {
+    browseTemplateImage(targetMode = 'existing') {
+      this.browseImageTargetMode = targetMode;
+      this.$emit('browse-image');
+    },
+    async updateSelectedVehicleToken(avatarUrl) {
+      if (!this.selectedVehicleId || !this.isGm) return;
+      this.updatingVehicleToken = true;
+      this.errorMessage = null;
+      try {
+        const res = await fetch(`/api/vehicles/${encodeURIComponent(this.selectedVehicleId)}/token`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ avatar_url: avatarUrl }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to update vehicle token');
+        }
+        const data = await res.json();
+        const updated = data?.vehicle || data;
+        if (updated && updated.id) {
+          this.onVehicleCreated(updated);
+          this.templateTokenUrlInput = updated.avatar_url || '';
+        }
+      } catch (err) {
+        console.error('Error updating vehicle token:', err);
+        this.errorMessage = err.message || 'Failed to update vehicle token';
+      } finally {
+        this.updatingVehicleToken = false;
+      }
+    },
+    async handleExistingVehicleTokenUpload(event) {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      this.errorMessage = null;
+      const formData = new FormData();
+      formData.append('folder', 'tokens');
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to upload vehicle token image');
+        }
+        const data = await res.json();
+        if (data.url) {
+          this.templateTokenUrlInput = data.url;
+          await this.updateSelectedVehicleToken(data.url);
+        }
+      } catch (err) {
+        console.error('Error uploading vehicle token:', err);
+        this.errorMessage = err.message || 'Failed to upload vehicle token image';
+      } finally {
+        if (event.target) event.target.value = '';
+      }
+    },
+    async handleCustomVehicleTokenUpload(event) {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      this.errorMessage = null;
+      const formData = new FormData();
+      formData.append('folder', 'tokens');
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to upload vehicle token image');
+        }
+        const data = await res.json();
+        if (data.url) {
+          this.customForm.avatar_url = data.url;
+        }
+      } catch (err) {
+        console.error('Error uploading custom vehicle token:', err);
+        this.errorMessage = err.message || 'Failed to upload vehicle token image';
+      } finally {
+        if (event.target) event.target.value = '';
+      }
+    },
     onVehicleCreated(payload) {
       const newVeh = payload?.vehicle || payload;
       if (!newVeh || !newVeh.id) return;
@@ -1080,6 +1244,96 @@ textarea:focus {
 .active-veh-tag {
   color: #00ffff;
   font-size: 0.8rem;
+}
+
+.template-token-editor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.veh-token-preview-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #00ffff;
+  background-color: #161b22;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.veh-token-preview-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.veh-token-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.veh-token-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+}
+
+.vehicle-token-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-browse-veh-token,
+.btn-upload-veh-token,
+.btn-save-veh-token {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid #30363d;
+  background-color: #21262d;
+  color: #58a6ff;
+  transition: all 0.15s ease;
+}
+
+.btn-browse-veh-token:hover:not(:disabled),
+.btn-upload-veh-token:hover:not(.disabled) {
+  background-color: #30363d;
+  border-color: #58a6ff;
+  color: #79c0ff;
+}
+
+.btn-save-veh-token {
+  background-color: #082d33;
+  border-color: #00ffff;
+  color: #00ffff;
+}
+
+.btn-save-veh-token:hover:not(:disabled) {
+  background-color: #0e4f5b;
+  color: #cecece;
+}
+
+.btn-save-veh-token:disabled,
+.btn-browse-veh-token:disabled,
+.btn-upload-veh-token.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .color-group {

@@ -64,4 +64,66 @@ describe('imageGeneratorService', () => {
       global.fetch = origFetch;
     }
   });
+
+  it('saves generated AI token art directly into the specified target folder without creating duplicate raw files', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const os = await import('os');
+    const sharp = (await import('sharp')).default;
+    const { generateTokenArtFromDescription } = await import('../src/imageGeneratorService.js');
+
+    const tmpUploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-ai-folder-test-'));
+    const origFetch = global.fetch;
+
+    const pngBuffer = await sharp({
+      create: { width: 64, height: 64, channels: 4, background: { r: 20, g: 120, b: 200, alpha: 1 } },
+    })
+      .png()
+      .toBuffer();
+
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => pngBuffer.buffer.slice(pngBuffer.byteOffset, pngBuffer.byteOffset + pngBuffer.byteLength),
+    });
+
+    try {
+      const result = await generateTokenArtFromDescription({
+        prompt: 'Cybernetic bounty hunter',
+        name: 'Vrusk Hunter',
+        species: 'Vrusk',
+        category: 'npc',
+        threat_tier: 2,
+        folder: 'species/vrusk',
+        uploadDir: tmpUploadsDir,
+      });
+
+      expect(result.token_image_url).toMatch(/^\/uploads\/species\/vrusk\/vrusk-hunter-\d+\.png$/);
+      expect(result.source_image_url).toBe(result.token_image_url);
+      expect(result.folder).toBe('species/vrusk');
+
+      const savedRelPath = result.token_image_url.replace(/^\/uploads\//, '');
+      const savedFullPath = path.join(tmpUploadsDir, savedRelPath);
+      expect(fs.existsSync(savedFullPath)).toBe(true);
+
+      // Ensure no raw_*.jpg file was dumped in root uploadsDir
+      const rootFiles = fs.readdirSync(tmpUploadsDir).filter((f) => f.startsWith('raw_'));
+      expect(rootFiles).toHaveLength(0);
+    } finally {
+      global.fetch = origFetch;
+      fs.rmSync(tmpUploadsDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects path traversal in folder parameter with status 400', async () => {
+    const { generateTokenArtFromDescription } = await import('../src/imageGeneratorService.js');
+    await expect(
+      generateTokenArtFromDescription({
+        name: 'Traversal Test',
+        folder: '../../etc',
+      })
+    ).rejects.toMatchObject({
+      status: 400,
+    });
+  });
 });

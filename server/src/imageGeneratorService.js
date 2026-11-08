@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 import { fileURLToPath } from 'url';
-import { generateTokenRingImage } from './tokenImagePipeline.js';
+import { sanitizeFolder } from './upload.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -124,7 +125,7 @@ export async function generateAiImage(enhancedPrompt) {
 }
 
 /**
- * Generates AI token art, saves raw image, applies circular mask + tier ring
+ * Generates AI token art and saves a single image directly to the requested folder
  */
 export async function generateTokenArtFromDescription({
   prompt,
@@ -135,36 +136,60 @@ export async function generateTokenArtFromDescription({
   weapon,
   armor,
   attacks,
+  folder = 'tokens',
   uploadDir,
 }) {
+  let targetSubfolder = 'tokens';
+  if (folder !== undefined && folder !== null) {
+    try {
+      targetSubfolder = sanitizeFolder(String(folder));
+    } catch {
+      const folderErr = new Error('Invalid folder path');
+      folderErr.status = 400;
+      throw folderErr;
+    }
+  }
+
+  const uploadsDir = uploadDir || path.join(DATA_DIR, 'uploads');
+  const uploadsRoot = path.resolve(uploadsDir);
+  const targetDir = targetSubfolder ? path.resolve(uploadsDir, targetSubfolder) : uploadsRoot;
+  if (targetDir !== uploadsRoot && !targetDir.startsWith(uploadsRoot + path.sep)) {
+    const folderErr = new Error('Invalid folder path');
+    folderErr.status = 400;
+    throw folderErr;
+  }
+
   const enhancedPrompt = buildTokenPrompt({ prompt, name, species, category, weapon, armor, attacks });
   const imageBuffer = await generateAiImage(enhancedPrompt);
 
-  const uploadsDir = uploadDir || path.join(DATA_DIR, 'uploads');
-  const tokensUploadDir = path.join(uploadsDir, 'tokens');
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-  if (!fs.existsSync(tokensUploadDir)) fs.mkdirSync(tokensUploadDir, { recursive: true });
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
 
-  const slug = `${(name || 'adversary').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString().slice(-6)}`;
-  const rawFileName = `raw_${slug}.jpg`;
-  const rawFilePath = path.join(uploadsDir, rawFileName);
-  fs.writeFileSync(rawFilePath, imageBuffer);
+  const cleanSlugBase = (name || 'adversary')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'adversary';
+  const slug = `${cleanSlugBase}-${Date.now().toString().slice(-6)}`;
+  const tokenFileName = `${slug}.png`;
+  const tokenFilePath = path.join(targetDir, tokenFileName);
 
-  const tokenFileName = `token_${slug}.png`;
-  const tokenFilePath = path.join(tokensUploadDir, tokenFileName);
+  try {
+    await sharp(imageBuffer)
+      .resize(256, 256, { fit: 'cover' })
+      .png()
+      .toFile(tokenFilePath);
+  } catch {
+    fs.writeFileSync(tokenFilePath, imageBuffer);
+  }
 
-  await generateTokenRingImage({
-    sourceImagePath: rawFilePath,
-    outputPath: tokenFilePath,
-    threatTier: threat_tier,
-    category,
-    label: name,
-    size: 256,
-  });
+  const relPath = targetSubfolder ? `${targetSubfolder}/${tokenFileName}` : tokenFileName;
+  const publicUrl = `/uploads/${relPath}`;
 
   return {
-    source_image_url: `/uploads/${rawFileName}`,
-    token_image_url: `/uploads/tokens/${tokenFileName}`,
+    source_image_url: publicUrl,
+    token_image_url: publicUrl,
+    folder: targetSubfolder,
     enhanced_prompt: enhancedPrompt,
   };
 }

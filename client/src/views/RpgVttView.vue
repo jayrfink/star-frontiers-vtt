@@ -841,6 +841,8 @@
       :default-x="deployVehicleCoords.x"
       :default-y="deployVehicleCoords.y"
       :is-gm="isGm"
+      :selected-image-url="vehicleImageSelectedUrl"
+      @browse-image="openVehicleImageBrowser"
       @deploy="onDeployVehicle"
     />
 
@@ -1318,6 +1320,7 @@ watch(showDeployVehicleModal, (isOpen) => {
   }
 });
 const adversaryImageSelectedUrl = ref('');
+const vehicleImageSelectedUrl = ref('');
 const showImageBrowser = ref(false);
 const imageBrowserTarget = ref('token');
 const tokenFileInput = ref(null);
@@ -1373,6 +1376,9 @@ const imageBrowserTitle = computed(() => {
   if (imageBrowserTarget.value === 'adversary') {
     return 'Select Adversary Portrait Image';
   }
+  if (imageBrowserTarget.value === 'vehicle') {
+    return 'Select Vehicle Token Image';
+  }
   return 'Select Token Image';
 });
 
@@ -1380,6 +1386,7 @@ const currentBrowserImage = computed(() => {
   if (imageBrowserTarget.value === 'active_map') return activeMapForm.background_url;
   if (imageBrowserTarget.value === 'new_map') return newMapForm.background_url;
   if (imageBrowserTarget.value === 'adversary') return adversaryImageSelectedUrl.value;
+  if (imageBrowserTarget.value === 'vehicle') return vehicleImageSelectedUrl.value;
   return newTokenForm.avatar_url;
 });
 
@@ -1391,6 +1398,12 @@ function openTokenImageBrowser() {
 function openAdversaryImageBrowser() {
   adversaryImageSelectedUrl.value = '';
   imageBrowserTarget.value = 'adversary';
+  showImageBrowser.value = true;
+}
+
+function openVehicleImageBrowser() {
+  vehicleImageSelectedUrl.value = '';
+  imageBrowserTarget.value = 'vehicle';
   showImageBrowser.value = true;
 }
 
@@ -1737,6 +1750,8 @@ function onImageSelected(url) {
     newMapForm.background_url = url;
   } else if (imageBrowserTarget.value === 'adversary') {
     adversaryImageSelectedUrl.value = url;
+  } else if (imageBrowserTarget.value === 'vehicle') {
+    vehicleImageSelectedUrl.value = url;
   } else {
     newTokenForm.avatar_url = url;
   }

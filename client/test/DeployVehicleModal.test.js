@@ -76,6 +76,18 @@ describe('DeployVehicleModal.vue', () => {
           }),
         });
       }
+      if (options?.method === 'PATCH') {
+        const body = JSON.parse(options.body);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            vehicle: {
+              ...mockVehicles[0],
+              avatar_url: body.avatar_url,
+            },
+          }),
+        });
+      }
       if (options?.method === 'DELETE') {
         return Promise.resolve({
           ok: true,
@@ -357,5 +369,35 @@ describe('DeployVehicleModal.vue', () => {
     expect(wrapper.emitted('deploy')).toBeTruthy();
     const payload = wrapper.emitted('deploy')[0][0];
     expect(payload.layer).toBe('gm');
+  });
+
+  it('allows GM to edit the token of an existing vehicle template via PATCH /api/vehicles/:id/token', async () => {
+    const wrapper = mount(DeployVehicleModal, {
+      props: {
+        modelValue: true,
+        isGm: true,
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 10));
+
+    const urlInput = wrapper.find('input.veh-token-url-input');
+    expect(urlInput.exists()).toBe(true);
+    await urlInput.setValue('/uploads/tokens/ground-car.png');
+
+    const saveBtn = wrapper.find('button.btn-save-veh-token');
+    expect(saveBtn.exists()).toBe(true);
+    await saveBtn.trigger('click');
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/vehicles/ground_car/token',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ avatar_url: '/uploads/tokens/ground-car.png' }),
+      })
+    );
+    expect(wrapper.vm.selectedVehicle.avatar_url).toBe('/uploads/tokens/ground-car.png');
   });
 });

@@ -81,23 +81,78 @@ describe('Adversaries API - Template Delete & Token Update', () => {
 
     expect(patchRes.status).toBe(200);
     expect(patchRes.body.template.template_id).toBe(templateId);
-    expect(patchRes.body.template.token_image_path).toMatch(new RegExp(`^/uploads/tokens/${templateId}\\.png\\?v=\\d+$`));
+    expect(patchRes.body.template.token_image_path).toBe(`/uploads/${rawFileName}`);
     expect(patchRes.body.updatedTokensCount).toBe(2);
 
-    // Verify map tokens in DB were updated with the new avatar_url
+    // Verify map tokens in DB were updated with the shared original filename
     const activeMapRes = await agent.get('/api/maps/active?type=rpg');
     const mapTokens = activeMapRes.body.tokens.filter((t) => t.template_id === templateId);
     expect(mapTokens).toHaveLength(2);
-    expect(mapTokens[0].avatar_url).toBe(patchRes.body.template.token_image_path);
-    expect(mapTokens[1].avatar_url).toBe(patchRes.body.template.token_image_path);
+    expect(mapTokens[0].avatar_url).toBe(`/uploads/${rawFileName}`);
+    expect(mapTokens[1].avatar_url).toBe(`/uploads/${rawFileName}`);
 
     // Verify socket events emitted
     expect(emitSpy).toHaveBeenCalledWith('adversary:saved', expect.objectContaining({
       template: expect.objectContaining({ template_id: templateId }),
     }));
     expect(emitSpy).toHaveBeenCalledWith('token:updated', expect.objectContaining({
-      token: expect.objectContaining({ template_id: templateId, avatar_url: patchRes.body.template.token_image_path }),
+      token: expect.objectContaining({ template_id: templateId, avatar_url: `/uploads/${rawFileName}` }),
     }));
+  });
+
+  it('shares the original token filename across different tiers and adversaries without creating $tokenname-t$TIER duplicates', async () => {
+    const speciesDir = path.join(DATA_UPLOADS_DIR, 'species');
+    if (!fs.existsSync(speciesDir)) {
+      fs.mkdirSync(speciesDir, { recursive: true });
+    }
+    const sharedFileName = `shared_merc_${Date.now()}.png`;
+    const sharedDiskPath = path.join(speciesDir, sharedFileName);
+    await sharp({
+      create: { width: 64, height: 64, channels: 4, background: { r: 50, g: 180, b: 90, alpha: 1 } },
+    })
+      .png()
+      .toFile(sharedDiskPath);
+    createdFiles.push(sharedDiskPath);
+
+    const sharedUrl = `/uploads/species/${sharedFileName}`;
+
+    // Spawn Tier 1 Spy Merc using the shared token
+    const spawnT1 = await agent.post('/api/adversaries/spawn').send({
+      mapId,
+      count: 1,
+      source_image_url: sharedUrl,
+      template: {
+        name: 'Shared MercTest',
+        category: 'npc',
+        threat_tier: 1,
+        species: 'Human',
+      },
+    });
+    expect(spawnT1.status).toBe(201);
+    expect(spawnT1.body.template.token_image_path).toBe(sharedUrl);
+    expect(spawnT1.body.tokens[0].avatar_url).toBe(sharedUrl);
+
+    // Spawn Tier 2 Spy Merc using the exact same shared token
+    const spawnT2 = await agent.post('/api/adversaries/spawn').send({
+      mapId,
+      count: 1,
+      source_image_url: sharedUrl,
+      template: {
+        name: 'Shared MercTest',
+        category: 'npc',
+        threat_tier: 2,
+        species: 'Human',
+      },
+    });
+    expect(spawnT2.status).toBe(201);
+    expect(spawnT2.body.template.token_image_path).toBe(sharedUrl);
+    expect(spawnT2.body.tokens[0].avatar_url).toBe(sharedUrl);
+
+    // Verify NO duplicate $tokenname-t1.png or $tokenname-t2.png files were created in /uploads/tokens/
+    const dupT1 = path.join(DATA_UPLOADS_DIR, 'tokens', `${spawnT1.body.template.template_id}.png`);
+    const dupT2 = path.join(DATA_UPLOADS_DIR, 'tokens', `${spawnT2.body.template.template_id}.png`);
+    expect(fs.existsSync(dupT1)).toBe(false);
+    expect(fs.existsSync(dupT2)).toBe(false);
   });
 
   it('PATCH /api/adversaries/:id/token returns 400 when source_image_url file is missing on disk', async () => {

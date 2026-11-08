@@ -45,16 +45,26 @@
             <div class="form-group">
               <div class="template-select-header">
                 <label>Select Blueprint / Template</label>
-                <button
-                  v-if="currentSelectedTemplate"
-                  type="button"
-                  class="btn-delete-template"
-                  title="Delete selected template"
-                  :disabled="isUpdatingToken || isGeneratingArt || isSpawning"
-                  @click="deleteSelectedTemplate"
-                >
-                  🗑️ Delete Template
-                </button>
+                <div v-if="currentSelectedTemplate" class="template-header-actions">
+                  <button
+                    type="button"
+                    class="btn-clone-template"
+                    title="Edit or clone this template in Custom Builder (shares token image)"
+                    :disabled="isUpdatingToken || isGeneratingArt || isSpawning"
+                    @click="loadTemplateIntoBuilder"
+                  >
+                    ✏️ Edit / Clone
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-delete-template"
+                    title="Delete selected template"
+                    :disabled="isUpdatingToken || isGeneratingArt || isSpawning"
+                    @click="deleteSelectedTemplate"
+                  >
+                    🗑️ Delete Template
+                  </button>
+                </div>
               </div>
               <select v-model="selectedTemplateId" class="template-select">
                 <option v-for="tpl in templates" :key="tpl.template_id" :value="tpl.template_id">
@@ -95,36 +105,73 @@
 
               <!-- Change / Upload Token Artwork Controls for Existing Template -->
               <div class="existing-token-controls">
-                <span class="token-controls-label">Token Art:</span>
-                <div class="art-buttons-row">
-                  <label class="btn-upload-file" :class="{ disabled: isUpdatingToken }">
-                    {{ isUpdatingToken ? '⏳ Updating...' : '⬆️ Upload Token' }}
+                <div class="existing-token-controls-main">
+                  <div class="folder-picker-row">
+                    <span class="token-controls-label">Save to Folder:</span>
+                    <select v-model="selectedUploadFolder" class="folder-select">
+                      <option value="">/uploads (Root)</option>
+                      <option v-for="folder in nonRootUploadFolders" :key="folder" :value="folder">
+                        /uploads/{{ folder }}
+                      </option>
+                      <option value="__new__">+ New Folder...</option>
+                    </select>
                     <input
-                      type="file"
-                      accept="image/*"
-                      :disabled="isUpdatingToken"
-                      @change="handleExistingTokenFileUpload"
-                      style="display: none;"
+                      v-if="selectedUploadFolder === '__new__'"
+                      type="text"
+                      v-model="customUploadFolder"
+                      class="custom-folder-input"
+                      placeholder="New folder (e.g. npcs/pirates)"
                     />
-                  </label>
-                  <button
-                    type="button"
-                    class="btn-browse-art"
-                    :disabled="isUpdatingToken"
-                    @click="$emit('browse-image')"
-                  >
-                    📁 Browse Uploads
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-generate-ai-art"
-                    :disabled="isGeneratingArt || isUpdatingToken || cooldownSeconds > 0"
-                    @click="generateExistingTemplateAiArt"
-                  >
-                    <span v-if="isGeneratingArt">⏳ Generating...</span>
-                    <span v-else-if="cooldownSeconds > 0">⏳ Cooldown ({{ cooldownSeconds }}s)</span>
-                    <span v-else>✨ AI Token Art</span>
-                  </button>
+                  </div>
+                  <div class="art-buttons-row">
+                    <span class="token-controls-label">Token Art:</span>
+                    <label class="btn-upload-file" :class="{ disabled: isUpdatingToken }">
+                      {{ isUpdatingToken ? '⏳ Updating...' : '⬆️ Upload Token' }}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        :disabled="isUpdatingToken"
+                        @change="handleExistingTokenFileUpload"
+                        style="display: none;"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="btn-browse-art"
+                      :disabled="isUpdatingToken"
+                      @click="$emit('browse-image')"
+                    >
+                      📁 Browse Uploads
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-generate-ai-art"
+                      :disabled="isGeneratingArt || isUpdatingToken || cooldownSeconds > 0"
+                      @click="generateExistingTemplateAiArt"
+                    >
+                      <span v-if="isGeneratingArt">⏳ Generating...</span>
+                      <span v-else-if="cooldownSeconds > 0">⏳ Cooldown ({{ cooldownSeconds }}s)</span>
+                      <span v-else>✨ AI Token Art</span>
+                    </button>
+                  </div>
+                  <div class="existing-token-url-row">
+                    <input
+                      type="text"
+                      v-model="existingTokenUrlInput"
+                      class="art-url-input existing-url-input"
+                      placeholder="Token path (/uploads/... or https://...)"
+                      :disabled="isUpdatingToken"
+                      @keyup.enter="applyExistingTokenUrl"
+                    />
+                    <button
+                      type="button"
+                      class="btn-apply-token-url"
+                      :disabled="isUpdatingToken || !existingTokenUrlInput || !existingTokenUrlInput.trim()"
+                      @click="applyExistingTokenUrl"
+                    >
+                      Save Token
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -308,6 +355,23 @@
                 </span>
               </div>
               <div class="art-picker-controls">
+                <div class="folder-picker-row">
+                  <span class="token-controls-label">Save to Folder:</span>
+                  <select v-model="selectedUploadFolder" class="folder-select">
+                    <option value="">/uploads (Root)</option>
+                    <option v-for="folder in nonRootUploadFolders" :key="folder" :value="folder">
+                      /uploads/{{ folder }}
+                    </option>
+                    <option value="__new__">+ New Folder...</option>
+                  </select>
+                  <input
+                    v-if="selectedUploadFolder === '__new__'"
+                    type="text"
+                    v-model="customUploadFolder"
+                    class="custom-folder-input"
+                    placeholder="New folder (e.g. npcs/pirates)"
+                  />
+                </div>
                 <div class="art-buttons-row">
                   <button
                     type="button"
@@ -443,6 +507,10 @@ export default {
       isGeneratingArt: false,
       isUpdatingToken: false,
       existingTokenImageError: false,
+      existingTokenUrlInput: '',
+      uploadFolders: ['', 'tokens', 'species', 'creatures', 'robots', 'ship-tokens'],
+      selectedUploadFolder: 'tokens',
+      customUploadFolder: '',
       cooldownSeconds: 0,
       artCooldownTimer: null,
       errorMessage: null,
@@ -467,16 +535,29 @@ export default {
       if (!this.selectedTemplateId) return null;
       return this.templates.find((t) => t.template_id === this.selectedTemplateId) || null;
     },
+    nonRootUploadFolders() {
+      return (this.uploadFolders || []).filter((f) => f && f !== '');
+    },
   },
   watch: {
     modelValue(val) {
       if (val) {
         this.errorMessage = null;
         this.fetchTemplates();
+        if (typeof this.fetchUploadFolders === 'function') {
+          this.fetchUploadFolders();
+        }
       }
     },
     selectedTemplateId() {
       this.existingTokenImageError = false;
+      this.existingTokenUrlInput = this.currentSelectedTemplate?.token_image_path || '';
+    },
+    currentSelectedTemplate: {
+      immediate: true,
+      handler(tpl) {
+        this.existingTokenUrlInput = tpl?.token_image_path || '';
+      },
     },
     selectedImageUrl(newVal) {
       if (!newVal) return;
@@ -490,6 +571,56 @@ export default {
   methods: {
     close() {
       this.$emit('update:modelValue', false);
+    },
+    getEffectiveUploadFolder() {
+      if (this.selectedUploadFolder === '__new__') {
+        return (this.customUploadFolder || '').trim().replace(/^\/+|\/+$/g, '');
+      }
+      return this.selectedUploadFolder !== undefined && this.selectedUploadFolder !== null
+        ? this.selectedUploadFolder
+        : 'tokens';
+    },
+    async fetchUploadFolders() {
+      try {
+        const res = await fetch('/api/upload/files', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.folders)) {
+            const merged = new Set(['', 'tokens', 'species', 'creatures', 'robots', 'ship-tokens', ...data.folders]);
+            this.uploadFolders = Array.from(merged);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load upload folders:', err);
+      }
+    },
+    loadTemplateIntoBuilder() {
+      const tpl = this.currentSelectedTemplate;
+      if (!tpl) return;
+      const actionNames = Array.isArray(tpl.actions) ? tpl.actions.map((a) => a.name).join(', ') : '';
+      const traitNames = Array.isArray(tpl.traits) ? tpl.traits.map((t) => t.name || t).join(', ') : '';
+      this.customForm = {
+        ...this.customForm,
+        name: tpl.name || 'Adversary',
+        description: tpl.system_data?.description || '',
+        category: tpl.category || 'npc',
+        threat_tier: Number(tpl.threat_tier) || 2,
+        species: tpl.system_data?.race || tpl.system_data?.species || 'Sathar',
+        weapon: actionNames || this.customForm.weapon,
+        armor: tpl.defense_summary || '',
+        attacks: actionNames || this.customForm.attacks,
+        traits: traitNames || this.customForm.traits,
+        diet: tpl.system_data?.diet || 'Carnivore',
+        size: tpl.system_data?.size_class || 'Medium',
+        source_image_url: tpl.token_image_path || '',
+      };
+      this.mode = 'custom';
+    },
+    async applyExistingTokenUrl() {
+      if (!this.selectedTemplateId || !this.existingTokenUrlInput) return;
+      const url = this.existingTokenUrlInput.trim();
+      if (!url) return;
+      await this.updateExistingTemplateToken(url);
     },
     getTierColor(tier) {
       const map = {
@@ -553,7 +684,14 @@ export default {
       const file = event.target?.files?.[0];
       if (!file) return;
 
+      const folder = typeof this.getEffectiveUploadFolder === 'function'
+        ? this.getEffectiveUploadFolder()
+        : (this.selectedUploadFolder ?? 'tokens');
+
       const formData = new FormData();
+      if (folder !== undefined && folder !== null) {
+        formData.append('folder', folder);
+      }
       formData.append('file', file);
       try {
         const res = await fetch('/api/upload', {
@@ -564,6 +702,11 @@ export default {
         if (res.ok) {
           const data = await res.json();
           this.customForm.source_image_url = data.url;
+          if (folder && Array.isArray(this.uploadFolders) && !this.uploadFolders.includes(folder)) {
+            this.uploadFolders.push(folder);
+            this.selectedUploadFolder = folder;
+            this.customUploadFolder = '';
+          }
         }
       } catch (err) {
         console.error('Failed to upload adversary image:', err);
@@ -586,6 +729,9 @@ export default {
       this.isGeneratingArt = true;
       this.errorMessage = null;
       try {
+        const folder = typeof this.getEffectiveUploadFolder === 'function'
+          ? this.getEffectiveUploadFolder()
+          : (this.selectedUploadFolder ?? 'tokens');
         const payload = {
           prompt: this.customForm.description || '',
           name: this.customForm.name,
@@ -595,6 +741,7 @@ export default {
           weapon: this.customForm.weapon,
           armor: this.customForm.armor,
           attacks: this.customForm.attacks,
+          folder,
         };
 
         const res = await fetch('/api/adversaries/generate-token-art', {
@@ -615,6 +762,14 @@ export default {
         const data = await res.json();
         if (data.token_image_url) {
           this.customForm.source_image_url = data.token_image_url;
+        }
+        const savedFolder = data.folder !== undefined ? data.folder : folder;
+        if (savedFolder && Array.isArray(this.uploadFolders)) {
+          if (!this.uploadFolders.includes(savedFolder)) {
+            this.uploadFolders.push(savedFolder);
+          }
+          this.selectedUploadFolder = savedFolder;
+          this.customUploadFolder = '';
         }
         // Start a 45s pacing cooldown after successful generation
         if (typeof this.startArtCooldown === 'function') {
@@ -714,6 +869,7 @@ export default {
             this.templates.splice(idx, 1, data.template);
           }
           this.existingTokenImageError = false;
+          this.existingTokenUrlInput = data.template.token_image_path || '';
         }
       } catch (err) {
         console.error('Failed to update template token:', err);
@@ -726,7 +882,13 @@ export default {
       const file = event.target?.files?.[0];
       if (!file) return;
       this.errorMessage = null;
+      const folder = typeof this.getEffectiveUploadFolder === 'function'
+        ? this.getEffectiveUploadFolder()
+        : (this.selectedUploadFolder ?? 'tokens');
       const formData = new FormData();
+      if (folder) {
+        formData.append('folder', folder);
+      }
       formData.append('file', file);
       try {
         const res = await fetch('/api/upload', {
@@ -740,6 +902,9 @@ export default {
         }
         const data = await res.json();
         if (data.url) {
+          if (folder && Array.isArray(this.uploadFolders) && !this.uploadFolders.includes(folder)) {
+            this.uploadFolders.push(folder);
+          }
           await this.updateExistingTemplateToken(data.url);
         }
       } catch (err) {
@@ -756,6 +921,9 @@ export default {
       this.errorMessage = null;
       try {
         const actionNames = Array.isArray(tpl.actions) ? tpl.actions.map((a) => a.name).join(', ') : '';
+        const folder = typeof this.getEffectiveUploadFolder === 'function'
+          ? this.getEffectiveUploadFolder()
+          : (this.selectedUploadFolder ?? 'tokens');
         const payload = {
           prompt: tpl.system_data?.description || '',
           name: tpl.name,
@@ -765,6 +933,7 @@ export default {
           weapon: actionNames,
           armor: tpl.defense_summary || '',
           attacks: actionNames,
+          folder,
         };
         const res = await fetch('/api/adversaries/generate-token-art', {
           method: 'POST',
@@ -781,6 +950,14 @@ export default {
         }
         const data = await res.json();
         if (data.token_image_url) {
+          const savedFolder = data.folder !== undefined ? data.folder : folder;
+          if (savedFolder && Array.isArray(this.uploadFolders) && !this.uploadFolders.includes(savedFolder)) {
+            this.uploadFolders.push(savedFolder);
+          }
+          if (this.selectedUploadFolder === '__new__' && savedFolder !== undefined) {
+            this.selectedUploadFolder = savedFolder;
+            this.customUploadFolder = '';
+          }
           await this.updateExistingTemplateToken(data.token_image_url);
         }
         if (typeof this.startArtCooldown === 'function') {
@@ -1164,6 +1341,29 @@ export default {
   align-items: center;
 }
 
+.template-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-clone-template {
+  background-color: rgba(56, 189, 248, 0.15);
+  border: 1px solid #38bdf8;
+  color: #7dd3fc;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-clone-template:hover:not(:disabled) {
+  background-color: #0284c7;
+  color: #cecece;
+}
+
 .btn-delete-template {
   background-color: rgba(248, 81, 73, 0.15);
   border: 1px solid #f85149;
@@ -1205,13 +1405,88 @@ export default {
 
 .existing-token-controls {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: #0d1117;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #30363d;
+}
+
+.existing-token-controls-main {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background-color: #0d1117;
-  padding: 6px 10px;
-  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.folder-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.folder-picker-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.folder-select {
+  background-color: #161b22;
   border: 1px solid #30363d;
+  color: #cecece;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.custom-folder-input {
+  background-color: #161b22;
+  border: 1px solid #38bdf8;
+  color: #cecece;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  flex: 1;
+  min-width: 120px;
+}
+
+.existing-token-url-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.existing-url-input {
+  flex: 1;
+}
+
+.btn-apply-token-url {
+  background-color: #082d33;
+  border: 1px solid #00ffff;
+  color: #00ffff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-apply-token-url:hover:not(:disabled) {
+  background-color: #0e4f5b;
+  color: #cecece;
+}
+
+.btn-apply-token-url:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .token-controls-label {

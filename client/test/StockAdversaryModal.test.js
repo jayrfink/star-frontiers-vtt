@@ -316,6 +316,105 @@ describe('StockAdversaryModal Component', () => {
         global.fetch = originalFetch;
       }
     });
+
+    it('sends selected folder or new custom folder when generating AI token art and adds new folder to uploadFolders', async () => {
+      const originalFetch = global.fetch;
+      let capturedBody = null;
+      global.fetch = async (url, options) => {
+        expect(url).toBe('/api/adversaries/generate-token-art');
+        capturedBody = JSON.parse(options.body);
+        return {
+          ok: true,
+          json: async () => ({
+            token_image_url: '/uploads/npcs/pirates/pirate-boss-111222.png',
+            source_image_url: '/uploads/npcs/pirates/pirate-boss-111222.png',
+            folder: 'npcs/pirates',
+          }),
+        };
+      };
+
+      try {
+        const ctx = {
+          isGeneratingArt: false,
+          errorMessage: null,
+          cooldownSeconds: 0,
+          selectedUploadFolder: '__new__',
+          customUploadFolder: 'npcs/pirates',
+          uploadFolders: ['', 'tokens', 'species'],
+          customForm: {
+            name: 'Pirate Boss',
+            description: 'Scarred pirate captain',
+            species: 'Human',
+            category: 'npc',
+            threat_tier: 4,
+            weapon: 'Heavy Laser',
+            armor: 'Albedo Suit',
+            source_image_url: '',
+          },
+          getEffectiveUploadFolder: StockAdversaryModal.methods.getEffectiveUploadFolder,
+        };
+
+        await StockAdversaryModal.methods.generateAiTokenArt.call(ctx);
+        expect(capturedBody.folder).toBe('npcs/pirates');
+        expect(ctx.customForm.source_image_url).toBe('/uploads/npcs/pirates/pirate-boss-111222.png');
+        expect(ctx.uploadFolders).toContain('npcs/pirates');
+        expect(ctx.selectedUploadFolder).toBe('npcs/pirates');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('applies manual token URL edit on existing template via applyExistingTokenUrl', async () => {
+      let updatedUrl = null;
+      const ctx = {
+        selectedTemplateId: 'spy-merc-t1',
+        existingTokenUrlInput: '  /uploads/species/human_male2.png  ',
+        async updateExistingTemplateToken(url) {
+          updatedUrl = url;
+        },
+      };
+
+      await StockAdversaryModal.methods.applyExistingTokenUrl.call(ctx);
+      expect(updatedUrl).toBe('/uploads/species/human_male2.png');
+    });
+
+    it('loads an existing template into the custom builder preserving shared token_image_path', () => {
+      const ctx = {
+        mode: 'existing',
+        currentSelectedTemplate: {
+          template_id: 'spy-merc-t1',
+          name: 'Spy Merc',
+          category: 'npc',
+          threat_tier: 1,
+          token_image_path: '/uploads/species/human_male2.png',
+          defense_summary: 'Skein Suit',
+          actions: [{ name: 'Laser Pistol' }],
+          traits: [{ name: 'Stealth' }],
+          system_data: { race: 'Human', description: 'Undercover operative' },
+        },
+        customForm: {
+          name: '',
+          description: '',
+          category: 'npc',
+          threat_tier: 2,
+          species: 'Sathar',
+          weapon: '',
+          armor: '',
+          attacks: '',
+          traits: '',
+          diet: 'Carnivore',
+          size: 'Medium',
+          source_image_url: '',
+        },
+      };
+
+      StockAdversaryModal.methods.loadTemplateIntoBuilder.call(ctx);
+      expect(ctx.mode).toBe('custom');
+      expect(ctx.customForm.name).toBe('Spy Merc');
+      expect(ctx.customForm.threat_tier).toBe(1);
+      expect(ctx.customForm.species).toBe('Human');
+      expect(ctx.customForm.source_image_url).toBe('/uploads/species/human_male2.png');
+    });
   });
 
   describe('Template Rendering & Controls', () => {

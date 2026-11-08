@@ -4,6 +4,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { requireAuth, requireGM } from './middleware.js';
+import { formatToken } from './maps.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -157,6 +158,70 @@ export function createVehiclesRouter(db, io) {
     } catch (err) {
       console.error('Error creating vehicle template:', err);
       res.status(500).json({ error: 'Failed to create vehicle template' });
+    }
+  });
+
+  // PATCH /api/vehicles/:id/token - Update vehicle template token/avatar (GM only)
+  router.patch('/:id/token', requireGM(db), (req, res) => {
+    try {
+      const vehicleId = req.params.id;
+      const { avatar_url = '' } = req.body || {};
+      const cleanAvatarUrl = typeof avatar_url === 'string' ? avatar_url.trim() : '';
+
+      const existingCustom = db.prepare('SELECT * FROM vehicle_templates WHERE id = ?').get(vehicleId);
+      let updatedVehicle = null;
+
+      if (existingCustom) {
+        db.prepare(`
+          UPDATE vehicle_templates
+          SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(cleanAvatarUrl, vehicleId);
+        const updatedRow = db.prepare('SELECT * FROM vehicle_templates WHERE id = ?').get(vehicleId);
+        updatedVehicle = formatVehicleTemplate(updatedRow);
+      } else {
+        const canonical = loadCanonicalVehicles();
+        const canonVeh = canonical.find((v) => v.id === vehicleId);
+        if (!canonVeh) {
+          return res.status(404).json({ error: 'Vehicle template not found' });
+        }
+        canonVeh.avatar_url = cleanAvatarUrl;
+        updatedVehicle = { ...canonVeh };
+      }
+
+      // Sync any active map tokens deployed from this vehicle template
+      try {
+        const allVehicleTokens = db.prepare('SELECT * FROM tokens WHERE vehicle_data IS NOT NULL').all();
+        for (const tRow of allVehicleTokens) {
+          let vData;
+          try {
+            vData = JSON.parse(tRow.vehicle_data);
+          } catch {
+            continue;
+          }
+          if (vData && (vData.template_id === vehicleId || vData.id === vehicleId)) {
+            vData.avatar_url = cleanAvatarUrl;
+            db.prepare('UPDATE tokens SET avatar_url = ?, vehicle_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(
+              cleanAvatarUrl,
+              JSON.stringify(vData),
+              tRow.id
+            );
+            if (io) {
+              const updatedTokenRow = db.prepare('SELECT * FROM tokens WHERE id = ?').get(tRow.id);
+              io.emit('token:updated', { token: formatToken(updatedTokenRow, db) });
+            }
+          }
+        }
+      } catch {}
+
+      if (io) {
+        io.emit('vehicle:updated', { vehicle: updatedVehicle });
+      }
+
+      res.status(200).json({ ...updatedVehicle, vehicle: updatedVehicle });
+    } catch (err) {
+      console.error('Error updating vehicle template token:', err);
+      res.status(500).json({ error: 'Failed to update vehicle template token' });
     }
   });
 

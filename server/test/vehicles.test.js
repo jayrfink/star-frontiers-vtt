@@ -243,5 +243,17 @@ describe('Vehicles API & Token Vehicle Support', () => {
       expect(res.body.vehicle_data.current_seu).toBe(90);
       expect(res.body.vehicle_data.damage_conditions).toEqual(['Turn Speed -15']);
     });
+
+    it('updates vehicle template token via PATCH /api/vehicles/:id/token and syncs deployed map tokens', async () => {
+      const patchRes = await gmAgent.patch('/api/vehicles/ground_car/token').send({
+        avatar_url: '/uploads/tokens/shared-ground-car.png',
+      });
+      expect(patchRes.status).toBe(200);
+      expect(patchRes.body.vehicle.avatar_url).toBe('/uploads/tokens/shared-ground-car.png');
+
+      const updatedToken = db.prepare('SELECT avatar_url, vehicle_data FROM tokens WHERE id = ?').get(tokenId);
+      expect(updatedToken.avatar_url).toBe('/uploads/tokens/shared-ground-car.png');
+      expect(JSON.parse(updatedToken.vehicle_data).avatar_url).toBe('/uploads/tokens/shared-ground-car.png');
+    });
   });
 });

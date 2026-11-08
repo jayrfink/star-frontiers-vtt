@@ -92,7 +92,7 @@ export function createAdversariesRouter(db, io, uploadDir = null) {
   // POST /api/adversaries/generate-token-art - Generate AI token portrait & masked ring
   router.post('/generate-token-art', requireGM(db), async (req, res) => {
     try {
-      const { prompt, name, species, category, threat_tier, weapon, armor, attacks } = req.body;
+      const { prompt, name, species, category, threat_tier, weapon, armor, attacks, folder } = req.body;
       const result = await generateTokenArtFromDescription({
         prompt,
         name,
@@ -102,6 +102,7 @@ export function createAdversariesRouter(db, io, uploadDir = null) {
         weapon,
         armor,
         attacks,
+        folder,
         uploadDir: effectiveUploadsDir,
       });
       res.json(result);
@@ -276,38 +277,27 @@ export function createAdversariesRouter(db, io, uploadDir = null) {
         return res.status(400).json({ error: 'Invalid template_id: invalid characters or path traversal rejected' });
       }
 
-      // Handle token image generation / circular masking
+      // Handle token image assignment (share existing filename without making $tokenname-t$TIER copies)
       const tokensUploadDir = path.join(effectiveUploadsDir, 'tokens');
-      if (!fs.existsSync(tokensUploadDir)) {
-        fs.mkdirSync(tokensUploadDir, { recursive: true });
-      }
-
       const safeTemplateId = path.basename(rawTemplateId);
       const tokenFileName = `${safeTemplateId}.png`;
       const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
 
-      let sourceDiskPath = resolveUploadDiskPath(source_image_url, effectiveUploadsDir);
+      const sourceDiskPath = resolveUploadDiskPath(source_image_url, effectiveUploadsDir);
       const existingTokenDiskPath = resolveUploadDiskPath(templateObj.token_image_path, effectiveUploadsDir);
 
       if (sourceDiskPath) {
-        const cleanSource = source_image_url.split('?')[0];
-        if (cleanSource.startsWith('/uploads/tokens/') || cleanSource.startsWith('tokens/')) {
-          if (path.resolve(sourceDiskPath) !== path.resolve(tokenOutputPath)) {
-            fs.copyFileSync(sourceDiskPath, tokenOutputPath);
-          }
-          templateObj.token_image_path = `/uploads/tokens/${tokenFileName}`;
-        } else {
-          await generateTokenRingImage({
-            sourceImagePath: sourceDiskPath,
-            outputPath: tokenOutputPath,
-            threatTier: templateObj.threat_tier,
-            category: templateObj.category,
-            label: templateObj.name,
-            size: 256,
-          });
-          templateObj.token_image_path = `/uploads/tokens/${tokenFileName}`;
+        const relPath = path.relative(effectiveUploadsDir, sourceDiskPath).split(path.sep).join('/');
+        templateObj.token_image_path = `/uploads/${relPath}`;
+      } else if (typeof source_image_url === 'string' && /^https?:\/\//i.test(source_image_url.trim())) {
+        templateObj.token_image_path = source_image_url.trim();
+      } else if (
+        !existingTokenDiskPath &&
+        !(typeof templateObj.token_image_path === 'string' && /^https?:\/\//i.test(templateObj.token_image_path.trim()))
+      ) {
+        if (!fs.existsSync(tokensUploadDir)) {
+          fs.mkdirSync(tokensUploadDir, { recursive: true });
         }
-      } else if (!existingTokenDiskPath || !fs.existsSync(tokenOutputPath) || !templateObj.token_image_path) {
         await generateTokenRingImage({
           outputPath: tokenOutputPath,
           threatTier: templateObj.threat_tier,
@@ -355,36 +345,28 @@ export function createAdversariesRouter(db, io, uploadDir = null) {
       }
 
       const { source_image_url } = req.body || {};
-      const tokensUploadDir = path.join(effectiveUploadsDir, 'tokens');
-      if (!fs.existsSync(tokensUploadDir)) {
-        fs.mkdirSync(tokensUploadDir, { recursive: true });
-      }
+      let newTokenPath;
 
-      const safeTemplateId = path.basename(templateId);
-      const tokenFileName = `${safeTemplateId}.png`;
-      const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
-
-      if (source_image_url) {
-        const sourceDiskPath = resolveUploadDiskPath(source_image_url, effectiveUploadsDir);
-        if (!sourceDiskPath) {
-          return res.status(400).json({ error: 'Source image file not found on disk' });
-        }
-        const cleanSource = source_image_url.split('?')[0];
-        if (cleanSource.startsWith('/uploads/tokens/') || cleanSource.startsWith('tokens/')) {
-          if (path.resolve(sourceDiskPath) !== path.resolve(tokenOutputPath)) {
-            fs.copyFileSync(sourceDiskPath, tokenOutputPath);
-          }
+      if (source_image_url && typeof source_image_url === 'string' && source_image_url.trim()) {
+        const trimmedUrl = source_image_url.trim();
+        if (/^https?:\/\//i.test(trimmedUrl)) {
+          newTokenPath = trimmedUrl;
         } else {
-          await generateTokenRingImage({
-            sourceImagePath: sourceDiskPath,
-            outputPath: tokenOutputPath,
-            threatTier: row.threat_tier,
-            category: row.category,
-            label: row.name,
-            size: 256,
-          });
+          const sourceDiskPath = resolveUploadDiskPath(trimmedUrl, effectiveUploadsDir);
+          if (!sourceDiskPath) {
+            return res.status(400).json({ error: 'Source image file not found on disk' });
+          }
+          const relPath = path.relative(effectiveUploadsDir, sourceDiskPath).split(path.sep).join('/');
+          newTokenPath = `/uploads/${relPath}`;
         }
       } else {
+        const tokensUploadDir = path.join(effectiveUploadsDir, 'tokens');
+        if (!fs.existsSync(tokensUploadDir)) {
+          fs.mkdirSync(tokensUploadDir, { recursive: true });
+        }
+        const safeTemplateId = path.basename(templateId);
+        const tokenFileName = `${safeTemplateId}.png`;
+        const tokenOutputPath = path.join(tokensUploadDir, tokenFileName);
         await generateTokenRingImage({
           outputPath: tokenOutputPath,
           threatTier: row.threat_tier,
@@ -392,9 +374,8 @@ export function createAdversariesRouter(db, io, uploadDir = null) {
           label: row.name,
           size: 256,
         });
+        newTokenPath = `/uploads/tokens/${tokenFileName}?v=${Date.now()}`;
       }
-
-      const newTokenPath = `/uploads/tokens/${tokenFileName}?v=${Date.now()}`;
       let updateTokensResult;
       let updatedRow;
 
