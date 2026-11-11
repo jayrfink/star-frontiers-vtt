@@ -30,8 +30,8 @@ describe('Sheet Background Image Optimization and Toggle', () => {
       expect(vueFile).toContain('.sheet-main.has-sheet-bg');
       expect(vueFile).toContain('.sheets-layout.has-sheet-bg');
       expect(vueFile).toContain('.sheet-bg-checkbox');
-      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.52\);/);
-      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(8px\);/);
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.32\);/);
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(6px\);/);
     });
 
     it('renders the background toggle checkbox and applies has-sheet-bg by default', async () => {
@@ -152,8 +152,8 @@ describe('Sheet Background Image Optimization and Toggle', () => {
       expect(vueFile).toContain('.sheet-main.has-sheet-bg');
       expect(vueFile).toContain('.sheets-layout.has-sheet-bg');
       expect(vueFile).toContain('.sheet-bg-checkbox');
-      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.52\);/);
-      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(8px\);/);
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.32\);/);
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(6px\);/);
     });
 
     it('renders the background toggle checkbox and applies has-sheet-bg by default', async () => {
