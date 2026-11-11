@@ -1,7 +1,7 @@
 <template>
   <div
-    class="sheets-layout"
-    :class="{ 'sidebar-collapsed': isSidebarCollapsed, 'has-sheet-bg': showSheetBackground }"
+    class="sheets-layout has-sheet-bg"
+    :class="{ 'sidebar-collapsed': isSidebarCollapsed }"
   >
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -76,8 +76,7 @@
     <!-- Main Content Area -->
     <main
       ref="mainScroll"
-      class="sheet-main sheet-detail"
-      :class="{ 'has-sheet-bg': showSheetBackground }"
+      class="sheet-main sheet-detail has-sheet-bg"
       @scroll="onScrollSave"
     >
       <!-- Error Feedback Banner (Bug 29) -->
@@ -158,17 +157,6 @@
                   <span class="badge-player" title="Assigned Player">
                     👤 {{ selectedChar.owner_username }}
                   </span>
-                </div>
-                <div class="sheet-bg-toggle-wrap">
-                  <label class="sheet-bg-toggle-label" title="Toggle Sheet Background">
-                    <input
-                      type="checkbox"
-                      v-model="showSheetBackground"
-                      @change="onToggleSheetBackground"
-                      class="sheet-bg-checkbox"
-                    />
-                    <span>BG</span>
-                  </label>
                 </div>
               </div>
             </div>
@@ -1052,18 +1040,8 @@ export default {
     } catch (e) {
       // ignore
     }
-    let initialShowBg = true;
-    try {
-      const uid = getSafeUserId();
-      const saved = getUserState(uid, 'characterSheets', { showSheetBackground: true });
-      if (typeof saved?.showSheetBackground === 'boolean') {
-        initialShowBg = saved.showSheetBackground;
-      }
-    } catch {
-      // ignore
-    }
     return {
-      showSheetBackground: initialShowBg,
+      showSheetBackground: true,
       isSidebarCollapsed: collapsed,
       characters: [],
       selectedChar: null,
@@ -1313,10 +1291,6 @@ export default {
         // ignore
       }
     },
-    onToggleSheetBackground() {
-      const uid = this.getCurrentUserId ? this.getCurrentUserId() : getSafeUserId();
-      saveUserState(uid, 'characterSheets', { showSheetBackground: this.showSheetBackground });
-    },
     getCharTier(char) {
       if (!char) return 1;
       if (char.tier != null && !isNaN(char.tier)) return Number(char.tier);
@@ -1420,11 +1394,7 @@ export default {
             selectedCharId: null,
             sidebarScrollTop: 0,
             mainScrollTop: 0,
-            showSheetBackground: true,
           });
-          if (typeof saved.showSheetBackground === 'boolean') {
-            this.showSheetBackground = saved.showSheetBackground;
-          }
           if (this.characters.length > 0 && !this.selectedChar) {
             const match = saved.selectedCharId != null
               ? this.characters.find((c) => String(c.id) === String(saved.selectedCharId))
@@ -2363,7 +2333,9 @@ export default {
 .sheets-layout {
   display: flex;
   height: 100%;
-  background: var(--bg-dark, #0d1117);
+  background:
+    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
+    url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
   color: var(--text-primary, #cecece);
   overflow: hidden;
   position: relative;
@@ -2604,47 +2576,15 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  background:
+    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
+    url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
 }
 
 .sheet-main.has-sheet-bg {
   background:
     linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
     url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
-}
-
-.sheet-bg-toggle-wrap {
-  display: flex;
-  align-items: center;
-  margin-left: 4px;
-}
-
-.sheet-bg-toggle-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #8b949e;
-  cursor: pointer;
-  padding: 2px 6px;
-  background: rgba(13, 50, 68, 0.35);
-  border: 1px solid rgba(45, 197, 212, 0.25);
-  border-radius: 4px;
-  user-select: none;
-  transition: all 0.15s ease-in-out;
-}
-
-.sheet-bg-toggle-label:hover {
-  border-color: rgba(45, 197, 212, 0.6);
-  color: #00ffff;
-}
-
-.sheet-bg-checkbox {
-  width: 12px;
-  height: 12px;
-  accent-color: #00ffff;
-  cursor: pointer;
-  margin: 0;
 }
 
 .no-selection {
@@ -2669,7 +2609,9 @@ export default {
 }
 
 .card {
-  background: #161b22;
+  background: rgba(22, 27, 34, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
@@ -2678,7 +2620,9 @@ export default {
 
 /* Header */
 .sheet-header {
-  background: #161b22;
+  background: rgba(22, 27, 34, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;

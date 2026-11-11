@@ -9,9 +9,9 @@ import path from 'path';
 import CharacterSheetsView from '../src/views/CharacterSheetsView.vue';
 import ShipSheetsView from '../src/views/ShipSheetsView.vue';
 import { useAuthStore } from '../src/stores/auth.js';
-import { getUserState, saveUserState, clearUserStateMemory } from '../src/utils/userState.js';
+import { clearUserStateMemory } from '../src/utils/userState.js';
 
-describe('Sheet Background Image Optimization and Toggle', () => {
+describe('Sheet Background Always-On & Card Translucency', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     clearUserStateMemory();
@@ -20,21 +20,33 @@ describe('Sheet Background Image Optimization and Toggle', () => {
     }
   });
 
-  describe('CharacterSheetsView Background Toggle', () => {
-    it('verifies CSS contains optimized starfiel-cyan.jpg fixed background rule and translucent sidebar', () => {
+  describe('CharacterSheetsView Translucent Cards and Always-On Background', () => {
+    it('verifies CSS contains optimized starfiel-cyan.jpg background, translucent cards, and translucent sidebar', () => {
       const vueFile = fs.readFileSync(
         path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'),
         'utf-8'
       );
+      // Background rules
       expect(vueFile).toContain('/uploads/sheet-backgrounds/starfiel-cyan.jpg');
-      expect(vueFile).toContain('.sheet-main.has-sheet-bg');
-      expect(vueFile).toContain('.sheets-layout.has-sheet-bg');
-      expect(vueFile).toContain('.sheet-bg-checkbox');
+      expect(vueFile).toContain('.sheet-main');
+      expect(vueFile).toContain('.sheets-layout');
+
+      // Card translucency
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+      expect(vueFile).toMatch(/\.sheet-header\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      expect(vueFile).toMatch(/\.sheet-header\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+
+      // Sidebar translucency
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.32\);/);
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(6px\);/);
+
+      // Toggle button removed
+      expect(vueFile).not.toContain('.sheet-bg-checkbox');
+      expect(vueFile).not.toContain('.sheet-bg-toggle-wrap');
     });
 
-    it('renders the background toggle checkbox and applies has-sheet-bg by default', async () => {
+    it('renders with background always on and no toggle checkbox', async () => {
       const auth = useAuthStore();
       auth.user = { id: 42, username: 'starfarer', role: 'Player' };
 
@@ -67,96 +79,58 @@ describe('Sheet Background Image Optimization and Toggle', () => {
         });
         await flushPromises();
 
+        // Main element has background class
         const mainEl = wrapper.find('.sheet-main');
         expect(mainEl.exists()).toBe(true);
         expect(mainEl.classes()).toContain('has-sheet-bg');
 
+        // Layout element has background class
+        const layoutEl = wrapper.find('.sheets-layout');
+        expect(layoutEl.exists()).toBe(true);
+        expect(layoutEl.classes()).toContain('has-sheet-bg');
+
+        // Checkbox toggle does NOT exist
         const checkbox = wrapper.find('.sheet-bg-checkbox');
-        expect(checkbox.exists()).toBe(true);
-        expect(checkbox.element.checked).toBe(true);
+        expect(checkbox.exists()).toBe(false);
 
-        // Toggle checkbox to off
-        await checkbox.setValue(false);
-        await flushPromises();
-
-        expect(mainEl.classes()).not.toContain('has-sheet-bg');
-
-        // Check user state persistence
-        const state = getUserState(42, 'characterSheets');
-        expect(state.showSheetBackground).toBe(false);
-
-        // Toggle back to on
-        await checkbox.setValue(true);
-        await flushPromises();
-
-        expect(mainEl.classes()).toContain('has-sheet-bg');
-        const updatedState = getUserState(42, 'characterSheets');
-        expect(updatedState.showSheetBackground).toBe(true);
-      } finally {
-        global.fetch = origFetch;
-      }
-    });
-
-    it('restores disabled background preference from saved userState', async () => {
-      const auth = useAuthStore();
-      auth.user = { id: 99, username: 'recon', role: 'Player' };
-      saveUserState(99, 'characterSheets', { showSheetBackground: false });
-
-      const origFetch = global.fetch;
-      global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === '/api/characters') {
-          return Promise.resolve({
-            ok: true,
-            json: async () => [
-              {
-                id: 2,
-                name: 'Scout Larry',
-                race: 'Yazirian',
-                owner_username: 'recon',
-                user_id: 99,
-              },
-            ],
-          });
-        }
-        return Promise.resolve({ ok: true, json: async () => [] });
-      });
-
-      try {
-        const wrapper = mount(CharacterSheetsView, {
-          global: {
-            stubs: {
-              ImageBrowserModal: true,
-            },
-          },
-        });
-        await flushPromises();
-
-        const mainEl = wrapper.find('.sheet-main');
-        expect(mainEl.classes()).not.toContain('has-sheet-bg');
-
-        const checkbox = wrapper.find('.sheet-bg-checkbox');
-        expect(checkbox.element.checked).toBe(false);
+        // Header and cards exist and render
+        const header = wrapper.find('.sheet-header');
+        expect(header.exists()).toBe(true);
+        const cards = wrapper.findAll('.card');
+        expect(cards.length).toBeGreaterThan(0);
       } finally {
         global.fetch = origFetch;
       }
     });
   });
 
-  describe('ShipSheetsView Background Toggle', () => {
-    it('verifies CSS contains optimized azure-green-cyan.jpg fixed background rule and translucent sidebar', () => {
+  describe('ShipSheetsView Translucent Cards and Always-On Background', () => {
+    it('verifies CSS contains optimized azure-green-cyan.jpg background, translucent cards, and translucent sidebar', () => {
       const vueFile = fs.readFileSync(
         path.resolve(__dirname, '../src/views/ShipSheetsView.vue'),
         'utf-8'
       );
+      // Background rules
       expect(vueFile).toContain('/uploads/sheet-backgrounds/azure-green-cyan.jpg');
-      expect(vueFile).toContain('.sheet-main.has-sheet-bg');
-      expect(vueFile).toContain('.sheets-layout.has-sheet-bg');
-      expect(vueFile).toContain('.sheet-bg-checkbox');
+      expect(vueFile).toContain('.sheet-main');
+      expect(vueFile).toContain('.sheets-layout');
+
+      // Card translucency
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+      expect(vueFile).toMatch(/\.flip-burn-ship-banner\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      expect(vueFile).toMatch(/\.flip-burn-ship-banner\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+
+      // Sidebar translucency
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.32\);/);
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(6px\);/);
+
+      // Toggle button removed
+      expect(vueFile).not.toContain('.sheet-bg-checkbox');
+      expect(vueFile).not.toContain('.sheet-bg-toggle-wrap');
     });
 
-    it('renders the background toggle checkbox and applies has-sheet-bg by default', async () => {
+    it('renders with background always on and no toggle checkbox', async () => {
       const auth = useAuthStore();
       auth.user = { id: 77, username: 'admiral', role: 'Player' };
 
@@ -189,75 +163,25 @@ describe('Sheet Background Image Optimization and Toggle', () => {
         });
         await flushPromises();
 
+        // Main element has background class
         const mainEl = wrapper.find('.sheet-main');
         expect(mainEl.exists()).toBe(true);
         expect(mainEl.classes()).toContain('has-sheet-bg');
 
+        // Layout element has background class
+        const layoutEl = wrapper.find('.sheets-layout');
+        expect(layoutEl.exists()).toBe(true);
+        expect(layoutEl.classes()).toContain('has-sheet-bg');
+
+        // Checkbox toggle does NOT exist
         const checkbox = wrapper.find('.sheet-bg-checkbox');
-        expect(checkbox.exists()).toBe(true);
-        expect(checkbox.element.checked).toBe(true);
+        expect(checkbox.exists()).toBe(false);
 
-        // Toggle checkbox to off
-        await checkbox.setValue(false);
-        await flushPromises();
-
-        expect(mainEl.classes()).not.toContain('has-sheet-bg');
-
-        // Check user state persistence
-        const state = getUserState(77, 'shipSheets');
-        expect(state.showSheetBackground).toBe(false);
-
-        // Toggle back on
-        await checkbox.setValue(true);
-        await flushPromises();
-
-        expect(mainEl.classes()).toContain('has-sheet-bg');
-        const updatedState = getUserState(77, 'shipSheets');
-        expect(updatedState.showSheetBackground).toBe(true);
-      } finally {
-        global.fetch = origFetch;
-      }
-    });
-
-    it('restores disabled background preference from saved userState', async () => {
-      const auth = useAuthStore();
-      auth.user = { id: 88, username: 'pilot88', role: 'Player' };
-      saveUserState(88, 'shipSheets', { showSheetBackground: false });
-
-      const origFetch = global.fetch;
-      global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === '/api/ships') {
-          return Promise.resolve({
-            ok: true,
-            json: async () => [
-              {
-                id: 20,
-                name: 'Nightwind',
-                ship_type: 'Fighter',
-                owner_username: 'pilot88',
-                user_id: 88,
-              },
-            ],
-          });
-        }
-        return Promise.resolve({ ok: true, json: async () => [] });
-      });
-
-      try {
-        const wrapper = mount(ShipSheetsView, {
-          global: {
-            stubs: {
-              ImageBrowserModal: true,
-            },
-          },
-        });
-        await flushPromises();
-
-        const mainEl = wrapper.find('.sheet-main');
-        expect(mainEl.classes()).not.toContain('has-sheet-bg');
-
-        const checkbox = wrapper.find('.sheet-bg-checkbox');
-        expect(checkbox.element.checked).toBe(false);
+        // Header and cards exist and render
+        const header = wrapper.find('.sheet-header');
+        expect(header.exists()).toBe(true);
+        const cards = wrapper.findAll('.card');
+        expect(cards.length).toBeGreaterThan(0);
       } finally {
         global.fetch = origFetch;
       }
