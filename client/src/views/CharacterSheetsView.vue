@@ -2595,7 +2595,7 @@ export default {
 
 .sheet-main.has-sheet-bg {
   background:
-    linear-gradient(rgba(13, 17, 23, 0.82), rgba(13, 17, 23, 0.90)),
+    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
     url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
 }
 
