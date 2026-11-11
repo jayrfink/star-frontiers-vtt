@@ -2684,7 +2684,9 @@ export default {
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
-  background: var(--bg-tertiary, #0d1117);
+  background: rgba(22, 27, 34, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   flex-shrink: 0;
   transition: border-color 0.2s;
 }
