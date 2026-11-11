@@ -2609,7 +2609,7 @@ export default {
 }
 
 .card {
-  background: rgba(22, 27, 34, 0.65);
+  background: rgba(22, 27, 34, 0.55);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid #30363d;
@@ -2620,7 +2620,7 @@ export default {
 
 /* Header */
 .sheet-header {
-  background: rgba(22, 27, 34, 0.65);
+  background: rgba(22, 27, 34, 0.55);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid #30363d;

@@ -31,11 +31,14 @@ describe('Sheet Background Always-On & Card Translucency', () => {
       expect(vueFile).toContain('.sheet-main');
       expect(vueFile).toContain('.sheets-layout');
 
-      // Card translucency
-      expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      // Card translucency (increased by 10% to 0.55)
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.55\);/);
       expect(vueFile).toMatch(/\.card\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
-      expect(vueFile).toMatch(/\.sheet-header\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      expect(vueFile).toMatch(/\.sheet-header\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.55\);/);
       expect(vueFile).toMatch(/\.sheet-header\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+
+      // Species infobox preserves its specific styling
+      expect(vueFile).toMatch(/\.racial-panel\.species-traits-banner\s*\{[^}]*background:\s*rgba\(56,\s*189,\s*248,\s*0\.05\);/);
 
       // Sidebar translucency
       expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.32\);/);
@@ -115,9 +118,11 @@ describe('Sheet Background Always-On & Card Translucency', () => {
       expect(vueFile).toContain('.sheet-main');
       expect(vueFile).toContain('.sheets-layout');
 
-      // Card translucency
-      expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
+      // Card translucency (increased by 10% to 0.55)
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.55\);/);
       expect(vueFile).toMatch(/\.card\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+
+      // Flip/Burn infobox preserves its specific styling
       expect(vueFile).toMatch(/\.flip-burn-ship-banner\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
       expect(vueFile).toMatch(/\.flip-burn-ship-banner\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
 
