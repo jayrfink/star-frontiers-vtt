@@ -2009,7 +2009,7 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       expect(content).toMatch(/\.system-btn\.is-ok:hover\s*\{[^}]*box-shadow:\s*0\s+0\s+10px\s+rgba\(60,\s*228,\s*247,\s*0\.55\);/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*color:\s*#f85149;/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*border:\s*1px\s+solid\s+#f8514988;/);
-      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*background:\s*#000000;/);
+      expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*background:\s*#101010;/);
       expect(content).toMatch(/\.system-btn\.is-damaged\s*\{[^}]*box-shadow:\s*0\s+0\s+8px\s+rgba\(248,\s*81,\s*73,\s*0\.5\)/);
     });
 

@@ -2786,7 +2786,7 @@ export default {
 
 .input-type-select,
 .input-type-select option {
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   color: #c0c0c0 !important;
   -webkit-text-fill-color: #c0c0c0;
   background-image: none !important;
@@ -2808,7 +2808,7 @@ export default {
 
 .select-player,
 .select-player option {
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   color: #c0c0c0 !important;
   -webkit-text-fill-color: #c0c0c0;
   background-image: none !important;
@@ -2918,7 +2918,7 @@ export default {
 
 /* Damaged (selected / clicked): same red colors, background, and border as weapons offline indicator */
 .system-btn.is-damaged {
-  background: #000000;
+  background: #101010;
   color: #f85149;
   border: 1px solid #f8514988;
   box-shadow: 0 0 8px rgba(248, 81, 73, 0.5), inset 0 0 6px rgba(248, 81, 73, 0.25);
@@ -3578,7 +3578,7 @@ export default {
 
 .item-dmg-input {
   width: 65px;
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff !important;
@@ -3594,7 +3594,7 @@ export default {
 
 .item-num-input {
   width: 40px;
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff !important;
@@ -3610,7 +3610,7 @@ export default {
 
 .status-select,
 .status-select option {
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   background-image: none !important;
 }
 
@@ -3623,7 +3623,7 @@ export default {
   font-size: 0.75rem;
   font-weight: 600;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   color: #00ffff;
   cursor: pointer;
 }
@@ -3650,7 +3650,7 @@ export default {
 
 .item-level-input {
   width: 45px;
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff !important;
@@ -3666,7 +3666,7 @@ export default {
 
 .btn-remove {
   flex: 0 0 auto;
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #8b949e !important;
   cursor: pointer;
@@ -3820,7 +3820,7 @@ export default {
 
 .form-group input,
 .form-group select {
-  background-color: #000000;
+  background-color: #101010;
   border: 1px solid rgba(0, 128, 128, 0.6);
   color: #00ffff;
   padding: 8px;
@@ -3829,7 +3829,7 @@ export default {
 
 .preset-select,
 .preset-select option {
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
   background-image: none !important;
@@ -3852,7 +3852,7 @@ export default {
 
 .ship-create-select,
 .ship-create-select option {
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   color: aqua !important;
   -webkit-text-fill-color: aqua;
   background-image: none !important;
@@ -3876,7 +3876,7 @@ export default {
 .modal-card input[type="text"],
 .modal-card input[type="number"] {
   color-scheme: dark;
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   border: 1px solid rgba(0, 128, 128, 0.6) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff;
@@ -3903,8 +3903,8 @@ export default {
 }
 
 .btn-modal-cancel {
-  background-color: #000000 !important;
-  background: #000000 !important;
+  background-color: #101010 !important;
+  background: #101010 !important;
   border: 1px solid #00a8a8 !important;
   color: #00a8a8 !important;
   -webkit-text-fill-color: #00a8a8;
@@ -3986,7 +3986,7 @@ export default {
   position: absolute;
   top: 2px;
   right: 2px;
-  background: #000000;
+  background: #101010;
   border: 1px solid #00a8a8;
   color: aqua;
   border-radius: 50%;
@@ -4008,8 +4008,8 @@ export default {
 }
 
 .btn-browse-avatar {
-  background-color: #000000 !important;
-  background: #000000 !important;
+  background-color: #101010 !important;
+  background: #101010 !important;
   border: 1px solid #00a8a8 !important;
   color: #00a8a8 !important;
   -webkit-text-fill-color: #00a8a8;
@@ -4036,7 +4036,7 @@ export default {
 
 .avatar-file-input::file-selector-button,
 .avatar-file-input::-webkit-file-upload-button {
-  background-color: #000000 !important;
+  background-color: #101010 !important;
   border: 1px solid #00a8a8 !important;
   color: #00a8a8 !important;
   -webkit-text-fill-color: #00a8a8;
@@ -4197,7 +4197,7 @@ export default {
 
 .weapon-title-input:focus {
   outline: none;
-  background-color: #000000;
+  background-color: #101010;
   border-color: aqua !important;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
@@ -4339,7 +4339,7 @@ export default {
 
 .stat-pill {
   font-size: 0.8rem;
-  background: #000000;
+  background: #101010;
   border: 1px solid #30363d;
   border-radius: 4px;
   padding: 2px 8px;
@@ -4369,7 +4369,7 @@ export default {
 }
 
 .btn-equip-weapon {
-  background-color: #000000;
+  background-color: #101010;
   border: 1px solid #00a8a8;
   color: #00ffff;
   font-weight: 600;
