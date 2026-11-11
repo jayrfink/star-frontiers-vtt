@@ -5181,7 +5181,7 @@ onBeforeUnmount(() => {
 
 .btn-audio-toggle {
   background: transparent !important;
-  border: 1px solid rgba(0, 128, 128, 0.5) !important;
+  border: 1px solid rgba(45, 197, 212, 0.35) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff;
   font-size: 11px;
@@ -5196,58 +5196,64 @@ onBeforeUnmount(() => {
 }
 
 .btn-audio-toggle:hover {
-  background: #051414 !important;
-  border-color: aqua !important;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+  background: rgba(13, 50, 68, 0.55) !important;
+  border-color: rgba(45, 197, 212, 0.6) !important;
+  box-shadow: 0 0 8px rgba(45, 197, 212, 0.3);
 }
 
 .btn-audio-toggle-pill {
-  background: #000000 !important;
-  border: 1px solid rgba(0, 128, 128, 0.7) !important;
+  background: rgba(5, 14, 28, 0.68) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 197, 212, 0.35) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff;
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 600;
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 168, 184, 0.2);
   cursor: pointer;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-audio-toggle-pill:hover {
-  background: #051414 !important;
-  border-color: aqua !important;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+  background: rgba(13, 50, 68, 0.55) !important;
+  border-color: rgba(45, 197, 212, 0.6) !important;
+  box-shadow: 0 0 12px rgba(45, 197, 212, 0.4);
 }
 
 .btn-roll-log-pill {
-  background: #000000 !important;
-  border: 1px solid rgba(0, 128, 128, 0.7) !important;
+  background: rgba(5, 14, 28, 0.68) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 197, 212, 0.35) !important;
   color: #00ffff !important;
   -webkit-text-fill-color: #00ffff;
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 168, 184, 0.2);
   cursor: pointer;
   transition: all 0.15s ease-in-out;
 }
 
 .btn-roll-log-pill:hover {
-  background: #051414 !important;
-  border-color: aqua !important;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+  background: rgba(13, 50, 68, 0.55) !important;
+  border-color: rgba(45, 197, 212, 0.6) !important;
+  box-shadow: 0 0 12px rgba(45, 197, 212, 0.4);
 }
 
 .roll-log-card {
   width: 290px;
   max-height: 290px;
-  background: #000000;
-  border: 1px solid rgba(0, 128, 128, 0.8);
+  background: rgba(5, 14, 28, 0.68);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 197, 212, 0.35);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 168, 184, 0.2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -5258,8 +5264,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #051414;
-  border-bottom: 1px solid rgba(0, 128, 128, 0.5);
+  background: rgba(13, 50, 68, 0.35);
+  border-bottom: 1px solid rgba(45, 197, 212, 0.25);
 }
 
 .roll-log-title {
@@ -5277,7 +5283,7 @@ onBeforeUnmount(() => {
 
 .btn-roll-log-clear {
   background: transparent !important;
-  border: 1px solid rgba(0, 128, 128, 0.5) !important;
+  border: 1px solid rgba(45, 197, 212, 0.35) !important;
   color: #8b949e !important;
   -webkit-text-fill-color: #8b949e;
   font-size: 10px;
@@ -5286,6 +5292,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-roll-log-clear:hover:not(:disabled) {
+  background: rgba(248, 81, 73, 0.2) !important;
   border-color: #f85149 !important;
   color: #f85149 !important;
   -webkit-text-fill-color: #f85149;
@@ -5298,6 +5305,13 @@ onBeforeUnmount(() => {
   -webkit-text-fill-color: #00ffff;
   font-size: 11px;
   padding: 2px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-roll-log-toggle:hover {
+  color: #ccfafb !important;
+  -webkit-text-fill-color: #ccfafb;
 }
 
 .roll-log-body {
@@ -5350,8 +5364,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 4px 6px;
-  background: rgba(10, 25, 25, 0.5);
-  border: 1px solid rgba(0, 128, 128, 0.25);
+  background: rgba(13, 50, 68, 0.25);
+  border: 1px solid rgba(45, 197, 212, 0.2);
   border-radius: 4px;
 }
 

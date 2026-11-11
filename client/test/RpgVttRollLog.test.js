@@ -25,6 +25,14 @@ describe('RpgVttView Roll Log', () => {
     expect(content).toMatch(/class="roll-log-card"/);
   });
 
+  it('styles roll log card and pills with translucent backdrop blur like vtt toolbar', () => {
+    expect(content).toMatch(/\.roll-log-card\s*\{[^}]*background:\s*rgba\(5,\s*14,\s*28,\s*0\.68\);/);
+    expect(content).toMatch(/\.roll-log-card\s*\{[^}]*backdrop-filter:\s*blur\(12px\);/);
+    expect(content).toMatch(/\.btn-roll-log-pill\s*\{[^}]*background:\s*rgba\(5,\s*14,\s*28,\s*0\.68\)\s*!important;/);
+    expect(content).toMatch(/\.btn-roll-log-pill\s*\{[^}]*backdrop-filter:\s*blur\(12px\);/);
+    expect(content).toMatch(/\.roll-log-header\s*\{[^}]*background:\s*rgba\(13,\s*50,\s*68,\s*0\.35\);/);
+  });
+
   it('hooks into rollPercentile and rollDamage', () => {
     const rollPercentileFn = content.slice(content.indexOf('async function rollPercentile'), content.indexOf('async function rollDamage'));
     expect(rollPercentileFn).toMatch(/(sendRollToServer|addRollToLog)\(/);
