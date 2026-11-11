@@ -2784,7 +2784,61 @@ export default {
   font-size: 0.9rem;
 }
 
-.input-type-select,
+.input-type-select {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #c0c0c0 !important;
+  -webkit-text-fill-color: #c0c0c0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 2px 28px 2px 2px !important;
+  padding-right: 28px !important;
+  border-radius: 4px;
+  transition: color 0.15s ease-in-out;
+}
+
+.select-player {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #c0c0c0 !important;
+  -webkit-text-fill-color: #c0c0c0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 2px 28px 2px 2px !important;
+  padding-right: 28px !important;
+  border-radius: 4px;
+  transition: color 0.15s ease-in-out;
+}
+
+.input-type-select:hover,
+.select-player:hover {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.input-type-select:focus,
+.select-player:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .input-type-select option {
   background-color: #101010 !important;
   color: #c0c0c0 !important;
@@ -2792,40 +2846,11 @@ export default {
   background-image: none !important;
 }
 
-.input-type-select {
-  border: 1px solid #30363d !important;
-  border-radius: 4px;
-  padding: 6px 28px 6px 10px !important;
-  padding-right: 28px !important;
-  font-size: 0.9rem;
-}
-
-.input-type-select:focus {
-  outline: none;
-  border-color: #8b949e !important;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
-}
-
-.select-player,
 .select-player option {
   background-color: #101010 !important;
   color: #c0c0c0 !important;
   -webkit-text-fill-color: #c0c0c0;
   background-image: none !important;
-}
-
-.select-player {
-  border: 1px solid #30363d !important;
-  border-radius: 4px;
-  padding: 6px 28px 6px 10px !important;
-  padding-right: 28px !important;
-  font-size: 0.9rem;
-}
-
-.select-player:focus {
-  outline: none;
-  border-color: #8b949e !important;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 
 .player-badge-wrap {

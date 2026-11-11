@@ -2253,9 +2253,9 @@ describe('ShipSheetsView - Ship Sheets Left Navigation Reordering', () => {
       const path = require('path');
       const vueFile = fs.readFileSync(path.resolve(__dirname, '../src/views/ShipSheetsView.vue'), 'utf-8');
       expect(vueFile).toMatch(/\.input-type-select[^}]*color:\s*#c0c0c0\s*!important/);
-      expect(vueFile).toMatch(/\.input-type-select[^}]*border:\s*1px\s+solid\s+#30363d\s*!important/);
+      expect(vueFile).toMatch(/\.input-type-select[^}]*border:\s*none\s*!important/);
       expect(vueFile).toMatch(/\.select-player[^}]*color:\s*#c0c0c0\s*!important/);
-      expect(vueFile).toMatch(/\.select-player[^}]*border:\s*1px\s+solid\s+#30363d\s*!important/);
+      expect(vueFile).toMatch(/\.select-player[^}]*border:\s*none\s*!important/);
       expect(vueFile).toMatch(/\.stat-input\s*\{[^}]*color:\s*#d0d0d0;/);
     });
   });

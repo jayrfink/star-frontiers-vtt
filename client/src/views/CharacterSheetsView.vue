@@ -2694,32 +2694,48 @@ export default {
 
 .select-race,
 .select-psa,
-.select-player,
-.select-race option,
-.select-psa option,
-.select-player option {
-  background-color: #000000 !important;
+.select-player {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: #c0c0c0 !important;
   -webkit-text-fill-color: #c0c0c0;
-  background-image: none !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 2px 14px 2px 2px !important;
+  border-radius: 4px;
+  transition: color 0.15s ease-in-out;
 }
 
-.select-race,
-.select-psa,
-.select-player {
-  border: 1px solid #30363d !important;
-  border-radius: 4px;
-  padding: 6px 28px 6px 10px !important;
-  padding-right: 28px !important;
-  font-size: 0.9rem;
+.select-race:hover,
+.select-psa:hover,
+.select-player:hover {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .select-race:focus,
 .select-psa:focus,
 .select-player:focus {
-  outline: none;
-  border-color: #8b949e !important;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.select-race option,
+.select-psa option,
+.select-player option {
+  background-color: #101010 !important;
+  color: #c0c0c0 !important;
+  -webkit-text-fill-color: #c0c0c0;
+  background-image: none !important;
 }
 
 .player-badge-wrap {

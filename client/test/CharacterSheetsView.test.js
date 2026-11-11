@@ -1857,9 +1857,9 @@ describe('CharacterSheetsView - Equipment Catalog & Inventory Logic', () => {
       // Tactical bar (IM, Melee Base Hit, Movement) values font color is #c0c0c0
       expect(vueFile).toMatch(/\.tactical-value\s*\{[^}]*color:\s*#c0c0c0;/);
 
-      // Species, PSA and Player fields font color is #c0c0c0 with dark border #30363d
+      // Species, PSA and Player fields font color is #c0c0c0 with border none (plain text dropdown)
       expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*color:\s*#c0c0c0\s*!important/);
-      expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*border:\s*1px\s*solid\s*#30363d\s*!important/);
+      expect(vueFile).toMatch(/\.select-race,\s*\.select-psa,\s*\.select-player[^}]*border:\s*none\s*!important/);
 
       // Left/right attribute shift arrows are darker cyan #00a8a8
       expect(vueFile).toMatch(/\.btn-shift\s*\{[^}]*color:\s*#00a8a8;/);
