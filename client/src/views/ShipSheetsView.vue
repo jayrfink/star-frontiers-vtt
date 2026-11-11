@@ -2830,8 +2830,8 @@ export default {
 
 .input-type-select:hover,
 .select-player:hover {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece;
 }
 
 .input-type-select:focus,

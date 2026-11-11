@@ -2717,8 +2717,8 @@ export default {
 .select-race:hover,
 .select-psa:hover,
 .select-player:hover {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff;
+  color: #cecece !important;
+  -webkit-text-fill-color: #cecece;
 }
 
 .select-race:focus,

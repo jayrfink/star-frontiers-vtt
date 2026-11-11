@@ -391,7 +391,7 @@ function drawCanvas() {
   ctx.clearRect(0, 0, width, height);
 
   if (!props.map) {
-    ctx.fillStyle = '#0d1117';
+    ctx.fillStyle = '#090c10';
     ctx.fillRect(0, 0, width, height);
     return;
   }
@@ -437,7 +437,7 @@ for (let i = 0; i < 200; i++) {
 
 function drawBackground(ctx, mapW, mapH) {
   // Fill with dark space background
-  ctx.fillStyle = '#030712';
+  ctx.fillStyle = '#02050d';
   ctx.fillRect(0, 0, mapW, mapH);
 
   if (props.map?.background_url) {
@@ -970,7 +970,7 @@ onBeforeUnmount(() => {
   height: 100%;
   position: relative;
   overflow: hidden;
-  background-color: #0d1117;
+  background-color: #090c10;
   user-select: none;
 }
 

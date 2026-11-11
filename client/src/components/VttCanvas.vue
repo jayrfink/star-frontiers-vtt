@@ -358,7 +358,7 @@ function drawCanvas() {
 
   if (!props.map) {
     // Render blank background when no map is active
-    ctx.fillStyle = '#0d1117';
+    ctx.fillStyle = '#090c10';
     ctx.fillRect(0, 0, width, height);
     ctx.save();
     ctx.scale(dpr, dpr);
@@ -410,6 +410,10 @@ function drawBackground(ctx, mapW, mapH) {
   const preset = props.map.preset_bg || 'grid_only';
   const customUrl = props.map.background_url;
 
+  // Background fill directly behind map
+  ctx.fillStyle = '#090c10';
+  ctx.fillRect(0, 0, mapW, mapH);
+
   if (customUrl) {
     const img = getCachedImage(customUrl);
     if (img) {
@@ -446,7 +450,7 @@ function drawBackground(ctx, mapW, mapH) {
       break;
     }
     case 'starfield': {
-      ctx.fillStyle = '#030712';
+      ctx.fillStyle = '#02050d';
       ctx.fillRect(0, 0, mapW, mapH);
       ctx.fillStyle = '#ffffff';
       for (let i = 0; i < 60; i++) {
@@ -1094,7 +1098,7 @@ onBeforeUnmount(() => {
   height: 100%;
   position: relative;
   overflow: hidden;
-  background-color: var(--bg-primary, #0d1117);
+  background-color: #090c10;
   user-select: none;
 }
 
