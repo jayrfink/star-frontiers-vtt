@@ -2605,7 +2605,7 @@ export default {
 }
 
 .card {
-  background: rgba(22, 27, 34, 0.55);
+  background: rgba(20, 52, 54, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   border: 1px solid #30363d;
@@ -2616,7 +2616,7 @@ export default {
 
 /* Header */
 .sheet-header {
-  background: rgba(22, 27, 34, 0.55);
+  background: rgba(20, 52, 54, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   border: 1px solid #30363d;

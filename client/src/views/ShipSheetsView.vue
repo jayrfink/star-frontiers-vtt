@@ -2387,7 +2387,7 @@ export default {
   display: flex;
   height: 100%;
   background:
-    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
+    linear-gradient(rgba(13, 17, 23, 0.20), rgba(13, 17, 23, 0.28)),
     url('/uploads/sheet-backgrounds/azure-green-cyan.jpg') center / cover no-repeat fixed;
   color: var(--text-primary, #cecece);
   overflow: hidden;
@@ -2396,7 +2396,7 @@ export default {
 
 .sheets-layout.has-sheet-bg {
   background:
-    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
+    linear-gradient(rgba(13, 17, 23, 0.20), rgba(13, 17, 23, 0.28)),
     url('/uploads/sheet-backgrounds/azure-green-cyan.jpg') center / cover no-repeat fixed;
 }
 
@@ -2629,15 +2629,11 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
-  background:
-    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
-    url('/uploads/sheet-backgrounds/azure-green-cyan.jpg') center / cover no-repeat fixed;
+  background: transparent;
 }
 
 .sheet-main.has-sheet-bg {
-  background:
-    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
-    url('/uploads/sheet-backgrounds/azure-green-cyan.jpg') center / cover no-repeat fixed;
+  background: transparent;
 }
 
 .no-selection {
@@ -2662,9 +2658,9 @@ export default {
 }
 
 .card {
-  background: rgba(22, 27, 34, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(20, 52, 54, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
