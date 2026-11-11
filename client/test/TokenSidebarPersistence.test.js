@@ -113,5 +113,12 @@ describe('Token Sidebar / Manager State Persistence & Toggle', () => {
       expect(rpgViewSrc).toMatch(/\.token-sidebar\s*\{[^}]*flex-shrink:\s*0/);
       expect(spaceViewSrc).toMatch(/\.token-sidebar\s*\{[^}]*flex-shrink:\s*0/);
     });
+
+    it('styles .token-sidebar and .gm-drawer with translucent backdrop-filter in both VTT views', () => {
+      expect(rpgViewSrc).toMatch(/\.token-sidebar\s*\{[^}]*position:\s*absolute;[^}]*background:\s*rgba\(5,\s*14,\s*28,\s*0\.72\);[^}]*backdrop-filter:\s*blur\(12px\);/);
+      expect(spaceViewSrc).toMatch(/\.token-sidebar\s*\{[^}]*position:\s*absolute;[^}]*background:\s*rgba\(5,\s*14,\s*28,\s*0\.72\);[^}]*backdrop-filter:\s*blur\(12px\);/);
+      expect(rpgViewSrc).toMatch(/\.gm-drawer\s*\{[^}]*position:\s*absolute;[^}]*background:\s*rgba\(5,\s*14,\s*28,\s*0\.72\);[^}]*backdrop-filter:\s*blur\(12px\);/);
+      expect(spaceViewSrc).toMatch(/\.gm-drawer\s*\{[^}]*position:\s*absolute;[^}]*background:\s*rgba\(5,\s*14,\s*28,\s*0\.72\);[^}]*backdrop-filter:\s*blur\(12px\);/);
+    });
   });
 });

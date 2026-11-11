@@ -3337,7 +3337,18 @@ onBeforeUnmount(() => {
 }
 
 /* GM Drawer Backdrop & Modal */
-.drawer-backdrop,
+.drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -3357,11 +3368,13 @@ onBeforeUnmount(() => {
   right: 0;
   bottom: 0;
   width: 360px;
-  background: var(--bg-secondary);
-  border-left: 1px solid var(--border);
+  background: rgba(5, 14, 28, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(45, 197, 212, 0.35);
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 168, 184, 0.2);
 }
 
 .drawer-header,
@@ -3370,7 +3383,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+  background: rgba(13, 50, 68, 0.35);
+  border-bottom: 1px solid rgba(45, 197, 212, 0.25);
   box-shadow: 0 1px 8px rgba(6, 182, 212, 0.2);
 }
 
@@ -3387,8 +3401,14 @@ onBeforeUnmount(() => {
   background: none;
   border: none;
   font-size: 20px;
-  color: var(--text-secondary);
+  color: #8b949e;
   padding: 0 4px;
+  cursor: pointer;
+  transition: color 0.15s ease-in-out;
+}
+
+.close-btn:hover {
+  color: #00ffff;
 }
 
 .drawer-content,
@@ -3399,33 +3419,67 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 255, 0.45) rgba(5, 15, 20, 0.4);
+}
+
+.drawer-content::-webkit-scrollbar,
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drawer-content::-webkit-scrollbar-track,
+.sidebar-content::-webkit-scrollbar-track {
+  background: rgba(5, 15, 20, 0.4);
+  border-radius: 3px;
+}
+
+.drawer-content::-webkit-scrollbar-thumb,
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.35);
+  border: 1px solid rgba(0, 255, 255, 0.5);
+  border-radius: 3px;
+}
+
+.drawer-content::-webkit-scrollbar-thumb:hover,
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
 }
 
 /* Token Sidebar */
 .token-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: 320px;
   flex-shrink: 0;
-  background: var(--bg-secondary);
-  border-left: 1px solid var(--border);
+  background: rgba(5, 14, 28, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(45, 197, 212, 0.35);
   display: flex;
   flex-direction: column;
-  z-index: 5;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.7), 0 0 15px rgba(20, 168, 184, 0.2);
+  z-index: 15;
 }
 
 .section-box {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
+  background: rgba(13, 50, 68, 0.25);
+  border: 1px solid rgba(45, 197, 212, 0.2);
   border-radius: var(--radius);
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .section-box h4 {
   font-size: 15.5px;
   color: var(--text-primary);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(45, 197, 212, 0.25);
   padding-bottom: 6px;
   margin-bottom: 2px;
 }
@@ -3444,16 +3498,24 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: rgba(13, 50, 68, 0.25);
+  border: 1px solid rgba(45, 197, 212, 0.15);
   border-radius: var(--radius);
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.map-list li:hover,
+.token-list li:hover {
+  background: rgba(13, 50, 68, 0.5);
+  border-color: rgba(45, 197, 212, 0.45);
 }
 
 .map-list li.active,
 .token-list li.active {
-  border-color: var(--accent);
-  background: rgba(88, 166, 255, 0.1);
+  border-color: #00ffff;
+  background: rgba(0, 255, 255, 0.12);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
 }
 
 .token-dot,
