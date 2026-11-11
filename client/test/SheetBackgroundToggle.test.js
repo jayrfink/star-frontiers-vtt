@@ -21,14 +21,17 @@ describe('Sheet Background Image Optimization and Toggle', () => {
   });
 
   describe('CharacterSheetsView Background Toggle', () => {
-    it('verifies CSS contains optimized starfiel-cyan.jpg fixed background rule', () => {
+    it('verifies CSS contains optimized starfiel-cyan.jpg fixed background rule and translucent sidebar', () => {
       const vueFile = fs.readFileSync(
         path.resolve(__dirname, '../src/views/CharacterSheetsView.vue'),
         'utf-8'
       );
       expect(vueFile).toContain('/uploads/sheet-backgrounds/starfiel-cyan.jpg');
       expect(vueFile).toContain('.sheet-main.has-sheet-bg');
+      expect(vueFile).toContain('.sheets-layout.has-sheet-bg');
       expect(vueFile).toContain('.sheet-bg-checkbox');
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.72\);/);
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(12px\);/);
     });
 
     it('renders the background toggle checkbox and applies has-sheet-bg by default', async () => {
@@ -140,14 +143,17 @@ describe('Sheet Background Image Optimization and Toggle', () => {
   });
 
   describe('ShipSheetsView Background Toggle', () => {
-    it('verifies CSS contains optimized azure-green-cyan.jpg fixed background rule', () => {
+    it('verifies CSS contains optimized azure-green-cyan.jpg fixed background rule and translucent sidebar', () => {
       const vueFile = fs.readFileSync(
         path.resolve(__dirname, '../src/views/ShipSheetsView.vue'),
         'utf-8'
       );
       expect(vueFile).toContain('/uploads/sheet-backgrounds/azure-green-cyan.jpg');
       expect(vueFile).toContain('.sheet-main.has-sheet-bg');
+      expect(vueFile).toContain('.sheets-layout.has-sheet-bg');
       expect(vueFile).toContain('.sheet-bg-checkbox');
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.72\);/);
+      expect(vueFile).toMatch(/\.sidebar\s*\{[^}]*backdrop-filter:\s*blur\(12px\);/);
     });
 
     it('renders the background toggle checkbox and applies has-sheet-bg by default', async () => {

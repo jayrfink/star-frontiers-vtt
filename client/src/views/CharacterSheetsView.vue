@@ -1,5 +1,8 @@
 <template>
-  <div class="sheets-layout" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+  <div
+    class="sheets-layout"
+    :class="{ 'sidebar-collapsed': isSidebarCollapsed, 'has-sheet-bg': showSheetBackground }"
+  >
     <!-- Sidebar -->
     <aside class="sidebar">
       <button
@@ -2366,11 +2369,19 @@ export default {
   position: relative;
 }
 
+.sheets-layout.has-sheet-bg {
+  background:
+    linear-gradient(rgba(13, 17, 23, 0.48), rgba(13, 17, 23, 0.58)),
+    url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
+}
+
 /* Sidebar */
 .sidebar {
   width: 280px;
-  background: #161b22;
-  border-right: 1px solid #30363d;
+  background: rgba(22, 27, 34, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(48, 54, 61, 0.7);
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 12px rgba(6, 182, 212, 0.25);
@@ -2390,7 +2401,9 @@ export default {
   right: -24px;
   width: 24px;
   height: 38px;
-  background: #161b22;
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid #30363d;
   border-left: none;
   border-radius: 0 6px 6px 0;
@@ -2407,7 +2420,7 @@ export default {
 }
 
 .sidebar-toggle-btn:hover {
-  background: #05282e;
+  background: rgba(5, 40, 46, 0.88);
   color: #a8ffea;
   box-shadow: 2px 0 10px rgba(6, 182, 212, 0.4);
 }
@@ -2419,7 +2432,7 @@ export default {
 
 .sidebar-header {
   padding: 16px;
-  border-bottom: 1px solid #30363d;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.7);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2450,7 +2463,7 @@ export default {
 
 .character-list li {
   padding: 10px 12px;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid rgba(33, 38, 45, 0.6);
   border-left: 4px solid transparent;
   cursor: pointer;
   display: flex;
@@ -2461,12 +2474,12 @@ export default {
 }
 
 .character-list li:hover {
-  background: #21262d;
+  background: rgba(33, 38, 45, 0.65);
 }
 
 .character-list li.dragging {
   opacity: 0.4;
-  background: #1c2128;
+  background: rgba(28, 33, 40, 0.6);
 }
 
 .character-list li.drag-over {
@@ -2475,13 +2488,13 @@ export default {
 }
 
 .character-list li.active {
-  background: #05282e;
+  background: rgba(5, 40, 46, 0.75);
   border-left: 4px solid aquamarine;
   box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.25);
 }
 
 .character-list li.active:hover {
-  background: #083841;
+  background: rgba(8, 56, 65, 0.85);
 }
 
 .character-list li.active .char-name {
