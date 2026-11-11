@@ -2334,7 +2334,7 @@ export default {
   display: flex;
   height: 100%;
   background:
-    linear-gradient(rgba(13, 17, 23, 0.20), rgba(13, 17, 23, 0.28)),
+    linear-gradient(rgba(13, 17, 23, 0.10), rgba(13, 17, 23, 0.16)),
     url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
   color: var(--text-primary, #cecece);
   overflow: hidden;
@@ -2343,7 +2343,7 @@ export default {
 
 .sheets-layout.has-sheet-bg {
   background:
-    linear-gradient(rgba(13, 17, 23, 0.20), rgba(13, 17, 23, 0.28)),
+    linear-gradient(rgba(13, 17, 23, 0.10), rgba(13, 17, 23, 0.16)),
     url('/uploads/sheet-backgrounds/starfiel-cyan.jpg') center / cover no-repeat fixed;
 }
 

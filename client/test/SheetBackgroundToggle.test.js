@@ -120,7 +120,7 @@ describe('Sheet Background Always-On & Card Translucency', () => {
 
       // Card translucency (increased transparency by 20% to 0.35)
       expect(vueFile).toMatch(/\.card\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.35\);/);
-      expect(vueFile).toMatch(/\.card\s*\{[^}]*backdrop-filter:\s*blur\(10px\);/);
+      expect(vueFile).toMatch(/\.card\s*\{[^}]*backdrop-filter:\s*blur\(4px\);/);
 
       // Flip/Burn infobox preserves its specific styling
       expect(vueFile).toMatch(/\.flip-burn-ship-banner\s*\{[^}]*background:\s*rgba\(22,\s*27,\s*34,\s*0\.65\);/);
