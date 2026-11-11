@@ -2378,10 +2378,10 @@ export default {
 /* Sidebar */
 .sidebar {
   width: 280px;
-  background: rgba(22, 27, 34, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-right: 1px solid rgba(48, 54, 61, 0.7);
+  background: rgba(22, 27, 34, 0.52);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-right: 1px solid rgba(48, 54, 61, 0.6);
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 12px rgba(6, 182, 212, 0.25);
@@ -2401,9 +2401,9 @@ export default {
   right: -24px;
   width: 24px;
   height: 38px;
-  background: rgba(22, 27, 34, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(22, 27, 34, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid #30363d;
   border-left: none;
   border-radius: 0 6px 6px 0;
@@ -2420,7 +2420,7 @@ export default {
 }
 
 .sidebar-toggle-btn:hover {
-  background: rgba(5, 40, 46, 0.88);
+  background: rgba(5, 40, 46, 0.78);
   color: #a8ffea;
   box-shadow: 2px 0 10px rgba(6, 182, 212, 0.4);
 }
@@ -2432,7 +2432,7 @@ export default {
 
 .sidebar-header {
   padding: 16px;
-  border-bottom: 1px solid rgba(48, 54, 61, 0.7);
+  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2463,7 +2463,7 @@ export default {
 
 .character-list li {
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(33, 38, 45, 0.6);
+  border-bottom: 1px solid rgba(33, 38, 45, 0.45);
   border-left: 4px solid transparent;
   cursor: pointer;
   display: flex;
@@ -2474,12 +2474,12 @@ export default {
 }
 
 .character-list li:hover {
-  background: rgba(33, 38, 45, 0.65);
+  background: rgba(33, 38, 45, 0.45);
 }
 
 .character-list li.dragging {
   opacity: 0.4;
-  background: rgba(28, 33, 40, 0.6);
+  background: rgba(28, 33, 40, 0.4);
 }
 
 .character-list li.drag-over {
@@ -2488,9 +2488,13 @@ export default {
 }
 
 .character-list li.active {
-  background: rgba(5, 40, 46, 0.75);
+  background: rgba(5, 40, 46, 0.6);
   border-left: 4px solid aquamarine;
   box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.25);
+}
+
+.character-list li.active:hover {
+  background: rgba(8, 56, 65, 0.75);
 }
 
 .character-list li.active:hover {
